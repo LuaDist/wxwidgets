@@ -1,0 +1,10 @@
+--- This file is part of LuaDist project
+
+name = "wxwidgets"
+version = "2.8.12"
+
+desc = "wxWidgets is a multiplatform C++ GUI library."
+author = "wxWidgets developers"
+license = "GPL"
+url = "http://www.wxwidgets.org"
+maintainer = "Peter Drahoš"
