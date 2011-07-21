@@ -4,7 +4,7 @@
 # For details see the COPYRIGHT file distributed with LuaDist.
 # Please note that the package source code is licensed under its own license.
 
-project ( lua C ) # Compiler check required
+project ( wxwidgets C ) # Compiler check required
 cmake_minimum_required ( VERSION 2.8 )
 include ( dist.cmake )
 include ( ExternalProject )
@@ -21,20 +21,28 @@ if (APPLE)
 		BUILD_COMMAND ${CMAKE_MAKE_PROGRAM}
 		BUILD_IN_SOURCE 1
 	)
-elseif (MINGW) # On MinGW we use the provided makefile instad of ./configure
+elseif (MINGW) # On MinGW we use the provided makefile instad of ./configure, these have been manually modified to luadist requirements
 	# Build the wxWidgets library
 	externalproject_add(
 		wxwidgets
 		SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}
-		BINARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build/msw
-		BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} -f makefile.gcc MONOLITHIC=1 SHARED=1 UNICODE=1 BUILD=release USE_OPENGL=1 VENDOR=LuaDist
-		DEPENDEES build
-		DEPENDERS install
+		BINARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build/luadist
+		BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} -f wx.mingw
+		INSTALL_COMMAND ""
 	)
+	# Build stc contrib
+	externalproject_add(
+		wxwidgets_stc
+		SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}
+		BINARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build/luadist
+		BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} -f wx_stc.mingw
+		INSTALL_COMMAND ""
+	)
+	# Install
+	install ( FILES lib/gcc_dll/libwx.dll lib/gcc_dll/libwx_gl.dll lib/gcc_dll/libwx_stc.dll DESTINATION ${INSTALL_BIN} )
+	install ( FILES include/wx/msw/setup.h DESTINATION ${INSTALL_INC}/wx )
+	install ( FILES contrib/include/wx/stc/stc.h DESTINATION ${INSTALL_INC}/wx/stc )
 	
-	# Build Scintilla contrib module
-	install ( FILES lib/gcc-dll/libwxmsw28u_gcc_LuaDist.dll DESTINATION ${INSTALL_BIN} RENAME libwx.dll )
-	install ( FILES lib/gcc-dll/libwxmsw28u_gl_gcc_LuaDist.dll DESTINATION ${INSTALL_BIN} RENAME libwx_gl.dll )
 elseif ()
 	# On Unknown systems just call configure
 	externalproject_add(
