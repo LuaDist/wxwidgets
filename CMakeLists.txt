@@ -11,20 +11,10 @@ include ( ExternalProject )
 
 # 2DO: Provide proper CMake based build, for now rely on the provided build system
 # but configure and install modules as required by LuaDist
-if (APPLE)
-	# On OSX we need to configure with some extra options
-	# NOTE: wxWidgets 2.8 is 32bit only as it depends on Carbon
-	externalproject_add(
-		wxwidgets
-		SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}
-		CONFIGURE_COMMAND ./configure
-		BUILD_COMMAND ${CMAKE_MAKE_PROGRAM}
-		BUILD_IN_SOURCE 1
-	)
-elseif (MINGW) # On MinGW we use the provided makefile instad of ./configure, these have been manually modified to luadist requirements
+if (MINGW) # On MinGW we use the provided makefile instad of ./configure, these have been manually modified to luadist requirements
 	# Build the wxWidgets library
 	externalproject_add(
-		wxwidgets
+		wxwidgets_mingw
 		SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}
 		BINARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build/luadist
 		BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} -f wx.mingw
@@ -39,18 +29,31 @@ elseif (MINGW) # On MinGW we use the provided makefile instad of ./configure, th
 		INSTALL_COMMAND ""
 	)
 	# Install
-	install ( FILES lib/gcc_dll/libwx.dll lib/gcc_dll/libwx_gl.dll lib/gcc_dll/libwx_stc.dll DESTINATION ${INSTALL_BIN} )
-	install ( FILES include/wx/msw/setup.h DESTINATION ${INSTALL_INC}/wx )
+	set ( WX_LIBRARIES 
+		lib/gcc_dll/libwxmsw28_gl.dll
+		lib/gcc_dll/libwxmsw28_stc.dll
+		lib/gcc_dll/libwxmsw28.dll
+	)
+	install ( FILES ${WX_LIBRARIES} DESTINATION ${INSTALL_BIN} )
+	install ( FILES lib/gcc_dll/msw/wx/setup.h DESTINATION ${INSTALL_INC}/wx )
+	install ( FILES lib/gcc_dll/msw/wx/msw/rcdefs.h DESTINATION ${INSTALL_INC}/wx/msw )
 	install ( FILES contrib/include/wx/stc/stc.h DESTINATION ${INSTALL_INC}/wx/stc )
-	
 elseif ()
-	# On Unknown systems just call configure
+	# On unknown systems use autotools, it might actually work.
 	externalproject_add(
-		wxwidgets
+		wxwidgets_autotools
 		SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}
-		CONFIGURE_COMMAND ./configure
-		BUILD_COMMAND ${CMAKE_MAKE_PROGRAM}
-		BUILD_IN_SOURCE 1
+		BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/wxwidgets
+		CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/configure
+			--prefix=${CMAKE_CURRENT_BINARY_DIR}
+			--disable-debug
+			--disable-dependency-tracking
+			--enable-monolithic
+			--enable-unicode
+			--enable-stc
+			--enable-threads
+		BUILD_COMMAND make -j4 install
+		INSTALL_COMMAND ""
 	)
 endif ()
 
