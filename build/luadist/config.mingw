@@ -26,13 +26,14 @@ CXX = g++
 CFLAGS ?= 
 
 # Standard flags for C++ 
-CXXFLAGS ?= 
+CXXFLAGS ?= -fno-keep-inline-dllexport
 
 # Standard preprocessor flags (common for CC and CXX) 
 CPPFLAGS ?= 
 
 # Standard linker flags 
-LDFLAGS ?= --enable-auto-import
+LDFLAGS ?= 
+#-enable-auto-import
 
 # The C preprocessor 
 CPP ?= $(CC) -E
@@ -89,7 +90,7 @@ USE_RICHTEXT ?= 1
 USE_OPENGL ?= 1
 
 # Build ODBC database classes (USE_GUI must be 1)? [0,1]
-USE_ODBC ?= 0
+USE_ODBC ?= 1
 
 # Build quality assurance classes library (USE_GUI must be 1)? [0,1]
 USE_QA ?= 0
@@ -107,7 +108,7 @@ USE_THREADS ?= 1
 USE_CAIRO ?= 0
 
 # Link with gdiplus.lib? (Needed for wxGraphicsContext, will also set wxUSE_GRAPHICS_CONTEXT) [0,1]
-USE_GDIPLUS ?= 0
+USE_GDIPLUS ?= 1
 
 # Is this official build by wxWidgets developers? [0,1]
 OFFICIAL_BUILD ?= 0
