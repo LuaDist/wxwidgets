@@ -26,6 +26,7 @@ if (MINGW) # On MinGW we use the provided makefile instad of ./configure, these 
 		SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}
 		BINARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build/luadist
 		BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} -f wx_stc.mingw
+		DEPENDS wxwidgets_mingw
 		INSTALL_COMMAND ""
 	)
 	# Install
