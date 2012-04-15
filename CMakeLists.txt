@@ -13,11 +13,12 @@ include ( ExternalProject )
 # but configure and install modules as required by LuaDist
 if (MINGW) # On MinGW we use the provided makefile instad of ./configure, these have been manually modified to luadist requirements
 	# Build the wxWidgets library
+	
 	externalproject_add(
 		wxwidgets_mingw
 		SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}
 		BINARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build/luadist
-		BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} -f wx.mingw
+		BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} -f wx.mingw -j1
 		INSTALL_COMMAND ""
 	)
 	# Build stc contrib
@@ -25,7 +26,7 @@ if (MINGW) # On MinGW we use the provided makefile instad of ./configure, these 
 		wxwidgets_stc
 		SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}
 		BINARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build/luadist
-		BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} -f wx_stc.mingw
+		BUILD_COMMAND ${CMAKE_MAKE_PROGRAM} -f wx_stc.mingw -j1
 		INSTALL_COMMAND ""
 	)
 	
