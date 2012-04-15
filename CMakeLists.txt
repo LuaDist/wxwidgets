@@ -29,7 +29,7 @@ if (MINGW) # On MinGW we use the provided makefile instad of ./configure, these 
 		INSTALL_COMMAND ""
 	)
 	
-	add_dependencies( wxwidgets_mingw wxwidgets_stc )
+	add_dependencies(  wxwidgets_stc wxwidgets_mingw )
 	
 	# Install
 	set ( WX_LIBRARIES 
