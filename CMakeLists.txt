@@ -87,7 +87,7 @@ install_library ( wx )
 
 # wx_gl
 find_package ( OpenGL )
-if ( HAVE_OPENGL )
+if ( OPENGL_FOUND )
   include_directories ( ${OPENGL_INCLUDE_DIR} )
 	set ( SRC_GL src/common/dummy.cpp src/msw/glcanvas.cpp )
 	add_library ( wx_gl ${SRC_GL} )
