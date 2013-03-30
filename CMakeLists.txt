@@ -82,7 +82,7 @@ set ( SRC_XML src/xml/xml.cpp )
 
 # wx (monolithic build)
 if ( WIN32 )
-	set ( OS_LIBS -lgdiplus -luser32 -lgdi32 -lcomdlg32 -lwinspool -lwinmm -lshell32 -lcomctl32 -lole32 -loleaut32 -luuid -lrpcrt4 -ladvapi32 -lwsock32 -lodbc32 )
+	set ( OS_LIBS gdiplus user32 gdi32 comdlg32 winspool winmm shell32 comctl32 ole32 oleaut32 uuid rpcrt4 advapi32 wsock32 odbc32 )
 endif ()
 set ( SRC_MONOLITHIC ${SRC_COMMON} ${SRC_MSW} ${SRC_GENERIC} ${SRC_HTML} ${SRC_XRC} ${SRC_AUI} ${SRC_RICHTEXT} ${SRC_XML} )
 add_library ( wx ${SRC_MONOLITHIC} )
