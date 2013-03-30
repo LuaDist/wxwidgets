@@ -1,4 +1,5 @@
 include ( TestBigEndian )
+include ( CheckCCompilerFlag )
 
 test_big_endian ( BIGENDIAN )
 if ( BIGENDIAN )
@@ -30,3 +31,5 @@ if ( NOT HAVE_SYS_TYPES_H )
   set ( OFF_T long )
   set ( SIZE_T ungigned )
 endif ()
+
+check_c_compiler_flag(-fno-keep-inline-dllexport HAVE_FNO_KEEP_INLINE_DLLEXPORT) # gcc >= 4.6.1

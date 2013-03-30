@@ -13,8 +13,12 @@ include ( configure )
 # 2DO: Use file globs where apropriate to reduce the ridiculous filelists
 # NOTE: We do not follow the recommended wxwidgets naming conventions as it conflicts with our conventions
 
-# Avoid linking memory issue with gcc (see wxwidgets wiki for details)
-set ( CMAKE_CXX_FLAGS "-fno-keep-inline-dllexport" )
+# Avoid leaking memory issue with gcc/mingw.
+# http://wiki.wxwidgets.org/Compiling_wxWidgets_with_MinGW
+# http://old.nabble.com/MinGW-GCC-4.6.1-released-p32468533.html
+if (HAVE_FNO_KEEP_INLINE_DLLEXPORT)
+  set ( CMAKE_CXX_FLAGS "-fno-keep-inline-dllexport" )
+endif ()
 
 configure_file ( include/wx/msw/setup.h ${CMAKE_CURRENT_BINARY_DIR}/include/wx/setup.h )
 configure_file ( include/wx/msw/genrcdefs.h ${CMAKE_CURRENT_BINARY_DIR}/include/wx/msw/rcdefs.h )
