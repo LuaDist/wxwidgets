@@ -17,14 +17,14 @@ include ( configure )
 # http://wiki.wxwidgets.org/Compiling_wxWidgets_with_MinGW
 # http://old.nabble.com/MinGW-GCC-4.6.1-released-p32468533.html
 if (HAVE_FNO_KEEP_INLINE_DLLEXPORT)
-  set ( CMAKE_CXX_FLAGS "-fno-keep-inline-dllexport" )
+  set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-keep-inline-dllexport" )
 endif ()
 
 configure_file ( include/wx/msw/setup.h ${CMAKE_CURRENT_BINARY_DIR}/include/wx/setup.h )
 configure_file ( include/wx/msw/genrcdefs.h ${CMAKE_CURRENT_BINARY_DIR}/include/wx/msw/rcdefs.h )
 
 include_directories ( include ${CMAKE_CURRENT_BINARY_DIR}/include src/tiff src/jpeg src/png src/zlib src/regex src/expat/lib contrib/include contrib/src/stc/scintilla/include contrib/src/stc/scintilla/src )
-add_definitions ( -DHAVE_W32API_H -D__WXMSW__ -D__WX__ -DNDEBUG -DwxUSE_GRAPHICS_CONTEXT=1 -DWXBUILDING -DwxUSE_BASE=1 -DWXMAKINGDLL -DWXMAKINGDLL_STC -DSCI_LEXER -DLINK_LEXERS )
+add_definitions ( -DHAVE_W32API_H -D__WXMSW__ -D__WX__ -DNDEBUG -DwxUSE_GRAPHICS_CONTEXT=1 -DWXBUILDING -DwxUSE_BASE=1 -DSCI_LEXER -DLINK_LEXERS )
 
 # wx_regex
 set ( SRC_REGEX src/regex/regcomp.c src/regex/regexec.c src/regex/regerror.c src/regex/regfree.c )
@@ -86,15 +86,21 @@ if ( WIN32 )
 endif ()
 set ( SRC_MONOLITHIC ${SRC_COMMON} ${SRC_MSW} ${SRC_GENERIC} ${SRC_HTML} ${SRC_XRC} ${SRC_AUI} ${SRC_RICHTEXT} ${SRC_XML} )
 add_library ( wx ${SRC_MONOLITHIC} )
+set_target_properties ( wx PROPERTIES COMPILE_DEFINITIONS "WXMAKINGDLL" )
 target_link_libraries ( wx wx_tiff wx_jpeg wx_png wx_zlib wx_regex wx_expat ${OS_LIBS} )
+if (MSVC)    # avoid LNK1210 "Exceeded internal ILK size limit" (MSVC2012, debug build)
+  set_property (TARGET wx APPEND_STRING PROPERTY LINK_FLAGS_DEBUG " /INCREMENTAL:NO")
+endif ()
+
 install_library ( wx )
 
 # wx_gl
 find_package ( OpenGL )
 if ( OPENGL_FOUND )
-  include_directories ( ${OPENGL_INCLUDE_DIR} )
+	include_directories ( ${OPENGL_INCLUDE_DIR} )
 	set ( SRC_GL src/common/dummy.cpp src/msw/glcanvas.cpp )
 	add_library ( wx_gl ${SRC_GL} )
+	set_target_properties ( wx_gl PROPERTIES COMPILE_DEFINITIONS "WXMAKINGDLL_STC;WXUSINGDLL" )
 	target_link_libraries ( wx_gl wx ${OPENGL_LIBRARIES} )
 	install_library ( wx_gl )
 endif ()
@@ -105,6 +111,7 @@ set ( SRC_STC_SCINTILLA contrib/src/stc/scintilla/src/AutoComplete.cxx contrib/s
 set ( SRC_STC contrib/src/stc/PlatWX.cpp contrib/src/stc/ScintillaWX.cpp contrib/src/stc/stc.cpp )
 
 add_library ( wx_stc ${SRC_STC} ${SRC_STC_SCINTILLA} )
+set_target_properties ( wx_stc PROPERTIES COMPILE_DEFINITIONS "WXMAKINGDLL_STC;WXUSINGDLL" )
 target_link_libraries ( wx_stc wx )
 install_library ( wx_stc )
 
