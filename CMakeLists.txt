@@ -17,7 +17,7 @@ include ( configure )
 # http://wiki.wxwidgets.org/Compiling_wxWidgets_with_MinGW
 # http://old.nabble.com/MinGW-GCC-4.6.1-released-p32468533.html
 if (HAVE_FNO_KEEP_INLINE_DLLEXPORT)
-  set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-keep-inline-dllexport" )
+	set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-keep-inline-dllexport" )
 endif ()
 
 configure_file ( include/wx/msw/setup.h ${CMAKE_CURRENT_BINARY_DIR}/include/wx/setup.h )
@@ -89,7 +89,7 @@ add_library ( wx ${SRC_MONOLITHIC} )
 set_target_properties ( wx PROPERTIES COMPILE_DEFINITIONS "WXMAKINGDLL" )
 target_link_libraries ( wx wx_tiff wx_jpeg wx_png wx_zlib wx_regex wx_expat ${OS_LIBS} )
 if (MSVC)    # avoid LNK1210 "Exceeded internal ILK size limit" (MSVC2012, debug build)
-  set_property (TARGET wx APPEND_STRING PROPERTY LINK_FLAGS_DEBUG " /INCREMENTAL:NO")
+	set_property (TARGET wx APPEND_STRING PROPERTY LINK_FLAGS_DEBUG " /INCREMENTAL:NO")
 endif ()
 
 install_library ( wx )
