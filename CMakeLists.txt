@@ -21,7 +21,21 @@ if (HAVE_FNO_KEEP_INLINE_DLLEXPORT)
 endif ()
 
 configure_file ( include/wx/msw/setup.h ${CMAKE_CURRENT_BINARY_DIR}/include/wx/setup.h )
-configure_file ( include/wx/msw/genrcdefs.h ${CMAKE_CURRENT_BINARY_DIR}/include/wx/msw/rcdefs.h )
+
+# It's unclear how to run genrcdefs.h through the C preprocessor, so just fake it.
+set ( RCDEFS_PATH ${CMAKE_CURRENT_BINARY_DIR}/include/wx/msw/rcdefs.h )
+file ( READ include/wx/msw/genrcdefs.h RCDEFS )
+string ( REPLACE "#define EMIT(line) line" "" RCDEFS "${RCDEFS}")
+string ( REGEX REPLACE "EMIT[(]([^)]*)[)]" "\\1" RCDEFS "${RCDEFS}" )
+if ( EXISTS "${RCDEFS_PATH}" )
+  file ( READ "${RCDEFS_PATH}" RCDEFS_OLD )
+  if ( NOT ( RCDEFS STREQUAL RCDEFS_OLD ) )
+    file ( WRITE "${RCDEFS_PATH}" "${RCDEFS}" )
+  endif ()
+else ()
+  file ( WRITE "${RCDEFS_PATH}" "${RCDEFS}" )
+endif ()
+#configure_file ( include/wx/msw/genrcdefs.h ${CMAKE_CURRENT_BINARY_DIR}/include/wx/msw/rcdefs.h )
 
 include_directories ( include ${CMAKE_CURRENT_BINARY_DIR}/include src/tiff src/jpeg src/png src/zlib src/regex src/expat/lib contrib/include contrib/src/stc/scintilla/include contrib/src/stc/scintilla/src )
 add_definitions ( -DHAVE_W32API_H -D__WXMSW__ -D__WX__ -DNDEBUG -DwxUSE_GRAPHICS_CONTEXT=1 -DWXBUILDING -DwxUSE_BASE=1 -DSCI_LEXER -DLINK_LEXERS )
