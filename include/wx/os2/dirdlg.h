@@ -1,10 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        dirdlg.h
+// Name:        wx/os2/dirdlg.h
 // Purpose:     wxDirDialog class
 // Author:      David Webster
 // Modified by:
 // Created:     10/14/99
-// RCS-ID:      $Id: dirdlg.h 39079 2006-05-06 20:10:11Z VZ $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -14,9 +13,9 @@
 
 #include "wx/dialog.h"
 
-WXDLLEXPORT_DATA(extern const wxChar) wxFileSelectorPromptStr[];
+WXDLLIMPEXP_DATA_CORE(extern const wxChar) wxFileSelectorPromptStr[];
 
-class WXDLLEXPORT wxDirDialog: public wxDirDialogBase
+class WXDLLIMPEXP_CORE wxDirDialog: public wxDirDialogBase
 {
     DECLARE_DYNAMIC_CLASS(wxDirDialog)
 public:

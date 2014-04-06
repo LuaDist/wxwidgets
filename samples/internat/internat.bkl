@@ -7,7 +7,6 @@
         <sources>internat.cpp</sources>
         <wx-lib>core</wx-lib>
         <wx-lib>base</wx-lib>
-        <win32-res>internat.rc</win32-res>
     </exe>
 
     <template id="catalog">
@@ -21,6 +20,7 @@
     <wx-data id="cs" template="catalog"/>
     <wx-data id="de" template="catalog"/>
     <wx-data id="fr" template="catalog"/>
+    <wx-data id="it" template="catalog"/>
     <wx-data id="ka" template="catalog"/>
     <wx-data id="pl" template="catalog"/>
     <wx-data id="ru" template="catalog"/>

@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     01/23/03
-// RCS-ID:      $Id: treectrl.h 38416 2006-03-28 13:11:20Z ABX $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -27,9 +26,9 @@
 typedef long wxDataType;
 
 // fwd decl
-class  WXDLLEXPORT wxImageList;
-class  WXDLLEXPORT wxDragImage;
-struct WXDLLEXPORT wxTreeViewItem;
+class  WXDLLIMPEXP_CORE wxImageList;
+class  WXDLLIMPEXP_CORE wxDragImage;
+struct WXDLLIMPEXP_FWD_CORE wxTreeViewItem;
 
 // a callback function used for sorting tree items, it should return -1 if the
 // first item precedes the second, +1 if the second precedes the first or 0 if
@@ -48,7 +47,7 @@ WX_DECLARE_EXPORTED_VOIDPTR_HASH_MAP(wxTreeItemAttr *, wxMapTreeAttr);
 // ----------------------------------------------------------------------------
 // wxTreeCtrl
 // ----------------------------------------------------------------------------
-class WXDLLEXPORT wxTreeCtrl : public wxControl
+class WXDLLIMPEXP_CORE wxTreeCtrl : public wxControl
 {
 public:
     // creation
@@ -442,13 +441,13 @@ public:
     // interface compatibility, only.
     //
     wxTextCtrl* EditLabel( const wxTreeItemId& rItem
-                          ,wxClassInfo*        pTextCtrlClass = CLASSINFO(wxTextCtrl)
+                          ,wxClassInfo*        pTextCtrlClass = wxCLASSINFO(wxTextCtrl)
                          );
 
     //
     // returns NULL for OS/2 in ALL cases
     //
-    wxTextCtrl* GetEditControl(void) const {return (wxTextCtrl*)NULL;}
+    wxTextCtrl* GetEditControl(void) const {return NULL;}
 
     //
     // End editing and accept or discard the changes to item label
@@ -505,70 +504,6 @@ public:
                          ,wxRect&             rRect
                          ,bool                bTextOnly = false
                         ) const;
-
-    //
-    // Deprecated
-    // ----------
-
-#if WXWIN_COMPATIBILITY_2_4
-    // These methods are deprecated and will be removed in future versions of
-    // wxWidgets, they're here for compatibility only, don't use them in new
-    // code (the comments indicate why these methods are now useless and how to
-    // replace them)
-    //
-
-    //
-    // Use Expand, Collapse, CollapseAndReset or Toggle
-    //
-    wxDEPRECATED( void ExpandItem( const wxTreeItemId& rItem
-                                  ,int                 nAction
-                                 ) );
-
-    //
-    // Use AddRoot, PrependItem or AppendItem
-    //
-    wxDEPRECATED( wxTreeItemId InsertItem( const wxTreeItemId& pParent
-                                          ,const wxString&     rsText
-                                          ,int                 nImage = -1
-                                          ,int                 nSelImage = -1
-                                          ,long                lInsertAfter = wxTREE_INSERT_LAST
-                                         ) );
-
-    //
-    // Use Set/GetImageList and Set/GetStateImageList
-    //
-    wxDEPRECATED( wxImageList* GetImageList(int nVal) const );
-    wxDEPRECATED( void SetImageList(wxImageList* pImageList, int nVal) );
-
-    //
-    // Use Set/GetItemImage directly
-    //
-    wxDEPRECATED( int GetItemSelectedImage(const wxTreeItemId& rItem) const );
-    wxDEPRECATED( void SetItemSelectedImage(const wxTreeItemId& rItem, int nImage) );
-
-    //
-    // For this enumeration function you must pass in a "cookie" parameter
-    // which is opaque for the application but is necessary for the library
-    // to make these functions reentrant (i.e. allow more than one
-    // enumeration on one and the same object simultaneously). Of course,
-    // the "cookie" passed to GetFirstChild() and GetNextChild() should be
-    // the same!
-    //
-
-    //
-    // Get the first child of this item
-    //
-    wxDEPRECATED( wxTreeItemId GetFirstChild( const wxTreeItemId& rItem
-                                             ,long&               rCookie
-                                            ) const );
-
-    //
-    // Get the next child
-    //
-    wxDEPRECATED( wxTreeItemId GetNextChild( const wxTreeItemId& rItem
-                                            ,long&               rCookie
-                                           ) const );
-#endif // WXWIN_COMPATIBILITY_2_4
 
     //
     // Implementation
@@ -650,7 +585,7 @@ private:
                          ,int                 nImage
                          ,int                 nImageSel
                         );
-    void DeleteTextCtrl() { };
+    void DeleteTextCtrl() { }
 
     //
     // support for additional item images which we implement using
@@ -688,7 +623,7 @@ private:
     friend class wxTreeSortHelper;
 
     DECLARE_DYNAMIC_CLASS(wxTreeCtrl)
-    DECLARE_NO_COPY_CLASS(wxTreeCtrl)
+    wxDECLARE_NO_COPY_CLASS(wxTreeCtrl);
 }; // end of CLASS wxTreeCtrl
 
 #endif // wxUSE_TREECTRL

@@ -2,7 +2,6 @@
 // Name:        src/motif/dataobj.cpp
 // Purpose:     wxDataObject class
 // Author:      Julian Smart
-// Id:          $Id: dataobj.cpp 38972 2006-05-02 10:39:23Z ABX $
 // Copyright:   (c) 1998 Julian Smart
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -59,12 +58,6 @@ wxDataFormat::wxDataFormat( wxDataFormatId type )
 {
     PrepareFormats();
     SetType( type );
-}
-
-wxDataFormat::wxDataFormat( const wxChar *id )
-{
-    PrepareFormats();
-    SetId( id );
 }
 
 wxDataFormat::wxDataFormat( const wxString &id )
@@ -129,13 +122,12 @@ void wxDataFormat::SetId( NativeFormat format )
         m_type = wxDF_PRIVATE;
 }
 
-void wxDataFormat::SetId( const wxChar *id )
+void wxDataFormat::SetId( const wxString& id )
 {
     PrepareFormats();
     m_type = wxDF_PRIVATE;
-    wxString tmp( id );
     m_format = XInternAtom( wxGlobalDisplay(),
-                            tmp.mbc_str(), False );
+                            id.mbc_str(), False );
 }
 
 void wxDataFormat::PrepareFormats()
@@ -167,7 +159,7 @@ size_t wxBitmapDataObject::GetDataSize() const
 
 bool wxBitmapDataObject::GetDataHere(void* buf) const
 {
-    if( !GetBitmap().Ok() )
+    if( !GetBitmap().IsOk() )
         return false;
 
     (*(Pixmap*)buf) = (Pixmap)GetBitmap().GetDrawable();

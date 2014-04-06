@@ -3,7 +3,6 @@
 // Purpose:
 // Author:      Robert Roebling
 // Created:     01/02/97
-// Id:          $Id: combobox.h 41020 2006-09-05 20:47:48Z VZ $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -11,102 +10,103 @@
 #ifndef _WX_GTK_COMBOBOX_H_
 #define _WX_GTK_COMBOBOX_H_
 
+#include "wx/choice.h"
+
+typedef struct _GtkEntry GtkEntry;
+
 //-----------------------------------------------------------------------------
 // wxComboBox
 //-----------------------------------------------------------------------------
 
-class WXDLLIMPEXP_CORE wxComboBox : public wxControl, public wxComboBoxBase
+class WXDLLIMPEXP_CORE wxComboBox : public wxChoice,
+                                    public wxTextEntry
 {
 public:
-    inline wxComboBox() {}
-    inline wxComboBox(wxWindow *parent, wxWindowID id,
-           const wxString& value = wxEmptyString,
-           const wxPoint& pos = wxDefaultPosition,
-           const wxSize& size = wxDefaultSize,
-           int n = 0, const wxString choices[] = (const wxString *) NULL,
-           long style = 0,
-           const wxValidator& validator = wxDefaultValidator,
-           const wxString& name = wxComboBoxNameStr)
+    wxComboBox()
+        : wxChoice(), wxTextEntry()
     {
+        Init();
+    }
+    wxComboBox(wxWindow *parent,
+               wxWindowID id,
+               const wxString& value = wxEmptyString,
+               const wxPoint& pos = wxDefaultPosition,
+               const wxSize& size = wxDefaultSize,
+               int n = 0, const wxString choices[] = NULL,
+               long style = 0,
+               const wxValidator& validator = wxDefaultValidator,
+               const wxString& name = wxComboBoxNameStr)
+        : wxChoice(), wxTextEntry()
+    {
+        Init();
         Create(parent, id, value, pos, size, n, choices, style, validator, name);
     }
-    inline wxComboBox(wxWindow *parent, wxWindowID id,
-           const wxString& value,
-           const wxPoint& pos,
-           const wxSize& size,
-           const wxArrayString& choices,
-           long style = 0,
-           const wxValidator& validator = wxDefaultValidator,
-           const wxString& name = wxComboBoxNameStr)
+
+    wxComboBox(wxWindow *parent, wxWindowID id,
+               const wxString& value,
+               const wxPoint& pos,
+               const wxSize& size,
+               const wxArrayString& choices,
+               long style = 0,
+               const wxValidator& validator = wxDefaultValidator,
+               const wxString& name = wxComboBoxNameStr)
+        : wxChoice(), wxTextEntry()
     {
+        Init();
         Create(parent, id, value, pos, size, choices, style, validator, name);
     }
-
-    virtual ~wxComboBox();
+    ~wxComboBox();
 
     bool Create(wxWindow *parent, wxWindowID id,
-           const wxString& value = wxEmptyString,
-           const wxPoint& pos = wxDefaultPosition,
-           const wxSize& size = wxDefaultSize,
-           int n = 0, const wxString choices[] = (const wxString *) NULL,
-           long style = 0,
-           const wxValidator& validator = wxDefaultValidator,
-           const wxString& name = wxComboBoxNameStr);
+                const wxString& value = wxEmptyString,
+                const wxPoint& pos = wxDefaultPosition,
+                const wxSize& size = wxDefaultSize,
+                int n = 0, const wxString choices[] = (const wxString *) NULL,
+                long style = 0,
+                const wxValidator& validator = wxDefaultValidator,
+                const wxString& name = wxComboBoxNameStr);
     bool Create(wxWindow *parent, wxWindowID id,
-           const wxString& value,
-           const wxPoint& pos,
-           const wxSize& size,
-           const wxArrayString& choices,
-           long style = 0,
-           const wxValidator& validator = wxDefaultValidator,
-           const wxString& name = wxComboBoxNameStr);
+                const wxString& value,
+                const wxPoint& pos,
+                const wxSize& size,
+                const wxArrayString& choices,
+                long style = 0,
+                const wxValidator& validator = wxDefaultValidator,
+                const wxString& name = wxComboBoxNameStr);
 
-    // From wxItemContainerImmutable:
-    virtual unsigned int GetCount() const;
-    virtual wxString GetString(unsigned int n) const;
-    virtual void SetString(unsigned int n, const wxString &text);
-    virtual int FindString(const wxString& s, bool bCase = false) const;
-    virtual void SetSelection(int n);
-    virtual int GetSelection() const;
-    wxString GetStringSelection() const; // not a virtual in parent class
+    // Set/GetSelection() from wxTextEntry and wxChoice
 
-    // From wxItemContainer:
-    virtual void Clear();
-    virtual void Delete(unsigned int n);
+    virtual void SetSelection(int n) { wxChoice::SetSelection(n); }
+    virtual void SetSelection(long from, long to)
+                               { wxTextEntry::SetSelection(from, to); }
 
-    // From wxBomboBoxBase:
-    virtual wxString GetValue() const;
-    virtual void SetValue(const wxString& value);
-    virtual void Copy();
-    virtual void Cut();
-    virtual void Paste();
-    virtual void SetInsertionPoint( long pos );
-    virtual long GetInsertionPoint() const;
-    virtual wxTextPos GetLastPosition() const;
-    virtual void Replace( long from, long to, const wxString& value );
-    virtual void SetSelection( long from, long to );
-    virtual void SetEditable( bool editable );
-    virtual void SetInsertionPointEnd() { SetInsertionPoint( -1 ); }
-    virtual void Remove(long from, long to) { Replace(from, to, wxEmptyString); }
-    virtual bool IsEditable() const;
-    virtual void Undo();
-    virtual void Redo();
-    virtual void SelectAll();
-    virtual bool CanCopy() const;
-    virtual bool CanCut() const;
-    virtual bool CanPaste() const;
-    virtual bool CanUndo() const;
-    virtual bool CanRedo() const;
+    virtual int GetSelection() const { return wxChoice::GetSelection(); }
+    virtual void GetSelection(long *from, long *to) const
+                               { return wxTextEntry::GetSelection(from, to); }
 
-    // implementation
-    bool HasSelection() const;
-    void GetSelection( long* from, long* to ) const;
-    int GetCurrentSelection() const;
+    virtual wxString GetStringSelection() const
+    {
+        return wxItemContainer::GetStringSelection();
+    }
 
-    virtual void SetFocus();
+    virtual void SetString(unsigned int n, const wxString& string);
 
-    void OnSize( wxSizeEvent &event );
+    virtual void Popup();
+    virtual void Dismiss();
+
+    virtual void Clear()
+    {
+        wxTextEntry::Clear();
+        wxItemContainer::Clear();
+    }
+
+    // See wxComboBoxBase discussion of IsEmpty().
+    bool IsListEmpty() const { return wxItemContainer::IsEmpty(); }
+    bool IsTextEmpty() const { return wxTextEntry::IsEmpty(); }
+
     void OnChar( wxKeyEvent &event );
+
+    virtual void SetValue(const wxString& value);
 
     // Standard event handling
     void OnCut(wxCommandEvent& event);
@@ -125,42 +125,40 @@ public:
     void OnUpdateDelete(wxUpdateUIEvent& event);
     void OnUpdateSelectAll(wxUpdateUIEvent& event);
 
-    bool     m_ignoreNextUpdate:1;
-    wxList   m_clientDataList;
-    wxList   m_clientObjectList;
-    int      m_prevSelection;
-
-    void DisableEvents();
-    void EnableEvents();
+    virtual void GTKDisableEvents();
+    virtual void GTKEnableEvents();
     GtkWidget* GetConnectWidget();
-
-    wxCONTROL_ITEMCONTAINER_CLIENTDATAOBJECT_RECAST
 
     static wxVisualAttributes
     GetClassDefaultAttributes(wxWindowVariant variant = wxWINDOW_VARIANT_NORMAL);
 
 protected:
     // From wxWindowGTK:
-    virtual void DoApplyWidgetStyle(GtkRcStyle *style);
     virtual GdkWindow *GTKGetWindow(wxArrayGdkWindows& windows) const;
-
-    // From wxItemContainer:
-    virtual int DoAppend(const wxString& item);
-    virtual int DoInsert(const wxString& item, unsigned int pos);
-
-    virtual void DoSetItemClientData(unsigned int n, void* clientData);
-    virtual void* DoGetItemClientData(unsigned int n) const;
-    virtual void DoSetItemClientObject(unsigned int n, wxClientData* clientData);
-    virtual wxClientData* DoGetItemClientObject(unsigned int n) const;
-
-    // From wxControl:
-    virtual wxSize DoGetBestSize() const;
 
     // Widgets that use the style->base colour for the BG colour should
     // override this and return true.
     virtual bool UseGTKStyleBase() const { return true; }
 
+    // Override in derived classes to create combo box widgets with
+    // custom list stores.
+    virtual void GTKCreateComboBoxWidget();
+
+    virtual wxSize DoGetSizeFromTextSize(int xlen, int ylen = -1) const;
+
+    virtual GtkEntry *GetEntry() const
+        { return m_entry; }
+
+    GtkEntry*   m_entry;
+
 private:
+    // From wxTextEntry:
+    virtual wxWindow *GetEditableWindow() { return this; }
+    virtual GtkEditable *GetEditable() const;
+    virtual void EnableTextChangedEvents(bool enable);
+
+    void Init();
+
     DECLARE_DYNAMIC_CLASS_NO_COPY(wxComboBox)
     DECLARE_EVENT_TABLE()
 };

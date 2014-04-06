@@ -1,11 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        src/cocoa/utils.cpp
+// Name:        src/cocoa/utils.mm
 // Purpose:     Various utilities
-// Author:      AUTHOR
-// Modified by:
+// Author:      David Elliott
 // Created:     2003/??/??
-// RCS-ID:      $Id: utils.mm 48184 2007-08-19 19:22:09Z DE $
-// Copyright:   (c) AUTHOR
+// Copyright:   (c) wxWidgets dev team
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
@@ -19,6 +17,8 @@
 
 #include "wx/apptrait.h"
 #include "wx/display.h"
+#include "wx/evtloop.h"
+#include "wx/cocoa/private/timer.h"
 
 #include <ctype.h>
 
@@ -67,6 +67,16 @@ wxPortId wxGUIAppTraits::GetToolkitVersion(int *verMaj, int *verMin) const
     return wxPORT_COCOA;
 }
 
+wxTimerImpl* wxGUIAppTraits::CreateTimerImpl(wxTimer* timer)
+{
+    return new wxCocoaTimerImpl(timer);
+}
+
+wxEventLoopBase* wxGUIAppTraits::CreateEventLoop()
+{
+    return new wxGUIEventLoop;
+}
+
 wxWindow* wxFindWindowAtPoint(const wxPoint& pt)
 {
     return wxGenericFindWindowAtPoint(pt);
@@ -97,27 +107,12 @@ void wxBell()
     // TODO
 }
 
-#include "wx/private/browserhack28.h"
-
 // Private helper method for wxLaunchDefaultBrowser
-static bool wxCocoaLaunchDefaultBrowser(const wxString& url, int flags)
+bool wxDoLaunchDefaultBrowser(const wxString& url, int flags)
 {
     // NOTE: We ignore the flags
     return [[NSWorkspace sharedWorkspace] openURL: [NSURL URLWithString:wxNSStringWithWxString(url)]] != NO;
 }
-
-// For this to work the linker (particularly the static one) must link in this object file and the C++
-// runtime must call the static initializer.  It is basically guaranteed that the linker won't throw us
-// away because some of the wxGUIAppTraits virtual methods are implemented in this file.
-static class DoFixLaunchDefaultBrowser
-{
-public:
-    DoFixLaunchDefaultBrowser()
-    {
-        // Tell the base library we can launch a default browser better.
-        wxSetLaunchDefaultBrowserImpl(&wxCocoaLaunchDefaultBrowser);
-    }
-} s_launchDefaultBrowserFixer;
 
 #if 0
 // DFE: These aren't even implemented by wxGTK, and no wxWidgets code calls
@@ -138,77 +133,3 @@ bool wxCheckForInterrupt(wxWindow *wnd)
 
 #endif
 
-// Reading and writing resources (eg WIN.INI, .Xdefaults)
-#if wxUSE_RESOURCES
-bool wxWriteResource(const wxString& section, const wxString& entry, const wxString& value, const wxString& file)
-{
-    // TODO
-    return false;
-}
-
-bool wxWriteResource(const wxString& section, const wxString& entry, float value, const wxString& file)
-{
-    char buf[50];
-    sprintf(buf, "%.4f", value);
-    return wxWriteResource(section, entry, buf, file);
-}
-
-bool wxWriteResource(const wxString& section, const wxString& entry, long value, const wxString& file)
-{
-    char buf[50];
-    sprintf(buf, "%ld", value);
-    return wxWriteResource(section, entry, buf, file);
-}
-
-bool wxWriteResource(const wxString& section, const wxString& entry, int value, const wxString& file)
-{
-    char buf[50];
-    sprintf(buf, "%d", value);
-    return wxWriteResource(section, entry, buf, file);
-}
-
-bool wxGetResource(const wxString& section, const wxString& entry, char **value, const wxString& file)
-{
-    // TODO
-    return false;
-}
-
-bool wxGetResource(const wxString& section, const wxString& entry, float *value, const wxString& file)
-{
-    char *s = NULL;
-    bool succ = wxGetResource(section, entry, (char **)&s, file);
-    if (succ)
-    {
-        *value = (float)strtod(s, NULL);
-        delete[] s;
-        return true;
-    }
-    else return false;
-}
-
-bool wxGetResource(const wxString& section, const wxString& entry, long *value, const wxString& file)
-{
-    char *s = NULL;
-    bool succ = wxGetResource(section, entry, (char **)&s, file);
-    if (succ)
-    {
-        *value = strtol(s, NULL, 10);
-        delete[] s;
-        return true;
-    }
-    else return false;
-}
-
-bool wxGetResource(const wxString& section, const wxString& entry, int *value, const wxString& file)
-{
-    char *s = NULL;
-    bool succ = wxGetResource(section, entry, (char **)&s, file);
-    if (succ)
-    {
-        *value = (int)strtol(s, NULL, 10);
-        delete[] s;
-        return true;
-    }
-    else return false;
-}
-#endif // wxUSE_RESOURCES

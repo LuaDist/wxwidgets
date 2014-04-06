@@ -4,20 +4,18 @@
 // Author:      Guilhem Lavaux
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: joystick.h 42077 2006-10-17 14:44:52Z ABX $
 // Copyright:   (c) Guilhem Lavaux
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
-#ifndef __JOYSTICKH__
-#define __JOYSTICKH__
+#ifndef _WX_UNIX_JOYSTICK_H_
+#define _WX_UNIX_JOYSTICK_H_
 
 #include "wx/event.h"
-#include "wx/thread.h"
 
-class WXDLLEXPORT wxJoystickThread;
+class WXDLLIMPEXP_FWD_CORE wxJoystickThread;
 
-class WXDLLEXPORT wxJoystick: public wxObject
+class WXDLLIMPEXP_ADV wxJoystick: public wxObject
 {
     DECLARE_DYNAMIC_CLASS(wxJoystick)
         public:
@@ -32,6 +30,8 @@ class WXDLLEXPORT wxJoystick: public wxObject
     ////////////////////////////////////////////////////////////////////////////
 
     wxPoint GetPosition() const;
+    int GetPosition(unsigned axis) const;
+    bool GetButtonState(unsigned button) const;
     int GetZPosition() const;
     int GetButtonState() const;
     int GetPOVPosition() const;
@@ -91,5 +91,4 @@ protected:
     wxJoystickThread*   m_thread;
 };
 
-#endif
-    // __JOYSTICKH__
+#endif // _WX_UNIX_JOYSTICK_H_

@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     11.11.97
-// RCS-ID:      $Id: menuitem.h 48053 2007-08-13 17:07:01Z JS $
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -17,12 +16,14 @@
 // ----------------------------------------------------------------------------
 
 #include "wx/defs.h"
+#include "wx/os2/private.h"     // for MENUITEM
 
 // an exception to the general rule that a normal header doesn't include other
 // headers - only because ownerdrw.h is not always included and I don't want
 // to write #ifdef's everywhere...
 #if wxUSE_OWNER_DRAWN
-    #include  "wx/ownerdrw.h"
+    #include "wx/ownerdrw.h"
+    #include "wx/bitmap.h"
 #endif
 
 // ----------------------------------------------------------------------------
@@ -32,7 +33,7 @@
 // ----------------------------------------------------------------------------
 // wxMenuItem: an item in the menu, optionally implements owner-drawn behaviour
 // ----------------------------------------------------------------------------
-class WXDLLEXPORT wxMenuItem: public wxMenuItemBase
+class WXDLLIMPEXP_CORE wxMenuItem: public wxMenuItemBase
 #if wxUSE_OWNER_DRAWN
                             , public wxOwnerDrawn
 #endif
@@ -57,15 +58,14 @@ public:
                ,const wxString& rsText
                ,const wxString& rsHelp
                ,bool            bIsCheckable
-               ,wxMenu*         pSubMenu = (wxMenu *)NULL
+               ,wxMenu*         pSubMenu = NULL
               );
     virtual ~wxMenuItem();
 
     //
     // Override base class virtuals
     //
-    virtual void SetText(const wxString& rStrName);
-    virtual void SetCheckable(bool bCheckable);
+    virtual void SetItemLabel(const wxString& rStrName);
 
     virtual void Enable(bool bDoEnable = true);
     virtual void Check(bool bDoCheck = true);
@@ -96,6 +96,48 @@ public:
     //
     MENUITEM                        m_vMenuData;
 
+#if wxUSE_OWNER_DRAWN
+
+    void SetBitmaps(const wxBitmap& bmpChecked,
+                    const wxBitmap& bmpUnchecked = wxNullBitmap)
+    {
+        m_bmpChecked = bmpChecked;
+        m_bmpUnchecked = bmpUnchecked;
+        SetOwnerDrawn(true);
+    }
+
+    void SetBitmap(const wxBitmap& bmp, bool bChecked = true)
+    {
+        if ( bChecked )
+            m_bmpChecked = bmp;
+        else
+            m_bmpUnchecked = bmp;
+        SetOwnerDrawn(true);
+    }
+
+    void SetDisabledBitmap(const wxBitmap& bmpDisabled)
+    {
+        m_bmpDisabled = bmpDisabled;
+        SetOwnerDrawn(true);
+    }
+
+    const wxBitmap& GetBitmap(bool bChecked = true) const
+        { return (bChecked ? m_bmpChecked : m_bmpUnchecked); }
+
+    const wxBitmap& GetDisabledBitmap() const
+        { return m_bmpDisabled; }
+
+
+    // override wxOwnerDrawn base class virtuals
+    virtual wxString GetName() const;
+    virtual bool OnMeasureItem(size_t *pwidth, size_t *pheight);
+    virtual bool OnDrawItem(wxDC& dc, const wxRect& rc, wxODAction act, wxODStatus stat);
+
+protected:
+    virtual void GetFontToUse(wxFont& font) const;
+
+#endif // wxUSE_OWNER_DRAWN
+
 private:
     void Init();
 
@@ -116,16 +158,14 @@ private:
     //
     bool                            m_bIsRadioGroupStart;
 
+#if wxUSE_OWNER_DRAWN
+    // item bitmaps
+    wxBitmap m_bmpChecked,     // bitmap to put near the item
+             m_bmpUnchecked,   // (checked is used also for 'uncheckable' items)
+             m_bmpDisabled;
+#endif // wxUSE_OWNER_DRAWN
+
     DECLARE_DYNAMIC_CLASS(wxMenuItem)
-
-public:
-
-#if wxABI_VERSION >= 20805
-    // return the item label including any mnemonics and accelerators.
-    // This used to be called GetText.
-    wxString GetItemLabel() const { return GetText(); }
-#endif
-
 }; // end of CLASS wxMenuItem
 
 #endif  //_MENUITEM_H

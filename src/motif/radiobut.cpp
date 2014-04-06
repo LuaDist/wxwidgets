@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: radiobut.cpp 50982 2008-01-01 20:38:33Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -32,8 +31,6 @@
 void wxRadioButtonCallback (Widget w, XtPointer clientData,
                             XmToggleButtonCallbackStruct * cbs);
 
-IMPLEMENT_DYNAMIC_CLASS(wxRadioButton, wxControl)
-
 wxRadioButton::wxRadioButton()
 {
 }
@@ -47,6 +44,7 @@ bool wxRadioButton::Create(wxWindow *parent, wxWindowID id,
 {
     if( !CreateControl( parent, id, pos, size, style, validator, name ) )
         return false;
+    PreCreation();
 
     Widget parentWidget = (Widget) parent->GetClientWidget();
     Display* dpy = XtDisplay(parentWidget);
@@ -76,10 +74,9 @@ bool wxRadioButton::Create(wxWindow *parent, wxWindowID id,
 
     XtManageChild (radioButtonWidget);
 
+    PostCreation();
     AttachWidget (parent, m_mainWidget, (WXWidget) NULL,
                   pos.x, pos.y, size.x, size.y);
-
-    ChangeBackgroundColour();
 
     //copied from mac/radiobut.cpp (from here till "return true;")
     m_cycle = this ;
@@ -91,7 +88,7 @@ bool wxRadioButton::Create(wxWindow *parent, wxWindowID id,
     else
     {
         /* search backward for last group start */
-        wxRadioButton *chief = (wxRadioButton*) NULL;
+        wxRadioButton *chief = NULL;
         wxWindowList::compatibility_iterator node = parent->GetChildren().GetLast();
         while (node)
         {
@@ -161,13 +158,13 @@ void wxRadioButtonCallback (Widget WXUNUSED(w), XtPointer clientData,
 
     if ( old )
     {
-        wxCommandEvent event(wxEVT_COMMAND_RADIOBUTTON_SELECTED,
+        wxCommandEvent event(wxEVT_RADIOBUTTON,
                              old->GetId() );
         event.SetEventObject(old);
         event.SetInt( false );
         old->ProcessCommand(event);
     }
-    wxCommandEvent event2(wxEVT_COMMAND_RADIOBUTTON_SELECTED, item->GetId() );
+    wxCommandEvent event2(wxEVT_RADIOBUTTON, item->GetId() );
     event2.SetEventObject(item);
     event2.SetInt( true );
     item->ProcessCommand(event2);

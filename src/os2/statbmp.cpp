@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     11/27/99
-// RCS-ID:      $Id: statbmp.cpp 39085 2006-05-06 21:51:49Z ABX $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -28,8 +27,6 @@
 // macros
 // ---------------------------------------------------------------------------
 
-IMPLEMENT_DYNAMIC_CLASS(wxStaticBitmap, wxControl)
-
 BEGIN_EVENT_TABLE(wxStaticBitmap, wxWindow)
     EVT_PAINT(wxStaticBitmap::OnPaint)
 END_EVENT_TABLE()
@@ -43,7 +40,7 @@ static wxGDIImage* ConvertImage(
     if(!bIsIcon )
     {
         wxASSERT_MSG( wxDynamicCast(&rBitmap, wxBitmap),
-                      _T("not an icon and not a bitmap?") );
+                      wxT("not an icon and not a bitmap?") );
 
         const wxBitmap&             rBmp = (const wxBitmap&)rBitmap;
         wxMask*                     pMask = rBmp.GetMask();
@@ -136,14 +133,12 @@ bool wxStaticBitmap::Create( wxWindow*         pParent,
 
 bool wxStaticBitmap::ImageIsOk() const
 {
-    return(m_pImage && m_pImage->Ok());
+    return(m_pImage && m_pImage->IsOk());
 }
 
 void wxStaticBitmap::Free()
 {
-    if (m_pImage)
-        delete m_pImage;
-    m_pImage = NULL;
+    wxDELETE(m_pImage);
 } // end of wxStaticBitmap::Free
 
 wxSize wxStaticBitmap::DoGetBestSize() const

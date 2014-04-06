@@ -3,7 +3,6 @@
 // Purpose:     wxSystemSettings implementation
 // Author:      Vaclav Slavik
 // Created:     2006-08-08
-// RCS-ID:      $Id: settings.cpp 40999 2006-09-04 15:23:06Z VS $
 // Copyright:   (c) 2006 REA Elektronik GmbH
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -58,7 +57,7 @@ wxFont wxSystemSettingsNative::GetFont(wxSystemFont index)
         }
 
         default:
-            wxFAIL_MSG( _T("unknown font type") );
+            wxFAIL_MSG( "unknown font type" );
             return wxNullFont;
     }
 }
@@ -77,15 +76,7 @@ int wxSystemSettingsNative::GetMetric(wxSystemMetric index,
             wxDisplaySize(NULL, &val);
             return val;
 
-#warning "FIXME this"
-#if 0
-        case wxSYS_VSCROLL_X:
-        case wxSYS_HSCROLL_Y:
-            return 15;
-#endif
-
         default:
-            wxFAIL_MSG( _T("unsupported metric") );
             return -1;
     }
 }
@@ -100,7 +91,7 @@ bool wxSystemSettingsNative::HasFeature(wxSystemFeature index)
             return false;
 
         default:
-            wxFAIL_MSG( _T("unknown feature") );
+            wxFAIL_MSG( "unknown feature" );
             return false;
     }
 }

@@ -3,7 +3,6 @@
 // Purpose:     wxSpinButton
 // Author:      Robert
 // Modified by:
-// RCS-ID:      $Id: spinbutt.cpp 39745 2006-06-15 17:58:49Z ABX $
 // Copyright:   (c) Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -66,7 +65,7 @@ static void gtk_spinbutt_callback( GtkWidget *WXUNUSED(widget), wxSpinButton *wi
     event.SetPosition( value );
     event.SetEventObject( win );
 
-    if ((win->GetEventHandler()->ProcessEvent( event )) &&
+    if ((win->HandleWindowEvent( event )) &&
         !event.IsAllowed() )
     {
         /* program has vetoed */
@@ -94,7 +93,7 @@ static void gtk_spinbutt_callback( GtkWidget *WXUNUSED(widget), wxSpinButton *wi
         wxSpinEvent event2( command, win->GetId());
         event2.SetPosition( value );
         event2.SetEventObject( win );
-        win->GetEventHandler()->ProcessEvent( event2 );
+        win->HandleWindowEvent( event2 );
     }
 }
 }
@@ -102,9 +101,6 @@ static void gtk_spinbutt_callback( GtkWidget *WXUNUSED(widget), wxSpinButton *wi
 //-----------------------------------------------------------------------------
 // wxSpinButton
 //-----------------------------------------------------------------------------
-
-IMPLEMENT_DYNAMIC_CLASS(wxSpinButton,wxControl)
-IMPLEMENT_DYNAMIC_CLASS(wxSpinEvent, wxNotifyEvent)
 
 BEGIN_EVENT_TABLE(wxSpinButton, wxControl)
     EVT_SIZE(wxSpinButton::OnSize)

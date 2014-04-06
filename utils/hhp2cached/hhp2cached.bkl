@@ -1,9 +1,8 @@
 <?xml version="1.0" ?>
-<!-- $Id: hhp2cached.bkl 31103 2004-12-21 17:20:47Z ABX $ -->
 
 <makefile>
 
-    <include file="../../../build/bakefiles/common_samples.bkl"/>
+    <include file="../../build/bakefiles/common_samples.bkl"/>
 
     <exe id="hhp2cached" template="wx_util" template_append="wx_append">
         <sources>

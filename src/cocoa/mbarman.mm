@@ -1,12 +1,11 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        cocoa/mbarman.cpp
+// Name:        src/cocoa/mbarman.mm
 // Purpose:     wxMenuBarManager implementation
 // Author:      David Elliott
 // Modified by:
 // Created:     2003/09/04
-// RCS-ID:      $Id: mbarman.mm 49241 2007-10-19 05:39:18Z DE $
 // Copyright:   (c) 2003 David Elliott
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #include "wx/wxprec.h"
@@ -27,6 +26,14 @@
 #import <AppKit/NSMenu.h>
 #import <AppKit/NSApplication.h>
 #import <AppKit/NSWindow.h>
+
+#ifndef wxUSE_FSCRIPT
+#define wxUSE_FSCRIPT 0
+#endif
+
+#if wxUSE_FSCRIPT
+    #import <FScript/FScriptMenuItem.h>
+#endif
 
 // Declare setAppleMenu: in an NSApplication category since Tiger and later
 // releases support it but don't declare it as it's considered deprecated.
@@ -109,6 +116,17 @@ WX_IMPLEMENT_GET_OBJC_CLASS(wxMenuBarManagerObserver,NSObject)
 // ============================================================================
 wxMenuBarManager *wxMenuBarManager::sm_mbarmanInstance = NULL;
 
+static void AddFScriptItem(NSMenu *menu)
+#if wxUSE_FSCRIPT
+{
+    NSMenuItem *item = [[FScriptMenuItem alloc] init];
+    [menu addItem: item];
+    [item release];
+}
+#else
+{}
+#endif
+
 wxMenuBarManager::wxMenuBarManager()
 {
     m_observer = [[WX_GET_OBJC_CLASS(wxMenuBarManagerObserver) alloc]
@@ -155,6 +173,7 @@ wxMenuBarManager::wxMenuBarManager()
 
 /**/[m_menuApp addItemWithTitle:@"Preferences..." action:nil keyEquivalent:@""];
 /**/[m_menuApp addItem: [NSMenuItem separatorItem]];
+/**/AddFScriptItem(m_menuApp);
 /**/menuitem = [[NSMenuItem alloc] initWithTitle: @"Services" action:nil keyEquivalent:@""];
     [menuitem setSubmenu:m_menuServices];
     [m_menuApp addItem: menuitem];

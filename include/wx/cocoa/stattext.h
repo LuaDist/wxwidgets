@@ -4,7 +4,6 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2003/02/15
-// RCS-ID:      $Id: stattext.h 47907 2007-08-06 14:55:00Z DE $
 // Copyright:   (c) 2003 David Elliott
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -17,7 +16,7 @@
 // ========================================================================
 // wxStaticText
 // ========================================================================
-class WXDLLEXPORT wxStaticText : public wxStaticTextBase, protected wxCocoaNSTextField
+class WXDLLIMPEXP_CORE wxStaticText : public wxStaticTextBase, protected wxCocoaNSTextField
 {
     DECLARE_DYNAMIC_CLASS(wxStaticText)
     DECLARE_EVENT_TABLE()

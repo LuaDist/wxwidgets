@@ -3,7 +3,6 @@
 // Purpose:     XRC resource for buttons
 // Author:      Vaclav Slavik
 // Created:     2000/03/05
-// RCS-ID:      $Id: xh_bttn.cpp 41590 2006-10-03 14:53:40Z VZ $
 // Copyright:   (c) 2000 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -50,6 +49,13 @@ wxObject *wxButtonXmlHandler::DoCreateResource()
 
     if (GetBool(wxT("default"), 0))
         button->SetDefault();
+
+    if ( GetParamNode("bitmap") )
+    {
+        button->SetBitmap(GetBitmap("bitmap", wxART_BUTTON),
+                          GetDirection("bitmapposition"));
+    }
+
     SetupWindow(button);
 
     return button;

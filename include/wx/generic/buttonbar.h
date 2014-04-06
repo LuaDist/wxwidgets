@@ -4,9 +4,8 @@
 // Author:      Julian Smart, after Robert Roebling, Vadim Zeitlin, SciTech
 // Modified by:
 // Created:     2006-04-13
-// Id:          $Id: buttonbar.h 38714 2006-04-14 15:49:57Z JS $
 // Copyright:   (c) Julian Smart, Robert Roebling, Vadim Zeitlin,
-//              SciTech Software, Inc. 
+//              SciTech Software, Inc.
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -16,14 +15,14 @@
 #include "wx/bmpbuttn.h"
 #include "wx/toolbar.h"
 
-class WXDLLEXPORT wxButtonToolBarTool;
+class WXDLLIMPEXP_FWD_CORE wxButtonToolBarTool;
 
 // ----------------------------------------------------------------------------
 // wxButtonToolBar
 // ----------------------------------------------------------------------------
 
-class WXDLLEXPORT wxButtonToolBar : public wxToolBarBase
-{    
+class WXDLLIMPEXP_CORE wxButtonToolBar : public wxToolBarBase
+{
 public:
     // construction/destruction
     wxButtonToolBar() { Init(); }
@@ -45,7 +44,7 @@ public:
                  const wxSize& size = wxDefaultSize,
                  long style = 0,
                  const wxString& name = wxToolBarNameStr );
-                 
+
     virtual ~wxButtonToolBar();
 
     virtual bool Realize();
@@ -73,7 +72,8 @@ protected:
                                           wxObject *clientData,
                                           const wxString& shortHelp,
                                           const wxString& longHelp);
-    virtual wxToolBarToolBase *CreateTool(wxControl *control);
+    virtual wxToolBarToolBase *CreateTool(wxControl *control,
+                                          const wxString& label);
 
     virtual wxSize DoGetBestClientSize() const;
 

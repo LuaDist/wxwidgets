@@ -4,7 +4,6 @@
 // Author:      P. Foggia 1996
 // Modified by: Wlodzimierz Skiba (ABX) since 2003
 // Created:     1996
-// RCS-ID:      $Id: bombs1.cpp 35650 2005-09-23 12:56:45Z MR $
 // Copyright:   (c) 1996 P. Foggia
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -32,7 +31,7 @@
 void BombsCanvas::DrawField(wxDC *dc, int xc1, int yc1, int xc2, int yc2)
 {
     wxString buf;
-    long chw, chh;
+    wxCoord chw, chh;
 
     wxColour wxYellow  = wxTheColourDatabase->Find(wxT("YELLOW"));
     wxColour wxFocused = wxTheColourDatabase->Find(wxT("GREY"));
@@ -131,7 +130,7 @@ void BombsCanvas::DrawField(wxDC *dc, int xc1, int yc1, int xc2, int yc2)
                     dc->SetBrush(*focusedBrush);
                 else if (m_game->IsSelected(x,y))
                     dc->SetBrush(*wxWHITE_BRUSH);
-                else 
+                else
                     dc->SetBrush(*yellowBrush);
                 dc->DrawRectangle( x*m_cellWidth*X_UNIT, y*m_cellHeight*Y_UNIT,
                     m_cellWidth*X_UNIT+1, m_cellHeight*Y_UNIT+1);
@@ -163,7 +162,7 @@ void BombsCanvas::DrawField(wxDC *dc, int xc1, int yc1, int xc2, int yc2)
 
     wxString msg;
     msg.Printf(wxT("%d bombs, %u marked, %d remaining cells"),
-               m_game->GetNumBombs(), m_game->GetNumMarkedCells(), 
+               m_game->GetNumBombs(), m_game->GetNumMarkedCells(),
                m_game->GetNumRemainingCells() );
 
 #if wxUSE_LOG && wxUSE_STATUSBAR

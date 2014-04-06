@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: icon.cpp 35844 2005-10-08 17:10:10Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -30,13 +29,15 @@ wxIcon::wxIcon(const char bits[], int width, int height)
     (void) Create((void*) bits, wxBITMAP_TYPE_XBM_DATA, width, height, 1);
 }
 
+#ifdef wxNEEDS_CHARPP
 // Create from XPM data
 wxIcon::wxIcon(char **data)
 {
     (void) Create((void*) data, wxBITMAP_TYPE_XPM_DATA, 0, 0, 0);
 }
+#endif
 
-wxIcon::wxIcon(const char **data)
+wxIcon::wxIcon(const char* const* data)
 {
     (void) Create((void*) data, wxBITMAP_TYPE_XPM_DATA, 0, 0, 0);
 }

@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: settings.cpp 67019 2011-02-25 10:31:24Z JS $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -107,7 +106,6 @@ wxColour wxSystemSettingsNative::GetColour(wxSystemColour index)
     }
     case wxSYS_COLOUR_MENUTEXT:
     case wxSYS_COLOUR_WINDOWTEXT:
-    case wxSYS_COLOUR_LISTBOXTEXT:
     case wxSYS_COLOUR_CAPTIONTEXT:
     case wxSYS_COLOUR_INACTIVECAPTIONTEXT:
     case wxSYS_COLOUR_BTNTEXT:
@@ -161,7 +159,7 @@ wxColour wxSystemSettingsNative::GetColour(wxSystemColour index)
 
     default:
     case wxSYS_COLOUR_MAX:
-        wxFAIL_MSG( _T("unknown colour") );
+        wxFAIL_MSG( wxT("unknown colour") );
   }
   return *wxWHITE;
 }

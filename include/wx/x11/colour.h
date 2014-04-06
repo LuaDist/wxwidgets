@@ -4,7 +4,6 @@
 // Author:      Julian Smart, Robert Roebling
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: colour.h 41751 2006-10-08 21:56:55Z VZ $
 // Copyright:   (c) Julian Smart, Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -22,33 +21,28 @@
 // classes
 //-----------------------------------------------------------------------------
 
-class WXDLLIMPEXP_CORE wxDC;
-class WXDLLIMPEXP_CORE wxPaintDC;
-class WXDLLIMPEXP_CORE wxBitmap;
-class WXDLLIMPEXP_CORE wxWindow;
+class WXDLLIMPEXP_FWD_CORE wxDC;
+class WXDLLIMPEXP_FWD_CORE wxPaintDC;
+class WXDLLIMPEXP_FWD_CORE wxBitmap;
+class WXDLLIMPEXP_FWD_CORE wxWindow;
 
-class WXDLLIMPEXP_CORE wxColour;
+class WXDLLIMPEXP_FWD_CORE wxColour;
 
 //-----------------------------------------------------------------------------
 // wxColour
 //-----------------------------------------------------------------------------
 
-class WXDLLEXPORT wxColour : public wxColourBase
+class WXDLLIMPEXP_CORE wxColour : public wxColourBase
 {
 public:
     // constructors
     // ------------
-
-    wxColour() {}
     DEFINE_STD_WXCOLOUR_CONSTRUCTORS
 
     virtual ~wxColour();
 
-    bool Ok() const { return IsOk(); }
-    bool IsOk() const { return m_refData != NULL; }
-
-    bool operator == ( const wxColour& col ) const;
-    bool operator != ( const wxColour& col ) const { return !(*this == col); }
+    bool operator==(const wxColour& col) const;
+    bool operator!=(const wxColour& col) const { return !(*this == col); }
 
     unsigned char Red() const;
     unsigned char Green() const;
@@ -61,19 +55,16 @@ public:
     WXColor *GetColor() const;
 
 protected:
-    // ref counting code
-    virtual wxObjectRefData *CreateRefData() const;
-    virtual wxObjectRefData *CloneRefData(const wxObjectRefData *data) const;
+    virtual wxGDIRefData *CreateGDIRefData() const;
+    virtual wxGDIRefData *CloneGDIRefData(const wxGDIRefData *data) const;
 
     virtual void
     InitRGBA(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 
-    virtual bool FromString(const wxChar *str);
+    virtual bool FromString(const wxString& str);
 
 private:
     DECLARE_DYNAMIC_CLASS(wxColour)
 };
 
-#endif
-
-// _WX_COLOUR_H_
+#endif // _WX_COLOUR_H_

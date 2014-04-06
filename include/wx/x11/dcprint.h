@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: dcprint.h 42077 2006-10-17 14:44:52Z ABX $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -14,13 +13,13 @@
 
 #include "wx/dc.h"
 
-class WXDLLEXPORT wxPrinterDC: public wxDC
+class WXDLLIMPEXP_CORE wxPrinterDC: public wxDC
 {
 public:
     DECLARE_CLASS(wxPrinterDC)
 
     // Create a printer DC
-    wxPrinterDC(const wxString& driver, const wxString& device, const wxString& output, bool interactive = TRUE, int orientation = wxPORTRAIT);
+    wxPrinterDC(const wxString& driver, const wxString& device, const wxString& output, bool interactive = TRUE, wxPrintOrientation orientation = wxPORTRAIT);
 
     virtual ~wxPrinterDC();
 };

@@ -3,7 +3,6 @@
  * Purpose: PNG file reader
  * Author:  Alejandro Aguilar Sierra/Julian Smart
  * Created: 1995
- * RCS-ID:  $Id: pngread.h 42077 2006-10-17 14:44:52Z ABX $
  * Copyright: (c) 1995, Alejandro Aguilar Sierra <asierra@servidor.unam.mx>
  *
  *
@@ -62,10 +61,10 @@ public:
   bool ReadFile( wxChar* ImageFileName=0 );
   bool SaveFile( wxChar* ImageFileName=0 );
   bool SaveXPM(wxChar *filename, wxChar *name = 0);
-  int  GetWidth( void ) const { return Width; };
-  int  GetHeight( void ) const { return Height; };
-  int  GetDepth( void ) const { return Depth; };
-  int  GetColorType( void ) const { return ColorType; };
+  int  GetWidth( void ) const { return Width; }
+  int  GetHeight( void ) const { return Height; }
+  int  GetDepth( void ) const { return Depth; }
+  int  GetColorType( void ) const { return ColorType; }
 
   int  GetIndex(int x, int y);
   bool GetRGB(int x, int y, byte* r, byte* g, byte* b);

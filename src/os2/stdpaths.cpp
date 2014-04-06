@@ -1,12 +1,11 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Name:        unix/stdpaths.cpp
+// Name:        src/os2/stdpaths.cpp
 // Purpose:     wxStandardPaths implementation for OS/2 systems
 // Author:      Stefan Neis
 // Modified by:
 // Created:     2004-11-06
-// RCS-ID:      $Id: stdpaths.cpp 32649 2005-03-07 22:37:58Z VZ $
 // Copyright:   (c) 2004 Stefan Neis <Stefan.Neis@t-online.de>
-// License:     wxWindows license
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -54,9 +53,9 @@ wxString wxStandardPaths::GetInstallPrefix() const
 {
     if ( m_prefix.empty() )
     {
-        wxStandardPaths *self = wx_const_cast(wxStandardPaths *, this);
+        wxStandardPaths *self = const_cast<wxStandardPaths *>(this);
 
-        self->m_prefix = _T("/usr/local");
+        self->m_prefix = wxT("/usr/local");
     }
     return m_prefix;
 }
@@ -77,12 +76,12 @@ wxString wxStandardPaths::GetUserConfigDir() const
 
 wxString wxStandardPaths::GetDataDir() const
 {
-    return GetInstallPrefix() + _T("\\data");
+    return GetInstallPrefix() + wxT("\\data");
 }
 
 wxString wxStandardPaths::GetUserDataDir() const
 {
-    return AppendAppName(wxFileName::GetHomeDir() + _T("\\."));
+    return AppendAppInfo(wxFileName::GetHomeDir() + wxT("\\."));
 }
 
 wxString wxStandardPaths::GetPluginsDir() const

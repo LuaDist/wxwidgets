@@ -4,9 +4,8 @@
 // Author:      Francesco Montorsi
 // Modified by:
 // Created:     14/10/06
-// RCS-ID:      $Id: collpane.cpp 42759 2006-10-30 20:08:17Z VZ $
 // Copyright:   (c) Francesco Montorsi
-// Licence:     wxWindows license
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -44,6 +43,10 @@
 #include "wx/fontpicker.h"
 #include "wx/aboutdlg.h"
 
+#ifndef wxHAS_IMAGES_IN_RESOURCES
+    #include "../sample.xpm"
+#endif
+
 // ----------------------------------------------------------------------------
 // constants
 // ----------------------------------------------------------------------------
@@ -51,12 +54,15 @@
 // ID for the menu commands
 enum
 {
-    PANE_COLLAPSE,
+    PANE_COLLAPSE = 100,
     PANE_EXPAND,
     PANE_SETLABEL,
     PANE_SHOWDLG,
     PANE_ABOUT = wxID_ABOUT,
-    PANE_QUIT = wxID_EXIT
+    PANE_QUIT = wxID_EXIT,
+
+    PANE_BUTTON,
+    PANE_TEXTCTRL
 };
 
 
@@ -71,7 +77,7 @@ public:
 
     virtual bool OnInit();
 
-    DECLARE_NO_COPY_CLASS(MyApp)
+    wxDECLARE_NO_COPY_CLASS(MyApp);
 };
 
 class MyFrame: public wxFrame
@@ -88,14 +94,16 @@ public:
     void Quit(wxCommandEvent& event);
     void OnAbout(wxCommandEvent& event);
 
-    // Menu command update functions
-    void UpdateUI(wxUpdateUIEvent& event);
+    // UI update handlers
+    void OnCollapseUpdateUI(wxUpdateUIEvent& event);
+    void OnExpandUpdateUI(wxUpdateUIEvent& event);
 
 private:
     wxCollapsiblePane *m_collPane;
+    wxBoxSizer *m_paneSizer;
 
     DECLARE_EVENT_TABLE()
-    DECLARE_NO_COPY_CLASS(MyFrame)
+    wxDECLARE_NO_COPY_CLASS(MyFrame);
 };
 
 class MyDialog : public wxDialog
@@ -103,13 +111,15 @@ class MyDialog : public wxDialog
 public:
     MyDialog(wxFrame *parent);
     void OnToggleStatus(wxCommandEvent& WXUNUSED(ev));
+    void OnAlignButton(wxCommandEvent& WXUNUSED(ev));
     void OnPaneChanged(wxCollapsiblePaneEvent& event);
 
 private:
     wxCollapsiblePane *m_collPane;
+    wxGridSizer *m_paneSizer;
 
     DECLARE_EVENT_TABLE()
-    DECLARE_NO_COPY_CLASS(MyDialog)
+    wxDECLARE_NO_COPY_CLASS(MyDialog);
 };
 
 
@@ -126,6 +136,9 @@ IMPLEMENT_APP(MyApp)
 
 bool MyApp::OnInit()
 {
+    if ( !wxApp::OnInit() )
+        return false;
+
     // create and show the main frame
     MyFrame* frame = new MyFrame;
 
@@ -146,27 +159,30 @@ BEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_MENU(PANE_ABOUT, MyFrame::OnAbout)
     EVT_MENU(PANE_QUIT, MyFrame::Quit)
 
-    EVT_UPDATE_UI(wxID_ANY, MyFrame::UpdateUI)
+    EVT_UPDATE_UI(PANE_COLLAPSE, MyFrame::OnCollapseUpdateUI)
+    EVT_UPDATE_UI(PANE_EXPAND, MyFrame::OnExpandUpdateUI)
 END_EVENT_TABLE()
 
 // My frame constructor
 MyFrame::MyFrame()
-       : wxFrame(NULL, wxID_ANY, _T("wxCollapsiblePane sample"),
+       : wxFrame(NULL, wxID_ANY, wxT("wxCollapsiblePane sample"),
                  wxDefaultPosition, wxSize(420, 300),
                  wxDEFAULT_FRAME_STYLE | wxNO_FULL_REPAINT_ON_RESIZE)
 {
+    SetIcon(wxICON(sample));
+
 #if wxUSE_STATUSBAR
     CreateStatusBar(2);
 #endif // wxUSE_STATUSBAR
 
     // Make a menubar
     wxMenu *paneMenu = new wxMenu;
-    paneMenu->Append(PANE_COLLAPSE, _T("Collapse\tCtrl-C"));
-    paneMenu->Append(PANE_EXPAND, _T("Expand\tCtrl-E"));
+    paneMenu->Append(PANE_COLLAPSE, wxT("Collapse\tCtrl-C"));
+    paneMenu->Append(PANE_EXPAND, wxT("Expand\tCtrl-E"));
     paneMenu->AppendSeparator();
-    paneMenu->Append(PANE_SETLABEL, _T("Set label...\tCtrl-S"));
+    paneMenu->Append(PANE_SETLABEL, wxT("Set label...\tCtrl-L"));
     paneMenu->AppendSeparator();
-    paneMenu->Append(PANE_SHOWDLG, _T("Show dialog...\tCtrl-S"));
+    paneMenu->Append(PANE_SHOWDLG, wxT("Show dialog...\tCtrl-S"));
     paneMenu->AppendSeparator();
     paneMenu->Append(PANE_QUIT);
 
@@ -174,17 +190,24 @@ MyFrame::MyFrame()
     helpMenu->Append(PANE_ABOUT);
 
     wxMenuBar *menuBar = new wxMenuBar;
-    menuBar->Append(paneMenu, _T("&Pane"));
-    menuBar->Append(helpMenu, _T("&Help"));
+    menuBar->Append(paneMenu, wxT("&Pane"));
+    menuBar->Append(helpMenu, wxT("&Help"));
     SetMenuBar(menuBar);
 
     m_collPane = new wxCollapsiblePane(this, -1, wxT("test!"));
     wxWindow *win = m_collPane->GetPane();
 
-    new wxStaticText(win, -1, wxT("Static control with absolute coords"), wxPoint(10,2));
-    new wxStaticText(win, -1, wxT("Yet another one!"), wxPoint(30, 30));
-    new wxTextCtrl(win, -1, wxT("You can place anything you like inside a wxCollapsiblePane"),
-                   wxPoint(5, 60), wxSize(300, -1));
+    m_paneSizer = new wxBoxSizer( wxHORIZONTAL );
+    wxBoxSizer* paneSubSizer = new wxBoxSizer( wxVERTICAL );
+    m_paneSizer->AddSpacer( 20 );
+    m_paneSizer->Add( paneSubSizer, 1 );
+
+    paneSubSizer->Add( new wxStaticText(win, -1, wxT("Static text") ), 0, wxALIGN_LEFT | wxALL, 3 );
+    paneSubSizer->Add( new wxStaticText(win, -1, wxT("Yet another one!") ), 0, wxALIGN_LEFT | wxALL, 3 );
+    paneSubSizer->Add( new wxTextCtrl(win, PANE_TEXTCTRL, wxT("Text control"), wxDefaultPosition, wxSize(80,-1) ), 0, wxALIGN_LEFT | wxALL, 3 );
+    paneSubSizer->Add( new wxButton(win, PANE_BUTTON, wxT("Press to align right") ), 0, wxALIGN_LEFT | wxALL, 3 );
+
+    win->SetSizer( m_paneSizer );
 }
 
 MyFrame::~MyFrame()
@@ -210,7 +233,12 @@ void MyFrame::OnExpand(wxCommandEvent& WXUNUSED(event) )
 
 void MyFrame::OnSetLabel(wxCommandEvent& WXUNUSED(event) )
 {
-    wxString text = wxGetTextFromUser(wxT("Input the new label"));
+    wxString text = wxGetTextFromUser
+                    (
+                        wxT("Enter new label"),
+                        wxGetTextFromUserPromptStr,
+                        m_collPane->GetLabel()
+                    );
     m_collPane->SetLabel(text);
 }
 
@@ -225,15 +253,19 @@ void MyFrame::OnAbout(wxCommandEvent& WXUNUSED(event) )
     wxAboutDialogInfo info;
     info.SetName(_("wxCollapsiblePane sample"));
     info.SetDescription(_("This sample program demonstrates usage of wxCollapsiblePane"));
-    info.SetCopyright(_T("(C) 2006 Francesco Montorsi <frm@users.sourceforge.net>"));
+    info.SetCopyright(wxT("(C) 2006 Francesco Montorsi <frm@users.sourceforge.net>"));
 
     wxAboutBox(info);
 }
 
-void MyFrame::UpdateUI(wxUpdateUIEvent& event)
+void MyFrame::OnCollapseUpdateUI(wxUpdateUIEvent& event)
 {
-    GetMenuBar()->Enable(PANE_COLLAPSE, !m_collPane->IsCollapsed());
-    GetMenuBar()->Enable(PANE_EXPAND, m_collPane->IsCollapsed());
+    event.Enable(!m_collPane->IsCollapsed());
+}
+
+void MyFrame::OnExpandUpdateUI(wxUpdateUIEvent& event)
+{
+    event.Enable(m_collPane->IsCollapsed());
 }
 
 
@@ -249,6 +281,7 @@ enum
 BEGIN_EVENT_TABLE(MyDialog, wxDialog)
     EVT_BUTTON(PANEDLG_TOGGLESTATUS_BTN, MyDialog::OnToggleStatus)
     EVT_COLLAPSIBLEPANE_CHANGED(wxID_ANY, MyDialog::OnPaneChanged)
+    EVT_BUTTON(PANE_BUTTON, MyDialog::OnAlignButton)
 END_EVENT_TABLE()
 
 MyDialog::MyDialog(wxFrame *parent)
@@ -271,13 +304,16 @@ MyDialog::MyDialog(wxFrame *parent)
 
     // now add test controls in the collapsible pane
     wxWindow *win = m_collPane->GetPane();
-    wxSizer *paneSz = new wxGridSizer(2, 2, 5, 5);
-    paneSz->Add(new wxColourPickerCtrl(win, -1), 1, wxGROW|wxALL, 2);
-    paneSz->Add(new wxFontPickerCtrl(win, -1), 1, wxGROW|wxALL, 2);
-    paneSz->Add(new wxFilePickerCtrl(win, -1), 1, wxALL|wxALIGN_CENTER, 2);
-    paneSz->Add(new wxDirPickerCtrl(win, -1), 1, wxALL|wxALIGN_CENTER, 2);
-    win->SetSizer(paneSz);
-    paneSz->SetSizeHints(win);
+    m_paneSizer = new wxGridSizer(4, 1, 5, 5);
+
+    m_paneSizer->Add( new wxStaticText(win, -1, wxT("Static text") ), 0, wxALIGN_LEFT );
+    m_paneSizer->Add( new wxStaticText(win, -1, wxT("Yet another one!") ), 0, wxALIGN_LEFT );
+    m_paneSizer->Add( new wxTextCtrl(win, PANE_TEXTCTRL, wxT("Text control"), wxDefaultPosition, wxSize(80,-1) ), 0, wxALIGN_LEFT );
+    m_paneSizer->Add( new wxButton(win, PANE_BUTTON, wxT("Press to align right") ), 0, wxALIGN_LEFT );
+    win->SetSizer( m_paneSizer );
+
+    win->SetSizer( m_paneSizer );
+    m_paneSizer->SetSizeHints(win);
 
     SetSizer(sz);
     sz->SetSizeHints(this);
@@ -288,9 +324,17 @@ void MyDialog::OnToggleStatus(wxCommandEvent& WXUNUSED(ev))
     m_collPane->Collapse(!m_collPane->IsCollapsed());
 }
 
-void MyDialog::OnPaneChanged(wxCollapsiblePaneEvent &event)
+void MyDialog::OnAlignButton(wxCommandEvent& WXUNUSED(ev))
 {
-    wxLogDebug(wxT("The pane has just been %s by the user"),
+   wxSizerItem *item = m_paneSizer->GetItem( FindWindow(PANE_TEXTCTRL), true );
+   item->SetFlag(  wxALIGN_RIGHT );
+
+   Layout();
+}
+
+void MyDialog::OnPaneChanged(wxCollapsiblePaneEvent& event)
+{
+    wxLogMessage(wxT("The pane has just been %s by the user"),
                event.GetCollapsed() ? wxT("collapsed") : wxT("expanded"));
 }
 

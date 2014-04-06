@@ -4,9 +4,8 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: mdi.h 40267 2006-07-24 13:36:22Z VZ $
 // Copyright:   (c) Julian Smart
-// Licence:     wxWindows license
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #include "wx/toolbar.h"
@@ -15,7 +14,7 @@
 class MyApp : public wxApp
 {
 public:
-    bool OnInit();
+    virtual bool OnInit();
 };
 
 class MyCanvas : public wxScrolledWindow
@@ -26,11 +25,11 @@ public:
 
     bool IsDirty() const { return m_dirty; }
 
-    void OnEvent(wxMouseEvent& event);
-
     void SetText(const wxString& text) { m_text = text; Refresh(); }
 
 private:
+    void OnEvent(wxMouseEvent& event);
+
     wxString m_text;
 
     bool m_dirty;
@@ -42,29 +41,37 @@ private:
 class MyFrame : public wxMDIParentFrame
 {
 public:
-    wxTextCtrl *textWindow;
+    MyFrame();
+    virtual ~MyFrame();
 
-    MyFrame(wxWindow *parent, const wxWindowID id, const wxString& title,
-            const wxPoint& pos, const wxSize& size, const long style);
+    static wxMenuBar *CreateMainMenubar();
 
+private:
     void InitToolBar(wxToolBar* toolBar);
 
     void OnSize(wxSizeEvent& event);
     void OnAbout(wxCommandEvent& event);
     void OnNewWindow(wxCommandEvent& event);
+    void OnFullScreen(wxCommandEvent& event);
     void OnQuit(wxCommandEvent& event);
+    void OnCloseAll(wxCommandEvent& event);
+
     void OnClose(wxCloseEvent& event);
+
+    wxTextCtrl *m_textWindow;
 
     DECLARE_EVENT_TABLE()
 };
 
-class MyChild: public wxMDIChildFrame
+class MyChild : public wxMDIChildFrame
 {
 public:
-    MyCanvas *canvas;
-    MyChild(wxMDIParentFrame *parent, const wxString& title);
-    ~MyChild();
+    MyChild(wxMDIParentFrame *parent);
+    virtual ~MyChild();
 
+    static unsigned GetChildrenCount() { return ms_numChildren; }
+
+private:
     void OnActivate(wxActivateEvent& event);
 
     void OnRefresh(wxCommandEvent& event);
@@ -72,15 +79,39 @@ public:
     void OnChangeTitle(wxCommandEvent& event);
     void OnChangePosition(wxCommandEvent& event);
     void OnChangeSize(wxCommandEvent& event);
-    void OnQuit(wxCommandEvent& event);
+    void OnClose(wxCommandEvent& event);
     void OnSize(wxSizeEvent& event);
     void OnMove(wxMoveEvent& event);
-    void OnClose(wxCloseEvent& event);
+    void OnCloseWindow(wxCloseEvent& event);
 
 #if wxUSE_CLIPBOARD
     void OnPaste(wxCommandEvent& event);
     void OnUpdatePaste(wxUpdateUIEvent& event);
 #endif // wxUSE_CLIPBOARD
+
+    static unsigned ms_numChildren;
+
+    MyCanvas *m_canvas;
+
+    // simple test event handler class
+    class EventHandler : public wxEvtHandler
+    {
+    public:
+        EventHandler(unsigned numChild) : m_numChild(numChild) { }
+
+    private:
+        void OnRefresh(wxCommandEvent& event)
+        {
+            wxLogMessage("Child #%u refreshed.", m_numChild);
+            event.Skip();
+        }
+
+        const unsigned m_numChild;
+
+        DECLARE_EVENT_TABLE()
+
+        wxDECLARE_NO_COPY_CLASS(EventHandler);
+    };
 
     DECLARE_EVENT_TABLE()
 };
@@ -88,12 +119,9 @@ public:
 // menu items ids
 enum
 {
-    MDI_QUIT = wxID_EXIT,
-    MDI_NEW_WINDOW = 101,
+    MDI_FULLSCREEN = 100,
     MDI_REFRESH,
     MDI_CHANGE_TITLE,
     MDI_CHANGE_POSITION,
-    MDI_CHANGE_SIZE,
-    MDI_CHILD_QUIT,
-    MDI_ABOUT = wxID_ABOUT
+    MDI_CHANGE_SIZE
 };

@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     30.08.00
-// RCS-ID:      $Id: listbox.cpp 42816 2006-10-31 08:50:17Z RD $
 // Copyright:   (c) 2000 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -97,8 +96,6 @@ protected:
 // implementation of wxListBox
 // ============================================================================
 
-IMPLEMENT_DYNAMIC_CLASS(wxListBox, wxControl)
-
 BEGIN_EVENT_TABLE(wxListBox, wxListBoxBase)
     EVT_SIZE(wxListBox::OnSize)
 END_EVENT_TABLE()
@@ -115,7 +112,7 @@ void wxListBox::Init()
     m_maxWidth = 0;
     m_scrollRangeY = 0;
     m_maxWidthItem = -1;
-    m_strings = NULL;
+    m_strings.unsorted = NULL;
 
     // no items hence no current item
     m_current = -1;
@@ -192,7 +189,10 @@ bool wxListBox::Create(wxWindow *parent,
                             validator, name) )
         return false;
 
-    m_strings = new wxArrayString;
+    if ( IsSorted() )
+        m_strings.sorted = new wxSortedArrayString;
+    else
+        m_strings.unsorted = new wxArrayString;
 
     Set(n, choices);
 
@@ -208,76 +208,59 @@ wxListBox::~wxListBox()
     // call this just to free the client data -- and avoid leaking memory
     DoClear();
 
-    delete m_strings;
+    if ( IsSorted() )
+        delete m_strings.sorted;
+    else
+        delete m_strings.unsorted;
 
-    m_strings = NULL;
+    m_strings.sorted = NULL;
+}
+
+// ----------------------------------------------------------------------------
+// accessing strings
+// ----------------------------------------------------------------------------
+
+unsigned int wxListBox::GetCount() const
+{
+    return IsSorted() ? m_strings.sorted->size()
+                      : m_strings.unsorted->size();
+}
+
+wxString wxListBox::GetString(unsigned int n) const
+{
+    return IsSorted() ? m_strings.sorted->Item(n)
+                      : m_strings.unsorted->Item(n);
+}
+
+int wxListBox::FindString(const wxString& s, bool bCase) const
+{
+    return IsSorted() ? m_strings.sorted->Index(s, bCase)
+                      : m_strings.unsorted->Index(s, bCase);
 }
 
 // ----------------------------------------------------------------------------
 // adding/inserting strings
 // ----------------------------------------------------------------------------
 
-int wxCMPFUNC_CONV wxListBoxSortNoCase(wxString* s1, wxString* s2)
+int wxListBox::DoInsertItems(const wxArrayStringsAdapter& items,
+                             unsigned int pos,
+                             void **clientData,
+                             wxClientDataType type)
 {
-    return  s1->CmpNoCase(*s2);
-}
+    int idx = wxNOT_FOUND;
 
-int wxListBox::DoAppendOnly(const wxString& item)
-{
-    unsigned int index;
-
-    if ( IsSorted() )
+    const unsigned int numItems = items.GetCount();
+    for ( unsigned int i = 0; i < numItems; ++i )
     {
-        m_strings->Add(item);
-        m_strings->Sort(wxListBoxSortNoCase);
-        index = m_strings->Index(item);
-    }
-    else
-    {
-        index = m_strings->GetCount();
-        m_strings->Add(item);
-    }
+        const wxString& item = items[i];
+        idx = IsSorted() ? m_strings.sorted->Add(item)
+                         : (m_strings.unsorted->Insert(item, pos), pos++);
 
-    return index;
-}
+        m_itemsClientData.Insert(NULL, idx);
+        AssignNewItemClientData(idx, clientData, i, type);
 
-int wxListBox::DoAppend(const wxString& item)
-{
-    size_t index = DoAppendOnly( item );
-
-    m_itemsClientData.Insert(NULL, index);
-
-    m_updateScrollbarY = true;
-
-    if ( HasHorzScrollbar() )
-    {
-        // has the max width increased?
-        wxCoord width;
-        GetTextExtent(item, &width, NULL);
-        if ( width > m_maxWidth )
-        {
-            m_maxWidth = width;
-            m_maxWidthItem = index;
-            m_updateScrollbarX = true;
-        }
-    }
-
-    RefreshFromItemToEnd(index);
-
-    return index;
-}
-
-void wxListBox::DoInsertItems(const wxArrayString& items, unsigned int pos)
-{
-    // the position of the item being added to a sorted listbox can't be
-    // specified
-    wxCHECK_RET( !IsSorted(), _T("can't insert items into sorted listbox") );
-
-    unsigned int count = items.GetCount();
-    for ( unsigned int n = 0; n < count; n++ )
-    {
-        m_strings->Insert(items[n], pos + n);
-        m_itemsClientData.Insert(NULL, pos + n);
+        // call the wxCheckListBox hook
+        OnItemInserted(idx);
     }
 
     // the number of items has changed so we might have to show the scrollbar
@@ -291,36 +274,18 @@ void wxListBox::DoInsertItems(const wxArrayString& items, unsigned int pos)
     // note that we have to refresh all the items after the ones we inserted,
     // not just these items
     RefreshFromItemToEnd(pos);
-}
 
-void wxListBox::DoSetItems(const wxArrayString& items, void **clientData)
-{
-    DoClear();
-
-    unsigned int count = items.GetCount();
-    if ( !count )
-        return;
-
-    m_strings->Alloc(count);
-
-    m_itemsClientData.Alloc(count);
-    for ( unsigned int n = 0; n < count; n++ )
-    {
-        unsigned int index = DoAppendOnly(items[n]);
-
-        m_itemsClientData.Insert(clientData ? clientData[n] : NULL, index);
-    }
-
-    m_updateScrollbarY = true;
-
-    RefreshAll();
+    return idx;
 }
 
 void wxListBox::SetString(unsigned int n, const wxString& s)
 {
-    wxCHECK_RET( !IsSorted(), _T("can't set string in sorted listbox") );
+    wxCHECK_RET( !IsSorted(), wxT("can't set string in sorted listbox") );
 
-    (*m_strings)[n] = s;
+    if ( IsSorted() )
+        (*m_strings.sorted)[n] = s;
+    else
+        (*m_strings.unsorted)[n] = s;
 
     if ( HasHorzScrollbar() )
     {
@@ -353,26 +318,15 @@ void wxListBox::SetString(unsigned int n, const wxString& s)
 
 void wxListBox::DoClear()
 {
-    m_strings->Clear();
-
-    if ( HasClientObjectData() )
-    {
-        unsigned int count = m_itemsClientData.GetCount();
-        for ( unsigned int n = 0; n < count; n++ )
-        {
-            delete (wxClientData *) m_itemsClientData[n];
-        }
-    }
+    if ( IsSorted() )
+        m_strings.sorted->Clear();
+    else
+        m_strings.unsorted->Clear();
 
     m_itemsClientData.Clear();
     m_selections.Clear();
 
     m_current = -1;
-}
-
-void wxListBox::Clear()
-{
-    DoClear();
 
     m_updateScrollbarY = true;
 
@@ -381,21 +335,19 @@ void wxListBox::Clear()
     RefreshAll();
 }
 
-void wxListBox::Delete(unsigned int n)
+void wxListBox::DoDeleteOneItem(unsigned int n)
 {
     wxCHECK_RET( IsValid(n),
-                 _T("invalid index in wxListBox::Delete") );
+                 wxT("invalid index in wxListBox::Delete") );
 
     // do it before removing the index as otherwise the last item will not be
     // refreshed (as GetCount() will be decremented)
     RefreshFromItemToEnd(n);
 
-    m_strings->RemoveAt(n);
-
-    if ( HasClientObjectData() )
-    {
-        delete (wxClientData *)m_itemsClientData[n];
-    }
+    if ( IsSorted() )
+        m_strings.sorted->RemoveAt(n);
+    else
+        m_strings.unsorted->RemoveAt(n);
 
     m_itemsClientData.RemoveAt(n);
 
@@ -458,16 +410,6 @@ void *wxListBox::DoGetItemClientData(unsigned int n) const
     return m_itemsClientData[n];
 }
 
-void wxListBox::DoSetItemClientObject(unsigned int n, wxClientData* clientData)
-{
-    m_itemsClientData[n] = clientData;
-}
-
-wxClientData* wxListBox::DoGetItemClientObject(unsigned int n) const
-{
-    return (wxClientData *)m_itemsClientData[n];
-}
-
 // ----------------------------------------------------------------------------
 // selection
 // ----------------------------------------------------------------------------
@@ -515,7 +457,7 @@ void wxListBox::DoSetSelection(int n, bool select)
     // sanity check: a single selection listbox can't have more than one item
     // selected
     wxASSERT_MSG( HasMultipleSelection() || (m_selections.GetCount() < 2),
-                  _T("multiple selected items in single selection lbox?") );
+                  wxT("multiple selected items in single selection lbox?") );
 
     if ( select )
     {
@@ -527,12 +469,12 @@ void wxListBox::DoSetSelection(int n, bool select)
 int wxListBox::GetSelection() const
 {
     wxCHECK_MSG( !HasMultipleSelection(), wxNOT_FOUND,
-                 _T("use wxListBox::GetSelections for ths listbox") );
+                 wxT("use wxListBox::GetSelections for ths listbox") );
 
     return m_selections.IsEmpty() ? wxNOT_FOUND : m_selections[0];
 }
 
-int wxCMPFUNC_CONV wxCompareInts(int *n, int *m)
+static int wxCMPFUNC_CONV wxCompareInts(int *n, int *m)
 {
     return *n - *m;
 }
@@ -694,7 +636,7 @@ void wxListBox::UpdateItems()
     if ( m_updateCount == -1 )
     {
         // refresh all
-        wxLogTrace(_T("listbox"), _T("Refreshing all"));
+        wxLogTrace(wxT("listbox"), wxT("Refreshing all"));
 
         Refresh();
     }
@@ -711,7 +653,7 @@ void wxListBox::UpdateItems()
         // entire line(s)
         CalcScrolledPosition(0, rect.y, NULL, &rect.y);
 
-        wxLogTrace(_T("listbox"), _T("Refreshing items %d..%d (%d-%d)"),
+        wxLogTrace(wxT("listbox"), wxT("Refreshing items %d..%d (%d-%d)"),
                    m_updateFrom, m_updateFrom + m_updateCount - 1,
                    rect.GetTop(), rect.GetBottom());
 
@@ -772,7 +714,7 @@ void wxListBox::DoDraw(wxControlRenderer *renderer)
     wxCoord lineHeight = GetLineHeight();
     unsigned int itemFirst = yTop / lineHeight,
                  itemLast = (yBottom + lineHeight - 1) / lineHeight,
-                 itemMax = m_strings->GetCount();
+                 itemMax = GetCount();
 
     if ( itemFirst >= itemMax )
         return;
@@ -781,7 +723,7 @@ void wxListBox::DoDraw(wxControlRenderer *renderer)
         itemLast = itemMax;
 
     // do draw them
-    wxLogTrace(_T("listbox"), _T("Repainting items %d..%d"),
+    wxLogTrace(wxT("listbox"), wxT("Repainting items %d..%d"),
                itemFirst, itemLast);
 
     DoDrawRange(renderer, itemFirst, itemLast);
@@ -841,7 +783,7 @@ wxCoord wxListBox::GetMaxWidth() const
     {
         wxListBox *self = wxConstCast(this, wxListBox);
         wxCoord width;
-        unsigned int count = m_strings->GetCount();
+        unsigned int count = GetCount();
         for ( unsigned int n = 0; n < count; n++ )
         {
             GetTextExtent(this->GetString(n), &width, NULL);
@@ -898,7 +840,7 @@ wxSize wxListBox::DoGetBestClientSize() const
     wxCoord width = 0,
             height = 0;
 
-    unsigned int count = m_strings->GetCount();
+    unsigned int count = GetCount();
     for ( unsigned int n = 0; n < count; n++ )
     {
         wxCoord w,h;
@@ -1002,7 +944,7 @@ bool wxListBox::FindItem(const wxString& prefix, bool strictlyAfter)
     int last = first == 0 ? count - 1 : first - 1;
 
     // if this is not true we'd never exit from the loop below!
-    wxASSERT_MSG( first < (int)count && last < (int)count, _T("logic error") );
+    wxASSERT_MSG( first < (int)count && last < (int)count, wxT("logic error") );
 
     // precompute it outside the loop
     size_t len = prefix.length();
@@ -1149,7 +1091,7 @@ void wxListBox::SelectAndNotify(int item)
 {
     DoSelect(item);
 
-    SendEvent(wxEVT_COMMAND_LISTBOX_SELECTED);
+    SendEvent(wxEVT_LISTBOX);
 }
 
 void wxListBox::Activate(int item)
@@ -1168,7 +1110,7 @@ void wxListBox::Activate(int item)
     {
         DoSelect(item);
 
-        SendEvent(wxEVT_COMMAND_LISTBOX_DOUBLECLICKED);
+        SendEvent(wxEVT_LISTBOX_DCLICK);
     }
 }
 
@@ -1248,7 +1190,7 @@ bool wxListBox::PerformAction(const wxControlAction& action,
         AnchorSelection(item == -1 ? m_current : item);
     else if ( action == wxACTION_LISTBOX_SELECTALL ||
               action == wxACTION_LISTBOX_SELTOGGLE )
-        wxFAIL_MSG(_T("unimplemented yet"));
+        wxFAIL_MSG(wxT("unimplemented yet"));
     else
         return wxControl::PerformAction(action, numArg, strArg);
 
@@ -1559,7 +1501,7 @@ bool wxStdListboxInputHandler::HandleMouseMove(wxInputConsumer *consumer,
         {
             // pass something into strArg to tell the listbox that it shouldn't
             // send the notification message: see PerformAction() above
-            lbox->PerformAction(m_actionMouse, item, _T("no"));
+            lbox->PerformAction(m_actionMouse, item, wxT("no"));
         }
         // else: don't pass invalid index to the listbox
     }

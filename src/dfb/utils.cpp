@@ -3,7 +3,6 @@
 // Purpose:     Miscellaneous utility functions and classes
 // Author:      Vaclav Slavik
 // Created:     2006-08-08
-// RCS-ID:      $Id: utils.cpp 41154 2006-09-11 09:08:57Z VS $
 // Copyright:   (c) 2006 REA Elektronik GmbH
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -16,8 +15,9 @@
 #endif
 
 #include "wx/utils.h"
+#include "wx/evtloop.h"
 #include "wx/apptrait.h"
-#include "wx/unix/execute.h"
+#include "wx/unix/private/timer.h"
 
 #ifndef WX_PRECOMP
     #include "wx/app.h"
@@ -36,6 +36,17 @@ wxPortId wxGUIAppTraits::GetToolkitVersion(int *verMaj, int *verMin) const
     if ( verMin ) *verMaj = DIRECTFB_MINOR_VERSION;
 
     return wxPORT_DFB;
+}
+
+
+wxEventLoopBase* wxGUIAppTraits::CreateEventLoop()
+{
+    return new wxEventLoop;
+}
+
+wxTimerImpl *wxGUIAppTraits::CreateTimerImpl(wxTimer *timer)
+{
+    return new wxUnixTimerImpl(timer);
 }
 
 // ----------------------------------------------------------------------------
@@ -109,7 +120,7 @@ wxPoint wxGetMousePosition()
 bool wxGetKeyState(wxKeyCode key)
 {
     wxASSERT_MSG(key != WXK_LBUTTON && key != WXK_RBUTTON && key != WXK_MBUTTON,
-                 _T("can't use wxGetKeyState() for mouse buttons"));
+                 "can't use wxGetKeyState() for mouse buttons");
 
     return false; // FIXME
 }
@@ -120,10 +131,4 @@ bool wxGetKeyState(wxKeyCode key)
 
 void wxBell()
 {
-}
-
-int wxAddProcessCallback(wxEndProcessData *proc_data, int fd)
-{
-    wxFAIL_MSG( _T("wxAddProcessCallback not implemented") );
-    return 0;
 }

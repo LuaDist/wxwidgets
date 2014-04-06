@@ -4,7 +4,6 @@
 // Author:      Ryan Norton
 // Modified by: David Elliott
 // Created:     2005-02-04
-// RCS-ID:      $Id: timer.mm 48107 2007-08-15 16:12:45Z DE $
 // Copyright:   (c) Ryan Norton
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -22,34 +21,24 @@
 
 #if wxUSE_TIMER
 
-#include "wx/timer.h"
-
-#ifndef WX_PRECOMP
-#endif
-
+#include "wx/cocoa/private/timer.h"
 #include "wx/cocoa/autorelease.h"
 
 #include "wx/cocoa/objc/objc_uniquifying.h"
 
 #import <Foundation/NSTimer.h>
 
-// ============================================================================
-// implementation
-// ============================================================================
-
-IMPLEMENT_CLASS(wxTimer, wxTimerBase)
-
 // ========================================================================
 // wxNSTimerData
 // ========================================================================
 @interface wxNSTimerData : NSObject
 {
-    wxTimer* m_timer;
+    wxCocoaTimerImpl* m_timer;
 }
 
 - (id)init;
-- (id)initWithWxTimer:(wxTimer*)theTimer;
-- (wxTimer*)timer;
+- (id)initWithWxTimer:(wxCocoaTimerImpl*)theTimer;
+- (wxCocoaTimerImpl*)timer;
 - (void)onNotify:(NSTimer *)theTimer;
 @end // interface wxNSTimerData : NSObject
 WX_DECLARE_GET_OBJC_CLASS(wxNSTimerData,NSObject)
@@ -63,7 +52,7 @@ WX_DECLARE_GET_OBJC_CLASS(wxNSTimerData,NSObject)
     return self;
 }
 
-- (id)initWithWxTimer:(wxTimer*)theTimer;
+- (id)initWithWxTimer:(wxCocoaTimerImpl*)theTimer;
 {
     if(!(self = [super init]))
         return nil;
@@ -71,33 +60,33 @@ WX_DECLARE_GET_OBJC_CLASS(wxNSTimerData,NSObject)
     return self;
 }
 
-- (wxTimer*)timer
+- (wxCocoaTimerImpl*)timer
 {
     return m_timer;
 }
 
 - (void)onNotify:(NSTimer *)theTimer
 {
-    m_timer->Notify(); //wxTimerBase method
+    m_timer->Notify();
 }
 @end
 WX_IMPLEMENT_GET_OBJC_CLASS(wxNSTimerData,NSObject)
 
 // ----------------------------------------------------------------------------
-// wxTimer
+// wxCocoaTimerImpl
 // ----------------------------------------------------------------------------
 
-wxTimer::~wxTimer()
+wxCocoaTimerImpl::~wxCocoaTimerImpl()
 {
     Stop();
 }
 
-void wxTimer::Init()
+void wxCocoaTimerImpl::Init()
 {
     m_cocoaNSTimer = NULL;
 }
 
-bool wxTimer::Start(int millisecs, bool oneShot)
+bool wxCocoaTimerImpl::Start(int millisecs, bool oneShot)
 {
     Stop();
 
@@ -115,7 +104,7 @@ bool wxTimer::Start(int millisecs, bool oneShot)
     return IsRunning();
 }
 
-void wxTimer::Stop()
+void wxCocoaTimerImpl::Stop()
 {
     if (m_cocoaNSTimer)
     {
@@ -126,7 +115,7 @@ void wxTimer::Stop()
     }
 }
 
-bool wxTimer::IsRunning() const
+bool wxCocoaTimerImpl::IsRunning() const
 {
     return m_cocoaNSTimer != NULL && [m_cocoaNSTimer isValid];
 }

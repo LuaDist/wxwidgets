@@ -4,7 +4,6 @@
 // Author:      P. Foggia 1996
 // Modified by: Wlodzimierz Skiba (ABX) since 2003
 // Created:     1996
-// RCS-ID:      $Id: bombs.cpp 35650 2005-09-23 12:56:45Z MR $
 // Copyright:   (c) 1996 P. Foggia
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -29,8 +28,7 @@
 #   include <time.h>
 #endif
 
-#if defined(__WXGTK__) || defined(__WXX11__) || defined(__WXMOTIF__) \
-    || defined(__WXMAC__) || defined(__WXMGL__)
+#ifndef wxHAS_IMAGES_IN_RESOURCES
 #   include "bombs.xpm"
 #endif
 
@@ -233,7 +231,7 @@ BombsCanvas::BombsCanvas(wxFrame *parent, BombsGame *game)
     wxFont font= BOMBS_FONT;
     dc.SetFont(font);
 
-    long chw, chh;
+    wxCoord chw, chh;
     wxString buf = wxT("M");
 
     dc.GetTextExtent(buf, &chw, &chh);

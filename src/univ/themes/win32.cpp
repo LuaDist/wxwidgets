@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     06.08.00
-// RCS-ID:      $Id: win32.cpp 44058 2006-12-24 19:06:39Z VS $
 // Copyright:   (c) 2000 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -35,6 +34,7 @@
     #include "wx/window.h"
 
     #include "wx/dcmemory.h"
+    #include "wx/dcclient.h"
 
     #include "wx/button.h"
     #include "wx/bmpbuttn.h"
@@ -60,9 +60,7 @@
 #include "wx/notebook.h"
 #include "wx/spinbutt.h"
 #include "wx/artprov.h"
-#ifdef wxUSE_TOGGLEBTN
 #include "wx/tglbtn.h"
-#endif // wxUSE_TOGGLEBTN
 
 #include "wx/univ/scrtimer.h"
 #include "wx/univ/stdrend.h"
@@ -306,6 +304,52 @@ protected:
         { return GetIndicator(IndicatorType_Radio, flags); }
 
     virtual wxBitmap GetFrameButtonBitmap(FrameButtonType type);
+
+#if wxUSE_SLIDER
+    // Fill the arguments with true or false if this slider has labels on
+    // left/right side (or top/bottom for horizontal sliders) respectively
+    static
+    void GetSliderLabelsSides(wxOrientation orient, long style,
+                              bool *left, bool *right)
+    {
+        // should we draw ticks at all?
+        if ( !(style & wxSL_AUTOTICKS) )
+        {
+            *left =
+            *right = false;
+            return;
+        }
+
+        // should we draw them on both sides?
+        if ( style & wxSL_BOTH )
+        {
+            *left =
+            *right = true;
+            return;
+        }
+
+        // we draw them on one side only, determine which one
+        if ( ((style & wxSL_TOP) && (orient == wxHORIZONTAL)) ||
+                ((style & wxSL_LEFT) && (orient == wxVERTICAL)) )
+        {
+            *left = true;
+            *right = false;
+        }
+        else if ( ((style & wxSL_BOTTOM) && (orient == wxHORIZONTAL)) ||
+                    ((style & wxSL_RIGHT) && (orient == wxVERTICAL)) )
+        {
+            *left = false;
+            *right = true;
+        }
+        else
+        {
+            wxFAIL_MSG( "inconsistent wxSlider flags" );
+
+            *left =
+            *right = false;
+        }
+    }
+#endif // wxUSE_SLIDER
 
 private:
     // the sizing parameters (TODO make them changeable)
@@ -1206,7 +1250,7 @@ wxColour wxWin32ColourScheme::GetBackground(wxWindow *win) const
                 col = Get(CONTROL);
             else
             {
-                if ( !col.Ok() )
+                if ( !col.IsOk() )
                 {
                     // doesn't depend on the state
                     col = Get(WINDOW);
@@ -1215,7 +1259,7 @@ wxColour wxWin32ColourScheme::GetBackground(wxWindow *win) const
         }
 #endif // wxUSE_TEXTCTRL
 
-        if (!col.Ok())
+        if (!col.IsOk())
             col = Get(CONTROL); // Most controls should be this colour, not WINDOW
     }
     else
@@ -1224,7 +1268,7 @@ wxColour wxWin32ColourScheme::GetBackground(wxWindow *win) const
 
         // the colour set by the user should be used for the normal state
         // and for the states for which we don't have any specific colours
-        if ( !col.Ok() || (flags & wxCONTROL_PRESSED) != 0 )
+        if ( !col.IsOk() || (flags & wxCONTROL_PRESSED) != 0 )
         {
 #if wxUSE_SCROLLBAR
             if ( wxDynamicCast(win, wxScrollBar) )
@@ -1323,7 +1367,7 @@ wxColour wxWin32ColourScheme::Get(wxWin32ColourScheme::StdColour col) const
 
         case MAX:
         default:
-            wxFAIL_MSG(_T("invalid standard colour"));
+            wxFAIL_MSG(wxT("invalid standard colour"));
             return *wxBLACK;
     }
 }
@@ -1563,7 +1607,7 @@ void wxWin32Renderer::DrawFrameWithLabel(wxDC& dc,
                                          int indexAccel)
 {
     wxString label2;
-    label2 << _T(' ') << label << _T(' ');
+    label2 << wxT(' ') << label << wxT(' ');
     if ( indexAccel != -1 )
     {
         // adjust it as we prepended a space
@@ -1634,7 +1678,7 @@ void wxWin32Renderer::DrawCheckItemBitmap(wxDC& dc,
                                           int flags)
 {
     wxBitmap bmp;
-    if ( bitmap.Ok() )
+    if ( bitmap.IsOk() )
     {
         bmp = bitmap;
     }
@@ -1644,7 +1688,7 @@ void wxWin32Renderer::DrawCheckItemBitmap(wxDC& dc,
                                 ? IndicatorStatus_Checked
                                 : IndicatorStatus_Unchecked;
 
-        if ( !m_bmpCheckBitmaps[i].Ok() )
+        if ( !m_bmpCheckBitmaps[i].IsOk() )
         {
             m_bmpCheckBitmaps[i] = wxBitmap(ms_xpmChecked[i]);
         }
@@ -1667,7 +1711,7 @@ wxBitmap wxWin32Renderer::GetIndicator(IndicatorType indType, int flags)
     GetIndicatorsFromFlags(flags, indState, indStatus);
 
     wxBitmap& bmp = m_bmpIndicators[indType][indState][indStatus];
-    if ( !bmp.Ok() )
+    if ( !bmp.IsOk() )
     {
         const char **xpm = ms_xpmIndicators[indType][indState][indStatus];
         if ( xpm )
@@ -1782,7 +1826,7 @@ void wxWin32Renderer::DrawTab(wxDC& dc,
         switch ( dir )
         {
             default:
-                wxFAIL_MSG(_T("invaild notebook tab orientation"));
+                wxFAIL_MSG(wxT("invaild notebook tab orientation"));
                 // fall through
 
             case wxTOP:
@@ -1972,21 +2016,15 @@ wxRect wxWin32Renderer::GetSliderShaftRect(const wxRect& rectOrig,
                                            wxOrientation orient,
                                            long style) const
 {
-    bool transpose = (orient == wxVERTICAL);
-    bool left  = ((style & wxSL_AUTOTICKS) != 0) &
-                 (((style & wxSL_TOP) != 0) & !transpose |
-                  ((style & wxSL_LEFT) != 0) & transpose |
-                  ((style & wxSL_BOTH) != 0));
-    bool right = ((style & wxSL_AUTOTICKS) != 0) &
-                 (((style & wxSL_BOTTOM) != 0) & !transpose |
-                  ((style & wxSL_RIGHT) != 0) & transpose |
-                  ((style & wxSL_BOTH) != 0));
+    bool left, right;
+    GetSliderLabelsSides(orient, style, &left, &right);
 
     wxRect rect = rectOrig;
 
     wxSize sizeThumb = GetSliderThumbSize (rect, lenThumb, orient);
 
-    if (orient == wxHORIZONTAL) {
+    if (orient == wxHORIZONTAL)
+    {
         rect.x += SLIDER_MARGIN;
         if (left & right)
         {
@@ -2003,8 +2041,8 @@ wxRect wxWin32Renderer::GetSliderShaftRect(const wxRect& rectOrig,
         rect.width -= 2*SLIDER_MARGIN;
         rect.height = 2*BORDER_THICKNESS;
     }
-    else
-    { // == wxVERTICAL
+    else // == wxVERTICAL
+    {
         rect.y += SLIDER_MARGIN;
         if (left & right)
         {
@@ -2051,9 +2089,8 @@ void wxWin32Renderer::DrawSliderShaft(wxDC& dc,
              y1 y2
     */
 
-    if (flags & wxCONTROL_FOCUSED) {
-        DrawFocusRect(dc, rectOrig);
-    }
+    if (flags & wxCONTROL_FOCUSED)
+        DrawFocusRect(NULL, dc, rectOrig);
 
     wxRect rect = GetSliderShaftRect(rectOrig, lenThumb, orient, style);
 
@@ -2097,72 +2134,70 @@ void wxWin32Renderer::DrawSliderThumb(wxDC& dc,
 
     DrawBackground(dc, wxNullColour, rect, flags);
 
-    bool transpose = (orient == wxVERTICAL);
-    bool left  = ((style & wxSL_AUTOTICKS) != 0) &
-                 (((style & wxSL_TOP) != 0) & !transpose |
-                  ((style & wxSL_LEFT) != 0) & transpose) &
-                 ((style & wxSL_BOTH) == 0);
-    bool right = ((style & wxSL_AUTOTICKS) != 0) &
-                 (((style & wxSL_BOTTOM) != 0) & !transpose |
-                  ((style & wxSL_RIGHT) != 0) & transpose) &
-                 ((style & wxSL_BOTH) == 0);
+    bool left, right;
+    GetSliderLabelsSides(orient, style, &left, &right);
 
-    wxCoord sizeArrow = (transpose ? rect.height : rect.width) / 2;
-    wxCoord c = ((transpose ? rect.height : rect.width) - 2*sizeArrow);
+    bool isVertical = orient == wxVERTICAL;
+
+    wxCoord sizeArrow = (isVertical ? rect.height : rect.width) / 2;
+    wxCoord c = ((isVertical ? rect.height : rect.width) - 2*sizeArrow);
 
     wxCoord x1, x2, x3, y1, y2, y3, y4;
-    x1 = (transpose ? rect.y : rect.x);
-    x2 = (transpose ? rect.GetBottom() : rect.GetRight());
+    x1 = (isVertical ? rect.y : rect.x);
+    x2 = (isVertical ? rect.GetBottom() : rect.GetRight());
     x3 = (x1-1+c) + sizeArrow;
-    y1 = (transpose ? rect.x : rect.y);
-    y2 = (transpose ? rect.GetRight() : rect.GetBottom());
+    y1 = (isVertical ? rect.x : rect.y);
+    y2 = (isVertical ? rect.GetRight() : rect.GetBottom());
     y3 = (left  ? (y1-1+c) + sizeArrow : y1);
     y4 = (right ? (y2+1-c) - sizeArrow : y2);
 
     dc.SetPen(m_penBlack);
-    if (left) {
-        DrawLine(dc, x3+1-c, y1, x2, y3, transpose);
+    if (left)
+    {
+        DrawLine(dc, x3+1-c, y1, x2, y3, isVertical);
     }
-    DrawLine(dc, x2, y3, x2, y4, transpose);
+    DrawLine(dc, x2, y3, x2, y4, isVertical);
     if (right)
     {
-        DrawLine(dc, x3+1-c, y2, x2, y4, transpose);
+        DrawLine(dc, x3+1-c, y2, x2, y4, isVertical);
     }
     else
     {
-        DrawLine(dc, x1, y2, x2, y2, transpose);
+        DrawLine(dc, x1, y2, x2, y2, isVertical);
     }
 
     dc.SetPen(m_penDarkGrey);
-    DrawLine(dc, x2-1, y3+1, x2-1, y4-1, transpose);
-    if (right) {
-        DrawLine(dc, x3+1-c, y2-1, x2-1, y4, transpose);
+    DrawLine(dc, x2-1, y3+1, x2-1, y4-1, isVertical);
+    if (right)
+    {
+        DrawLine(dc, x3+1-c, y2-1, x2-1, y4, isVertical);
     }
     else
     {
-        DrawLine(dc, x1+1, y2-1, x2-1, y2-1, transpose);
+        DrawLine(dc, x1+1, y2-1, x2-1, y2-1, isVertical);
     }
 
     dc.SetPen(m_penHighlight);
     if (left)
     {
-        DrawLine(dc, x1, y3, x3, y1, transpose);
-        DrawLine(dc, x3+1-c, y1+1, x2-1, y3, transpose);
+        DrawLine(dc, x1, y3, x3, y1, isVertical);
+        DrawLine(dc, x3+1-c, y1+1, x2-1, y3, isVertical);
     }
     else
     {
-        DrawLine(dc, x1, y1, x2, y1, transpose);
+        DrawLine(dc, x1, y1, x2, y1, isVertical);
     }
-    DrawLine(dc, x1, y3, x1, y4, transpose);
+    DrawLine(dc, x1, y3, x1, y4, isVertical);
     if (right)
     {
-        DrawLine(dc, x1, y4, x3+c, y2+c, transpose);
+        DrawLine(dc, x1, y4, x3+c, y2+c, isVertical);
     }
 
-    if (flags & wxCONTROL_PRESSED) {
+    if (flags & wxCONTROL_PRESSED)
+    {
         // TODO: MSW fills the entire area inside, not just the rect
         wxRect rectInt = rect;
-        if ( transpose )
+        if ( isVertical )
         {
             rectInt.SetLeft(y3);
             rectInt.SetRight(y4);
@@ -2174,7 +2209,6 @@ void wxWin32Renderer::DrawSliderThumb(wxDC& dc,
         }
         rectInt.Deflate(2);
 
-#if !defined(__WXMGL__)
         static const char *stipple_xpm[] = {
             /* columns rows colors chars-per-pixel */
             "2 2 2 1",
@@ -2184,24 +2218,6 @@ void wxWin32Renderer::DrawSliderThumb(wxDC& dc,
             "w ",
             " w",
         };
-#else
-        // VS: MGL can only do 8x8 stipple brushes
-        static const char *stipple_xpm[] = {
-            /* columns rows colors chars-per-pixel */
-            "8 8 2 1",
-            "  c None",
-            "w c white",
-            /* pixels */
-            "w w w w ",
-            " w w w w",
-            "w w w w ",
-            " w w w w",
-            "w w w w ",
-            " w w w w",
-            "w w w w ",
-            " w w w w",
-        };
-#endif
         dc.SetBrush(wxBrush(stipple_xpm));
 
         dc.SetTextForeground(wxSCHEME_COLOUR(m_scheme, SHADOW_HIGHLIGHT));
@@ -2236,55 +2252,56 @@ void wxWin32Renderer::DrawSliderTicks(wxDC& dc,
     */
 
     // empty slider?
-    if (end == start) return;
+    if ( end == start )
+        return;
 
-    bool transpose = (orient == wxVERTICAL);
-    bool left  = ((style & wxSL_AUTOTICKS) != 0) &
-                 (((style & wxSL_TOP) != 0) & !transpose |
-                  ((style & wxSL_LEFT) != 0) & transpose |
-                  ((style & wxSL_BOTH) != 0));
-    bool right = ((style & wxSL_AUTOTICKS) != 0) &
-                 (((style & wxSL_BOTTOM) != 0) & !transpose |
-                  ((style & wxSL_RIGHT) != 0) & transpose |
-                  ((style & wxSL_BOTH) != 0));
+    bool left, right;
+    GetSliderLabelsSides(orient, style, &left, &right);
+
+    bool isVertical = orient == wxVERTICAL;
 
     // default thumb size
     wxSize sizeThumb = GetSliderThumbSize (rect, 0, orient);
-    wxCoord defaultLen = (transpose ? sizeThumb.x : sizeThumb.y);
+    wxCoord defaultLen = (isVertical ? sizeThumb.x : sizeThumb.y);
 
     // normal thumb size
     sizeThumb = GetSliderThumbSize (rect, lenThumb, orient);
-    wxCoord widthThumb  = (transpose ? sizeThumb.y : sizeThumb.x);
+    wxCoord widthThumb  = (isVertical ? sizeThumb.y : sizeThumb.x);
 
     wxRect rectShaft = GetSliderShaftRect (rect, lenThumb, orient, style);
 
     wxCoord x1, x2, y1, y2, y3, y4 , len;
-    x1 = (transpose ? rectShaft.y : rectShaft.x) + widthThumb/2;
-    x2 = (transpose ? rectShaft.GetBottom() : rectShaft.GetRight()) - widthThumb/2;
-    y1 = (transpose ? rectShaft.x : rectShaft.y) - defaultLen/2;
-    y2 = (transpose ? rectShaft.GetRight() : rectShaft.GetBottom()) + defaultLen/2;
-    y3 = (transpose ? rect.x : rect.y);
-    y4 = (transpose ? rect.GetRight() : rect.GetBottom());
+    x1 = (isVertical ? rectShaft.y : rectShaft.x) + widthThumb/2;
+    x2 = (isVertical ? rectShaft.GetBottom() : rectShaft.GetRight()) - widthThumb/2;
+    y1 = (isVertical ? rectShaft.x : rectShaft.y) - defaultLen/2;
+    y2 = (isVertical ? rectShaft.GetRight() : rectShaft.GetBottom()) + defaultLen/2;
+    y3 = (isVertical ? rect.x : rect.y);
+    y4 = (isVertical ? rect.GetRight() : rect.GetBottom());
     len = x2 - x1;
 
     dc.SetPen(m_penBlack);
 
     int range = end - start;
-    for ( int n = 0; n < range; n += step ) {
+    for ( int n = 0; n < range; n += step )
+    {
         wxCoord x = x1 + (len*n) / range;
 
-        if (left & (y1 > y3)) {
+        if (left & (y1 > y3))
+        {
             DrawLine(dc, x, y1, x, y3, orient == wxVERTICAL);
         }
-        if (right & (y4 > y2)) {
+        if (right & (y4 > y2))
+        {
             DrawLine(dc, x, y2, x, y4, orient == wxVERTICAL);
         }
     }
     // always draw the line at the end position
-    if (left & (y1 > y3)) {
+    if (left & (y1 > y3))
+    {
         DrawLine(dc, x2, y1, x2, y3, orient == wxVERTICAL);
     }
-    if (right & (y4 > y2)) {
+    if (right & (y4 > y2))
+    {
         DrawLine(dc, x2, y2, x2, y4, orient == wxVERTICAL);
     }
 }
@@ -2403,12 +2420,12 @@ void wxWin32Renderer::DrawMenuItem(wxDC& dc,
     // draw the bitmap: use the bitmap provided or the standard checkmark for
     // the checkable items
     wxBitmap bmp = bitmap;
-    if ( !bmp.Ok() && (flags & wxCONTROL_CHECKED) )
+    if ( !bmp.IsOk() && (flags & wxCONTROL_CHECKED) )
     {
         bmp = GetIndicator(IndicatorType_Menu, flags);
     }
 
-    if ( bmp.Ok() )
+    if ( bmp.IsOk() )
     {
         rect.SetRight(geometryInfo.GetLabelOffset());
         wxControlRenderer::DrawBitmap(dc, bmp, rect);
@@ -2504,7 +2521,7 @@ wxMenuGeometryInfo *wxWin32Renderer::GetMenuGeometry(wxWindow *win,
             h = heightText;
 
             wxCoord widthLabel;
-            dc.GetTextExtent(item->GetLabel(), &widthLabel, NULL);
+            dc.GetTextExtent(item->GetItemLabelText(), &widthLabel, NULL);
             if ( widthLabel > widthLabelMax )
             {
                 widthLabelMax = widthLabel;
@@ -2518,7 +2535,7 @@ wxMenuGeometryInfo *wxWin32Renderer::GetMenuGeometry(wxWindow *win,
             }
 
             const wxBitmap& bmp = item->GetBitmap();
-            if ( bmp.Ok() )
+            if ( bmp.IsOk() )
             {
                 wxCoord widthBmp = bmp.GetWidth();
                 if ( widthBmp > widthBmpMax )
@@ -2776,7 +2793,7 @@ void wxWin32Renderer::DrawScrollbarShaft(wxDC& dc,
 // ----------------------------------------------------------------------------
 
 /* Copyright (c) Julian Smart */
-static char *error_xpm[]={
+static const char *error_xpm[]={
 /* columns rows colors chars-per-pixel */
 "32 32 70 1",
 "- c #BF0101",
@@ -2885,7 +2902,7 @@ static char *error_xpm[]={
 };
 
 /* Copyright (c) Julian Smart */
-static char *info_xpm[]={
+static const char *info_xpm[]={
 /* columns rows colors chars-per-pixel */
 "32 32 17 1",
 "* c #A1A3FB",
@@ -2941,7 +2958,7 @@ static char *info_xpm[]={
 };
 
 /* Copyright (c) Julian Smart */
-static char *question_xpm[]={
+static const char *question_xpm[]={
 /* columns rows colors chars-per-pixel */
 "32 32 16 1",
 "O c #A3A3FF",
@@ -2996,7 +3013,7 @@ static char *question_xpm[]={
 };
 
 /* Copyright (c) Julian Smart */
-static char *warning_xpm[]={
+static const char *warning_xpm[]={
 /* columns rows colors chars-per-pixel */
 "32 32 9 1",
 "@ c Black",
@@ -3103,14 +3120,12 @@ void wxWin32Renderer::AdjustSize(wxSize *size, const wxWindow *window)
 #if wxUSE_SCROLLBAR
     if ( wxDynamicCast(window, wxScrollBar) )
     {
-        // we only set the width of vert scrollbars and height of the
-        // horizontal ones
-        if ( window->GetWindowStyle() & wxSB_HORIZONTAL )
-            size->y = m_sizeScrollbarArrow.y;
-        else
-            size->x = m_sizeScrollbarArrow.x;
-
-        // skip border width adjustments, they don't make sense for us
+        /*
+        Don't adjust the size for a scrollbar as its DoGetBestClientSize
+        already has the correct size set. Any size changes here would get
+        added to the best size, making the scrollbar larger.
+        Also skip border width adjustments, they don't make sense for us.
+        */
         return;
     }
 #endif // wxUSE_SCROLLBAR
@@ -3166,7 +3181,7 @@ void wxWin32Renderer::AdjustSize(wxSize *size, const wxWindow *window)
 wxBitmap wxWin32Renderer::GetFrameButtonBitmap(FrameButtonType type)
 {
     wxBitmap& bmp = m_bmpFrameButtons[type];
-    if ( !bmp.Ok() )
+    if ( !bmp.IsOk() )
     {
         bmp = wxBitmap(ms_xpmFrameButtons[type]);
     }
@@ -3195,10 +3210,9 @@ bool wxWin32InputHandler::HandleMouse(wxInputConsumer *control,
     // clicking on the control gives it focus
     if ( event.ButtonDown() )
     {
-        wxWindow *win = control->GetInputWindow();
+        wxWindow * const win = control->GetInputWindow();
 
-        if ( (wxWindow::FindFocus() != control->GetInputWindow()) &&
-             win->AcceptsFocus() )
+        if ( win->CanAcceptFocus() && wxWindow::FindFocus() != win )
         {
             win->SetFocus();
 
@@ -3502,7 +3516,7 @@ bool wxWin32StatusBarInputHandler::IsOnGrip(wxWindow *statbar,
             parentTLW = wxDynamicCast(statbar->GetParent(), wxTopLevelWindow);
 
         wxCHECK_MSG( parentTLW, false,
-                     _T("the status bar should be a child of a TLW") );
+                     wxT("the status bar should be a child of a TLW") );
 
         // a maximized window can't be resized anyhow
         if ( !parentTLW->IsMaximized() )
@@ -3610,7 +3624,7 @@ wxWin32SystemMenuEvtHandler(wxWin32FrameInputHandler *handler)
 
 void wxWin32SystemMenuEvtHandler::Attach(wxInputConsumer *consumer)
 {
-    wxASSERT_MSG( m_wnd == NULL, _T("can't attach the handler twice!") );
+    wxASSERT_MSG( m_wnd == NULL, wxT("can't attach the handler twice!") );
 
     m_wnd = wxStaticCast(consumer->GetInputWindow(), wxTopLevelWindow);
     m_wnd->PushEventHandler(this);
@@ -3739,7 +3753,7 @@ void wxWin32FrameInputHandler::PopupSystemMenu(wxTopLevelWindow *window) const
     if ( window->GetWindowStyle() & wxMAXIMIZE_BOX )
         menu.Append(wxID_MAXIMIZE_FRAME , _("Ma&ximize"));
     menu.AppendSeparator();
-    menu.Append(wxID_CLOSE_FRAME, _("Close\tAlt-F4"));
+    menu.Append(wxID_CLOSE_FRAME, _("&Close") + wxT("\t") + _("Alt+") + wxT("F4"));
 
     if ( window->GetWindowStyle() & wxMAXIMIZE_BOX )
     {

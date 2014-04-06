@@ -1,8 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        radiobut.cpp
+// Name:        src/gtk1/radiobut.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: radiobut.cpp 37063 2006-01-23 01:14:32Z MR $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -49,18 +48,16 @@ void gtk_radiobutton_clicked_callback( GtkToggleButton *button, wxRadioButton *r
 
     if (rb->m_blockEvent) return;
 
-    wxCommandEvent event( wxEVT_COMMAND_RADIOBUTTON_SELECTED, rb->GetId());
+    wxCommandEvent event( wxEVT_RADIOBUTTON, rb->GetId());
     event.SetInt( rb->GetValue() );
     event.SetEventObject( rb );
-    rb->GetEventHandler()->ProcessEvent( event );
+    rb->HandleWindowEvent( event );
 }
 }
 
 //-----------------------------------------------------------------------------
 // wxRadioButton
 //-----------------------------------------------------------------------------
-
-IMPLEMENT_DYNAMIC_CLASS(wxRadioButton,wxControl)
 
 bool wxRadioButton::Create( wxWindow *parent,
                             wxWindowID id,
@@ -87,7 +84,7 @@ bool wxRadioButton::Create( wxWindow *parent,
     if (!HasFlag(wxRB_GROUP))
     {
         // search backward for last group start
-        wxRadioButton *chief = (wxRadioButton*) NULL;
+        wxRadioButton *chief = NULL;
         wxWindowList::compatibility_iterator node = parent->GetChildren().GetLast();
         while (node)
         {
@@ -182,10 +179,10 @@ bool wxRadioButton::IsOwnGtkWindow( GdkWindow *window )
 void wxRadioButton::OnInternalIdle()
 {
     wxCursor cursor = m_cursor;
-    if (g_globalCursor.Ok()) cursor = g_globalCursor;
+    if (g_globalCursor.IsOk()) cursor = g_globalCursor;
 
     GdkWindow *win = TOGGLE_BUTTON_EVENT_WIN(m_widget);
-    if ( win && cursor.Ok())
+    if ( win && cursor.IsOk())
     {
         /* I now set the cursor the anew in every OnInternalIdle call
        as setting the cursor in a parent window also effects the

@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     15.09.00
-// RCS-ID:      $Id: textctrl.h 61872 2009-09-09 22:37:05Z VZ $
 // Copyright:   (c) 2000 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -12,8 +11,8 @@
 #ifndef _WX_UNIV_TEXTCTRL_H_
 #define _WX_UNIV_TEXTCTRL_H_
 
-class WXDLLEXPORT wxCaret;
-class WXDLLEXPORT wxTextCtrlCommandProcessor;
+class WXDLLIMPEXP_FWD_CORE wxCaret;
+class WXDLLIMPEXP_FWD_CORE wxTextCtrlCommandProcessor;
 
 #include "wx/scrolwin.h"    // for wxScrollHelper
 
@@ -66,7 +65,7 @@ class WXDLLEXPORT wxTextCtrlCommandProcessor;
 // wxTextCtrl
 // ----------------------------------------------------------------------------
 
-class WXDLLEXPORT wxTextCtrl : public wxTextCtrlBase,
+class WXDLLIMPEXP_CORE wxTextCtrl : public wxTextCtrlBase,
                                public wxScrollHelper
 {
 public:
@@ -83,7 +82,7 @@ public:
                long style = 0,
                const wxValidator& validator = wxDefaultValidator,
                const wxString& name = wxTextCtrlNameStr)
-        : wxScrollHelper(this) 
+        : wxScrollHelper(this)
     {
         Init();
 
@@ -103,8 +102,6 @@ public:
 
     // implement base class pure virtuals
     // ----------------------------------
-
-    virtual wxString GetValue() const;
 
     virtual int GetLineLength(wxTextCoord lineNo) const;
     virtual wxString GetLineText(wxTextCoord lineNo) const;
@@ -260,6 +257,7 @@ protected:
 
     // implements Set/ChangeValue()
     virtual void DoSetValue(const wxString& value, int flags = 0);
+    virtual wxString DoGetValue() const;
 
     // common part of all ctors
     void Init();

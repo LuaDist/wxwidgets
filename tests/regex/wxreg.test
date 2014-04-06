@@ -2,9 +2,8 @@
 # Name:        wxreg.test
 # Purpose:     Additional tests for the regex lib and wxRegEx
 # Author:      Mike Wetherell
-# RCS-ID:      $Id: wxreg.test 27026 2004-04-30 20:55:57Z VS $
 # Copyright:   (c) 2004 Mike Wetherell.
-# Licence:     wxWidgets licence
+# Licence:     wxWindows licence
 #############################################################################
 
 #

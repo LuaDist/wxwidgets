@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     2003-09-17
-// RCS-ID:      $Id: except.cpp 34436 2005-05-31 09:20:43Z JS $
 // Copyright:   (c) 2003-2005 Vadim Zeitlin
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -44,6 +43,8 @@
     #include "wx/utils.h"
     #include "wx/msgdlg.h"
     #include "wx/icon.h"
+
+    #include "wx/thread.h"
 #endif
 
 // ----------------------------------------------------------------------------
@@ -51,7 +52,7 @@
 // ----------------------------------------------------------------------------
 
 // the application icon (under Windows and OS/2 it is in resources)
-#if defined(__WXGTK__) || defined(__WXMOTIF__) || defined(__WXMAC__) || defined(__WXMGL__) || defined(__WXX11__)
+#ifndef wxHAS_IMAGES_IN_RESOURCES
     #include "../sample.xpm"
 #endif
 
@@ -91,14 +92,13 @@ public:
     // crash (e.g. dereferencing null pointer, division by 0, ...)
     virtual void OnFatalException();
 
-#ifdef __WXDEBUG__
-    // in debug mode, you can override this function to do something different
-    // (e.g. log the assert to file) whenever an assertion fails
-    virtual void OnAssert(const wxChar *file,
-                          int line,
-                          const wxChar *cond,
-                          const wxChar *msg);
-#endif // __WXDEBUG__
+    // you can override this function to do something different (e.g. log the
+    // assert to file) whenever an assertion fails
+    virtual void OnAssertFailure(const wxChar *file,
+                                 int line,
+                                 const wxChar *func,
+                                 const wxChar *cond,
+                                 const wxChar *msg);
 };
 
 // Define a new frame type: this is going to be our main frame
@@ -119,18 +119,24 @@ public:
     void OnThrowUnhandled(wxCommandEvent& event);
 
     void OnCrash(wxCommandEvent& event);
+    void OnTrap(wxCommandEvent& event);
 #if wxUSE_ON_FATAL_EXCEPTION
     void OnHandleCrash(wxCommandEvent& event);
 #endif
+
+protected:
 
     // 1st-level exception handling: we overload ProcessEvent() to be able to
     // catch exceptions which occur in MyFrame methods here
     virtual bool ProcessEvent(wxEvent& event);
 
-#ifdef __WXDEBUG__
-    // show how an assert failure message box looks like
+    // provoke assert in main or worker thread
+    //
+    // this is used to show how an assert failure message box looks like
     void OnShowAssert(wxCommandEvent& event);
-#endif // __WXDEBUG__
+#if wxUSE_THREADS
+    void OnShowAssertInThread(wxCommandEvent& event);
+#endif // wxUSE_THREADS
 
 private:
     // any class wishing to process wxWidgets events must use this macro
@@ -182,12 +188,14 @@ enum
     Except_ThrowObject,
     Except_ThrowUnhandled,
     Except_Crash,
+    Except_Trap,
 #if wxUSE_ON_FATAL_EXCEPTION
     Except_HandleCrash,
 #endif // wxUSE_ON_FATAL_EXCEPTION
-#ifdef __WXDEBUG__
     Except_ShowAssert,
-#endif // __WXDEBUG__
+#if wxUSE_THREADS
+    Except_ShowAssertInThread,
+#endif // wxUSE_THREADS
     Except_Dialog,
 
     Except_Quit = wxID_EXIT,
@@ -210,12 +218,14 @@ BEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_MENU(Except_ThrowObject, MyFrame::OnThrowObject)
     EVT_MENU(Except_ThrowUnhandled, MyFrame::OnThrowUnhandled)
     EVT_MENU(Except_Crash, MyFrame::OnCrash)
+    EVT_MENU(Except_Trap, MyFrame::OnTrap)
 #if wxUSE_ON_FATAL_EXCEPTION
     EVT_MENU(Except_HandleCrash, MyFrame::OnHandleCrash)
 #endif // wxUSE_ON_FATAL_EXCEPTION
-#ifdef __WXDEBUG__
     EVT_MENU(Except_ShowAssert, MyFrame::OnShowAssert)
-#endif // __WXDEBUG__
+#if wxUSE_THREADS
+    EVT_MENU(Except_ShowAssertInThread, MyFrame::OnShowAssertInThread)
+#endif // wxUSE_THREADS
 END_EVENT_TABLE()
 
 BEGIN_EVENT_TABLE(MyDialog, wxDialog)
@@ -238,6 +248,9 @@ IMPLEMENT_APP(MyApp)
 // 'Main program' equivalent: the program execution "starts" here
 bool MyApp::OnInit()
 {
+    if ( !wxApp::OnInit() )
+        return false;
+
     // create the main application window
     MyFrame *frame = new MyFrame();
 
@@ -259,11 +272,11 @@ bool MyApp::OnExceptionInMainLoop()
     }
     catch ( int i )
     {
-        wxLogWarning(_T("Caught an int %d in MyApp."), i);
+        wxLogWarning(wxT("Caught an int %d in MyApp."), i);
     }
     catch ( MyException& e )
     {
-        wxLogWarning(_T("Caught MyException(%s) in MyApp."), e.what());
+        wxLogWarning(wxT("Caught MyException(%s) in MyApp."), e.what());
     }
     catch ( ... )
     {
@@ -286,29 +299,38 @@ void MyApp::OnUnhandledException()
     }
     catch ( ... )
     {
-        wxMessageBox(_T("Unhandled exception caught, program will terminate."),
-                     _T("wxExcept Sample"), wxOK | wxICON_ERROR);
+        wxMessageBox(wxT("Unhandled exception caught, program will terminate."),
+                     wxT("wxExcept Sample"), wxOK | wxICON_ERROR);
     }
 }
 
 void MyApp::OnFatalException()
 {
-    wxMessageBox(_T("Program has crashed and will terminate."),
-                 _T("wxExcept Sample"), wxOK | wxICON_ERROR);
+    wxMessageBox(wxT("Program has crashed and will terminate."),
+                 wxT("wxExcept Sample"), wxOK | wxICON_ERROR);
 }
 
-#ifdef __WXDEBUG__
-
-void MyApp::OnAssert(const wxChar *file,
-                     int line,
-                     const wxChar *cond,
-                     const wxChar *msg)
+void MyApp::OnAssertFailure(const wxChar *file,
+                            int line,
+                            const wxChar *func,
+                            const wxChar *cond,
+                            const wxChar *msg)
 {
-    // we don't have anything special to do here
-    wxApp::OnAssert(file, line, cond, msg);
+    // take care to not show the message box from a worker thread, this doesn't
+    // work as it doesn't have any event loop
+    if ( !wxIsMainThread() ||
+            wxMessageBox
+            (
+                wxString::Format("An assert failed in %s().", func) +
+                "\n"
+                "Do you want to call the default assert handler?",
+                "wxExcept Sample",
+                wxYES_NO | wxICON_QUESTION
+            ) == wxYES )
+    {
+        wxApp::OnAssertFailure(file, line, func, cond, msg);
+    }
 }
-
-#endif // __WXDEBUG__
 
 // ============================================================================
 // MyFrame implementation
@@ -316,7 +338,7 @@ void MyApp::OnAssert(const wxChar *file,
 
 // frame constructor
 MyFrame::MyFrame()
-       : wxFrame(NULL, wxID_ANY, _T("Except wxWidgets App"),
+       : wxFrame(NULL, wxID_ANY, wxT("Except wxWidgets App"),
                  wxPoint(50, 50), wxSize(450, 340))
 {
     // set the frame icon
@@ -325,32 +347,36 @@ MyFrame::MyFrame()
 #if wxUSE_MENUS
     // create a menu bar
     wxMenu *menuFile = new wxMenu;
-    menuFile->Append(Except_Dialog, _T("Show &dialog\tCtrl-D"));
+    menuFile->Append(Except_Dialog, wxT("Show &dialog\tCtrl-D"));
     menuFile->AppendSeparator();
-    menuFile->Append(Except_ThrowInt, _T("Throw an &int\tCtrl-I"));
-    menuFile->Append(Except_ThrowString, _T("Throw a &string\tCtrl-S"));
-    menuFile->Append(Except_ThrowObject, _T("Throw an &object\tCtrl-O"));
+    menuFile->Append(Except_ThrowInt, wxT("Throw an &int\tCtrl-I"));
+    menuFile->Append(Except_ThrowString, wxT("Throw a &string\tCtrl-S"));
+    menuFile->Append(Except_ThrowObject, wxT("Throw an &object\tCtrl-O"));
     menuFile->Append(Except_ThrowUnhandled,
-                        _T("Throw &unhandled exception\tCtrl-U"));
-    menuFile->Append(Except_Crash, _T("&Crash\tCtrl-C"));
+                        wxT("Throw &unhandled exception\tCtrl-U"));
+    menuFile->Append(Except_Crash, wxT("&Crash\tCtrl-C"));
+    menuFile->Append(Except_Trap, "&Trap\tCtrl-T",
+                     "Break into the debugger (if one is running)");
     menuFile->AppendSeparator();
 #if wxUSE_ON_FATAL_EXCEPTION
-    menuFile->AppendCheckItem(Except_HandleCrash, _T("&Handle crashes\tCtrl-H"));
+    menuFile->AppendCheckItem(Except_HandleCrash, wxT("&Handle crashes\tCtrl-H"));
     menuFile->AppendSeparator();
 #endif // wxUSE_ON_FATAL_EXCEPTION
-#ifdef __WXDEBUG__
-    menuFile->Append(Except_ShowAssert, _T("Provoke &assert failure\tCtrl-A"));
+    menuFile->Append(Except_ShowAssert, wxT("Provoke &assert failure\tCtrl-A"));
+#if wxUSE_THREADS
+    menuFile->Append(Except_ShowAssertInThread,
+                     wxT("Assert failure in &thread\tShift-Ctrl-A"));
+#endif // wxUSE_THREADS
     menuFile->AppendSeparator();
-#endif // __WXDEBUG__
-    menuFile->Append(Except_Quit, _T("E&xit\tCtrl-Q"), _T("Quit this program"));
+    menuFile->Append(Except_Quit, wxT("E&xit\tCtrl-Q"), wxT("Quit this program"));
 
     wxMenu *helpMenu = new wxMenu;
-    helpMenu->Append(Except_About, _T("&About...\tF1"), _T("Show about dialog"));
+    helpMenu->Append(Except_About, wxT("&About\tF1"), wxT("Show about dialog"));
 
     // now append the freshly created menu to the menu bar...
     wxMenuBar *menuBar = new wxMenuBar();
-    menuBar->Append(menuFile, _T("&File"));
-    menuBar->Append(helpMenu, _T("&Help"));
+    menuBar->Append(menuFile, wxT("&File"));
+    menuBar->Append(helpMenu, wxT("&Help"));
 
     // ... and attach this menu bar to the frame
     SetMenuBar(menuBar);
@@ -359,7 +385,7 @@ MyFrame::MyFrame()
 #if wxUSE_STATUSBAR && !defined(__WXWINCE__)
     // create a status bar just for fun (by default with 1 pane only)
     CreateStatusBar(2);
-    SetStatusText(_T("Welcome to wxWidgets!"));
+    SetStatusText(wxT("Welcome to wxWidgets!"));
 #endif // wxUSE_STATUSBAR
 }
 
@@ -371,7 +397,7 @@ bool MyFrame::ProcessEvent(wxEvent& event)
     }
     catch ( const wxChar *msg )
     {
-        wxLogMessage(_T("Caught a string \"%s\" in MyFrame"), msg);
+        wxLogMessage(wxT("Caught a string \"%s\" in MyFrame"), msg);
 
         return true;
     }
@@ -393,7 +419,7 @@ void MyFrame::OnDialog(wxCommandEvent& WXUNUSED(event))
     }
     catch ( ... )
     {
-        wxLogWarning(_T("An exception in MyDialog"));
+        wxLogWarning(wxT("An exception in MyDialog"));
 
         Destroy();
         throw;
@@ -407,12 +433,12 @@ void MyFrame::OnThrowInt(wxCommandEvent& WXUNUSED(event))
 
 void MyFrame::OnThrowString(wxCommandEvent& WXUNUSED(event))
 {
-    throw _T("string thrown from MyFrame");
+    throw wxT("string thrown from MyFrame");
 }
 
 void MyFrame::OnThrowObject(wxCommandEvent& WXUNUSED(event))
 {
-    throw MyException(_T("Exception thrown from MyFrame"));
+    throw MyException(wxT("Exception thrown from MyFrame"));
 }
 
 void MyFrame::OnThrowUnhandled(wxCommandEvent& WXUNUSED(event))
@@ -425,6 +451,11 @@ void MyFrame::OnCrash(wxCommandEvent& WXUNUSED(event))
     DoCrash();
 }
 
+void MyFrame::OnTrap(wxCommandEvent& WXUNUSED(event))
+{
+    wxTrap();
+}
+
 #if wxUSE_ON_FATAL_EXCEPTION
 
 void MyFrame::OnHandleCrash(wxCommandEvent& event)
@@ -434,8 +465,6 @@ void MyFrame::OnHandleCrash(wxCommandEvent& event)
 
 #endif // wxUSE_ON_FATAL_EXCEPTION
 
-#ifdef __WXDEBUG__
-
 void MyFrame::OnShowAssert(wxCommandEvent& WXUNUSED(event))
 {
     // provoke an assert from wxArrayString
@@ -443,15 +472,42 @@ void MyFrame::OnShowAssert(wxCommandEvent& WXUNUSED(event))
     arr[0];
 }
 
-#endif // __WXDEBUG__
+#if wxUSE_THREADS
+
+void MyFrame::OnShowAssertInThread(wxCommandEvent& WXUNUSED(event))
+{
+    class AssertThread : public wxThread
+    {
+    public:
+        AssertThread()
+            : wxThread(wxTHREAD_JOINABLE)
+        {
+        }
+
+    protected:
+        virtual void *Entry()
+        {
+            wxFAIL_MSG("Test assert in another thread.");
+
+            return 0;
+        }
+    };
+
+    AssertThread thread;
+    thread.Create();
+    thread.Run();
+    thread.Wait();
+}
+
+#endif // wxUSE_THREADS
 
 void MyFrame::OnAbout(wxCommandEvent& WXUNUSED(event))
 {
     wxString msg;
-    msg.Printf( _T("This is the About dialog of the except sample.\n")
-                _T("Welcome to %s"), wxVERSION_STRING);
+    msg.Printf( wxT("This is the About dialog of the except sample.\n")
+                wxT("Welcome to %s"), wxVERSION_STRING);
 
-    wxMessageBox(msg, _T("About Except"), wxOK | wxICON_INFORMATION, this);
+    wxMessageBox(msg, wxT("About Except"), wxOK | wxICON_INFORMATION, this);
 }
 
 // ============================================================================
@@ -459,21 +515,20 @@ void MyFrame::OnAbout(wxCommandEvent& WXUNUSED(event))
 // ============================================================================
 
 MyDialog::MyDialog(wxFrame *parent)
-        : wxDialog(parent, wxID_ANY, wxString(_T("Throw exception dialog")))
+        : wxDialog(parent, wxID_ANY, wxString(wxT("Throw exception dialog")))
 {
     wxSizer *sizerTop = new wxBoxSizer(wxVERTICAL);
 
-    sizerTop->Add(new wxButton(this, Except_ThrowInt, _T("Throw &int")),
+    sizerTop->Add(new wxButton(this, Except_ThrowInt, wxT("Throw &int")),
                   0, wxCENTRE | wxALL, 5);
-    sizerTop->Add(new wxButton(this, Except_ThrowObject, _T("Throw &object")),
+    sizerTop->Add(new wxButton(this, Except_ThrowObject, wxT("Throw &object")),
                   0, wxCENTRE | wxALL, 5);
-    sizerTop->Add(new wxButton(this, Except_Crash, _T("&Crash")),
+    sizerTop->Add(new wxButton(this, Except_Crash, wxT("&Crash")),
                   0, wxCENTRE | wxALL, 5);
-    sizerTop->Add(new wxButton(this, wxID_CANCEL, _T("&Cancel")),
+    sizerTop->Add(new wxButton(this, wxID_CANCEL, wxT("&Cancel")),
                   0, wxCENTRE | wxALL, 5);
 
-    SetSizer(sizerTop);
-    sizerTop->Fit(this);
+    SetSizerAndFit(sizerTop);
 }
 
 void MyDialog::OnThrowInt(wxCommandEvent& WXUNUSED(event))
@@ -483,7 +538,7 @@ void MyDialog::OnThrowInt(wxCommandEvent& WXUNUSED(event))
 
 void MyDialog::OnThrowObject(wxCommandEvent& WXUNUSED(event))
 {
-    throw MyException(_T("Exception thrown from MyDialog"));
+    throw MyException(wxT("Exception thrown from MyDialog"));
 }
 
 void MyDialog::OnCrash(wxCommandEvent& WXUNUSED(event))

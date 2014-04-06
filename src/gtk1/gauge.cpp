@@ -2,7 +2,6 @@
 // Name:        src/gtk1/gauge.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: gauge.cpp 42816 2006-10-31 08:50:17Z RD $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -19,8 +18,6 @@
 //-----------------------------------------------------------------------------
 // wxGauge
 //-----------------------------------------------------------------------------
-
-IMPLEMENT_DYNAMIC_CLASS(wxGauge, wxControl)
 
 bool wxGauge::Create( wxWindow *parent,
                       wxWindowID id,
@@ -60,7 +57,7 @@ bool wxGauge::Create( wxWindow *parent,
 void wxGauge::DoSetGauge()
 {
     wxASSERT_MSG( 0 <= m_gaugePos && m_gaugePos <= m_rangeMax,
-                  _T("invalid gauge position in DoSetGauge()") );
+                  wxT("invalid gauge position in DoSetGauge()") );
 
     gtk_progress_bar_update( GTK_PROGRESS_BAR(m_widget),
                              m_rangeMax ? ((float)m_gaugePos)/m_rangeMax : 0.);
@@ -88,7 +85,7 @@ void wxGauge::SetRange( int range )
 
 void wxGauge::SetValue( int pos )
 {
-    wxCHECK_RET( pos <= m_rangeMax, _T("invalid value in wxGauge::SetValue()") );
+    wxCHECK_RET( pos <= m_rangeMax, wxT("invalid value in wxGauge::SetValue()") );
 
     m_gaugePos = pos;
 

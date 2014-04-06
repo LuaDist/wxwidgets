@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     06.08.00
-// RCS-ID:      $Id: gtk.cpp 44058 2006-12-24 19:06:39Z VS $
 // Copyright:   (c) 2000 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -32,6 +31,7 @@
     #include "wx/intl.h"
     #include "wx/log.h"
     #include "wx/dcmemory.h"
+    #include "wx/dcclient.h"
     #include "wx/window.h"
 
     #include "wx/menu.h"
@@ -56,16 +56,14 @@
 #include "wx/notebook.h"
 #include "wx/spinbutt.h"
 #include "wx/artprov.h"
-#ifdef wxUSE_TOGGLEBTN
 #include "wx/tglbtn.h"
-#endif // wxUSE_TOGGLEBTN
 
 #include "wx/univ/stdrend.h"
 #include "wx/univ/inpcons.h"
 #include "wx/univ/inphand.h"
 #include "wx/univ/colschem.h"
 
-class WXDLLEXPORT wxGTKMenuGeometryInfo;
+class wxGTKMenuGeometryInfo;
 
 // ----------------------------------------------------------------------------
 // constants
@@ -84,7 +82,7 @@ public:
     wxGTKRenderer(const wxColourScheme *scheme);
 
     // wxRenderer methods
-    virtual void DrawFocusRect(wxDC& dc, const wxRect& rect, int flags = 0);
+    virtual void DrawFocusRect(wxWindow* win, wxDC& dc, const wxRect& rect, int flags = 0);
     virtual void DrawTextBorder(wxDC& dc,
                                 wxBorder border,
                                 const wxRect& rect,
@@ -327,7 +325,7 @@ protected:
                      wxCoord y1, wxCoord y2);
 
     // draw the radio button bitmap for the given state
-    void DrawRadioBitmap(wxDC& dc, const wxRect& rect, int flags);
+    void DrawRadioButtonBitmap(wxDC& dc, const wxRect& rect, int flags);
 
     // common part of DrawMenuItem() and DrawMenuBarItem()
     void DoDrawMenuItem(wxDC& dc,
@@ -645,7 +643,7 @@ wxColour wxGTKColourScheme::GetBackground(wxWindow *win) const
     if ( !win->ShouldInheritColours() )
     {
         // doesn't depend on the state
-        if ( !col.Ok() )
+        if ( !col.IsOk() )
         {
             col = Get(WINDOW);
         }
@@ -656,7 +654,7 @@ wxColour wxGTKColourScheme::GetBackground(wxWindow *win) const
 
         // the colour set by the user should be used for the normal state
         // and for the states for which we don't have any specific colours
-        if ( !col.Ok() || (flags != 0) )
+        if ( !col.IsOk() || (flags != 0) )
         {
 #if wxUSE_SCROLLBAR
             if ( wxDynamicCast(win, wxScrollBar) )
@@ -715,7 +713,7 @@ wxColour wxGTKColourScheme::Get(wxGTKColourScheme::StdColour col) const
 
         case MAX:
         default:
-            wxFAIL_MSG(_T("invalid standard colour"));
+            wxFAIL_MSG(wxT("invalid standard colour"));
             return *wxBLACK;
     }
 }
@@ -771,7 +769,7 @@ void wxGTKRenderer::DrawAntiShadedRectSide(wxDC& dc,
             break;
 
         default:
-            wxFAIL_MSG(_T("unknown rectangle side"));
+            wxFAIL_MSG(wxT("unknown rectangle side"));
     }
 }
 
@@ -813,7 +811,7 @@ void wxGTKRenderer::DrawSunkenBorder(wxDC& dc, wxRect *rect)
 }
 
 void
-wxGTKRenderer::DrawFocusRect(wxDC& dc, const wxRect& rect, int WXUNUSED(flags))
+wxGTKRenderer::DrawFocusRect(wxWindow* WXUNUSED(win), wxDC& dc, const wxRect& rect, int WXUNUSED(flags))
 {
     dc.SetBrush(*wxTRANSPARENT_BRUSH);
     wxRect rectFocus = rect;
@@ -924,7 +922,7 @@ void wxGTKRenderer::DrawFrameWithLabel(wxDC& dc,
 }
 
 // ----------------------------------------------------------------------------
-// check/radion buttons
+// check/radio buttons
 // ----------------------------------------------------------------------------
 
 void wxGTKRenderer::DrawCheckItemBitmap(wxDC& dc,
@@ -996,9 +994,9 @@ void wxGTKRenderer::DrawCheckBitmap(wxDC& dc, const wxRect& rectTotal)
     dc.DrawRectangle(rect);
 }
 
-void wxGTKRenderer::DrawRadioBitmap(wxDC& dc,
-                                    const wxRect& rect,
-                                    int flags)
+void wxGTKRenderer::DrawRadioButtonBitmap(wxDC& dc,
+                                          const wxRect& rect,
+                                          int flags)
 {
     wxCoord x = rect.x,
             y = rect.y,
@@ -1068,7 +1066,7 @@ void wxGTKRenderer::DrawDownZag(wxDC& dc,
 
 wxBitmap wxGTKRenderer::GetCheckBitmap(int flags)
 {
-    if ( !m_bitmapsCheckbox[0][0].Ok() )
+    if ( !m_bitmapsCheckbox[0][0].IsOk() )
     {
         // init the bitmaps once only
         wxRect rect;
@@ -1125,7 +1123,7 @@ wxBitmap wxGTKRenderer::GetRadioBitmap(int flags)
     GetIndicatorsFromFlags(flags, state, status);
 
     wxBitmap& bmp = m_bitmapsRadiobtn[state][status];
-    if ( !bmp.Ok() )
+    if ( !bmp.IsOk() )
     {
         const wxSize size = GetRadioBitmapSize();
 
@@ -1133,7 +1131,7 @@ wxBitmap wxGTKRenderer::GetRadioBitmap(int flags)
         bmp.Create(size.x, size.y);
         dc.SelectObject(bmp);
 
-        DrawRadioBitmap(dc, size, flags);
+        DrawRadioButtonBitmap(dc, size, flags);
     }
 
     return bmp;
@@ -1141,7 +1139,7 @@ wxBitmap wxGTKRenderer::GetRadioBitmap(int flags)
 
 wxBitmap wxGTKRenderer::GetLineWrapBitmap() const
 {
-    if ( !m_bmpLineWrap.Ok() )
+    if ( !m_bmpLineWrap.IsOk() )
     {
         // the line wrap bitmap as used by GTK+
         #define line_wrap_width 6
@@ -1152,9 +1150,9 @@ wxBitmap wxGTKRenderer::GetLineWrapBitmap() const
         };
 
         wxBitmap bmpLineWrap(line_wrap_bits, line_wrap_width, line_wrap_height);
-        if ( !bmpLineWrap.Ok() )
+        if ( !bmpLineWrap.IsOk() )
         {
-            wxFAIL_MSG( _T("Failed to create line wrap XBM") );
+            wxFAIL_MSG( wxT("Failed to create line wrap XBM") );
         }
         else
         {
@@ -1175,7 +1173,7 @@ void wxGTKRenderer::DrawToolBarButton(wxDC& dc,
                                       int tbarStyle)
 {
     // we don't draw the separators at all
-    if ( !label.empty() || bitmap.Ok() )
+    if ( !label.empty() || bitmap.IsOk() )
     {
         wxRect rect = rectOrig;
         rect.Deflate(BORDER_THICKNESS);
@@ -1259,7 +1257,7 @@ void wxGTKRenderer::DrawLineWrapMark(wxDC& dc, const wxRect& rect)
     dc.DrawBitmap(bmpLineWrap,
                   rect.x, rect.y + (rect.height - bmpLineWrap.GetHeight())/2);
 
-    if ( colFgOld.Ok() )
+    if ( colFgOld.IsOk() )
     {
         // restore old colour
         dc.SetTextForeground(colFgOld);
@@ -1302,7 +1300,7 @@ void wxGTKRenderer::DrawTab(wxDC& dc,
         switch ( dir )
         {
             default:
-                wxFAIL_MSG(_T("invaild notebook tab orientation"));
+                wxFAIL_MSG(wxT("invaild notebook tab orientation"));
                 // fall through
 
             case wxTOP:
@@ -1572,7 +1570,7 @@ void wxGTKRenderer::DrawSliderThumb(wxDC& dc,
 // ----------------------------------------------------------------------------
 
 // wxGTKMenuGeometryInfo: the wxMenuGeometryInfo used by wxGTKRenderer
-class WXDLLEXPORT wxGTKMenuGeometryInfo : public wxMenuGeometryInfo
+class wxGTKMenuGeometryInfo : public wxMenuGeometryInfo
 {
 public:
     virtual wxSize GetSize() const { return m_size; }
@@ -1676,12 +1674,12 @@ void wxGTKRenderer::DoDrawMenuItem(wxDC& dc,
     if ( geometryInfo )
     {
         wxBitmap bmp = bitmap;
-        if ( !bmp.Ok() && (flags & wxCONTROL_CHECKABLE) )
+        if ( !bmp.IsOk() && (flags & wxCONTROL_CHECKABLE) )
         {
             bmp = GetCheckBitmap(flags);
         }
 
-        if ( bmp.Ok() )
+        if ( bmp.IsOk() )
         {
             rect.SetRight(geometryInfo->GetLabelOffset());
             wxControlRenderer::DrawBitmap(dc, bmp, rect);
@@ -1702,7 +1700,7 @@ void wxGTKRenderer::DoDrawMenuItem(wxDC& dc,
     if ( !accel.empty() )
     {
         // menubar items shouldn't have them
-        wxCHECK_RET( geometryInfo, _T("accel strings only valid for menus") );
+        wxCHECK_RET( geometryInfo, wxT("accel strings only valid for menus") );
 
         rect.x = geometryInfo->GetAccelOffset();
         rect.SetRight(geometryInfo->GetSize().x);
@@ -1714,7 +1712,7 @@ void wxGTKRenderer::DoDrawMenuItem(wxDC& dc,
     // draw the submenu indicator
     if ( flags & wxCONTROL_ISSUBMENU )
     {
-        wxCHECK_RET( geometryInfo, _T("wxCONTROL_ISSUBMENU only valid for menus") );
+        wxCHECK_RET( geometryInfo, wxT("wxCONTROL_ISSUBMENU only valid for menus") );
 
         rect.x = geometryInfo->GetSize().x - MENU_RIGHT_MARGIN;
         rect.width = MENU_RIGHT_MARGIN;
@@ -1781,7 +1779,7 @@ wxMenuGeometryInfo *wxGTKRenderer::GetMenuGeometry(wxWindow *win,
             h = heightText;
 
             wxCoord widthLabel;
-            dc.GetTextExtent(item->GetLabel(), &widthLabel, NULL);
+            dc.GetTextExtent(item->GetItemLabelText(), &widthLabel, NULL);
             if ( widthLabel > widthLabelMax )
             {
                 widthLabelMax = widthLabel;
@@ -1795,7 +1793,7 @@ wxMenuGeometryInfo *wxGTKRenderer::GetMenuGeometry(wxWindow *win,
             }
 
             const wxBitmap& bmp = item->GetBitmap();
-            if ( bmp.Ok() )
+            if ( bmp.IsOk() )
             {
                 wxCoord widthBmp = bmp.GetWidth();
                 if ( widthBmp > widthBmpMax )
@@ -1877,7 +1875,7 @@ void wxGTKRenderer::GetComboBitmaps(wxBitmap *bmpNormal,
                                     wxBitmap *bmpPressed,
                                     wxBitmap *bmpDisabled)
 {
-    if ( !m_bitmapsCombo[ComboState_Normal].Ok() )
+    if ( !m_bitmapsCombo[ComboState_Normal].IsOk() )
     {
         InitComboBitmaps();
     }
@@ -1949,7 +1947,7 @@ void wxGTKRenderer::DrawArrowBorder(wxDC& dc,
             break;
 
         default:
-            wxFAIL_MSG(_T("unknown arrow direction"));
+            wxFAIL_MSG(wxT("unknown arrow direction"));
             return;
     }
 
@@ -2084,7 +2082,7 @@ void wxGTKRenderer::DrawArrow(wxDC& dc,
             break;
 
         default:
-            wxFAIL_MSG(_T("unknown arrow direction"));
+            wxFAIL_MSG(wxT("unknown arrow direction"));
     }
 
     dc.DrawPolygon(WXSIZEOF(ptArrow), ptArrow);
@@ -2096,7 +2094,7 @@ void wxGTKRenderer::DrawArrow(wxDC& dc,
         case wxUP:
             dc.DrawLine(ptArrow[Point_Second], ptArrow[Point_First]);
             dc.DrawPoint(ptArrow[Point_First]);
-            if ( penShadow[3].Ok() )
+            if ( penShadow[3].IsOk() )
             {
                 dc.SetPen(penShadow[3]);
                 dc.DrawLine(ptArrow[Point_First].x + 1, ptArrow[Point_First].y,
@@ -2108,7 +2106,7 @@ void wxGTKRenderer::DrawArrow(wxDC& dc,
             dc.DrawPoint(ptArrow[Point_Third]);
             dc.DrawLine(ptArrow[Point_Third].x - 2, ptArrow[Point_Third].y,
                         ptArrow[Point_First].x + 1, ptArrow[Point_First].y);
-            if ( penShadow[2].Ok() )
+            if ( penShadow[2].IsOk() )
             {
                 dc.SetPen(penShadow[2]);
                 dc.DrawLine(ptArrow[Point_Third].x - 1, ptArrow[Point_Third].y,
@@ -2122,7 +2120,7 @@ void wxGTKRenderer::DrawArrow(wxDC& dc,
             dc.DrawLine(ptArrow[Point_First], ptArrow[Point_Second]);
             dc.DrawLine(ptArrow[Point_First].x + 2, ptArrow[Point_First].y,
                         ptArrow[Point_Third].x - 1, ptArrow[Point_Third].y);
-            if ( penShadow[2].Ok() )
+            if ( penShadow[2].IsOk() )
             {
                 dc.SetPen(penShadow[2]);
                 dc.DrawLine(ptArrow[Point_Second].x, ptArrow[Point_Second].y - 1,
@@ -2136,7 +2134,7 @@ void wxGTKRenderer::DrawArrow(wxDC& dc,
         case wxLEFT:
             dc.DrawLine(ptArrow[Point_Second], ptArrow[Point_First]);
             dc.DrawPoint(ptArrow[Point_First]);
-            if ( penShadow[2].Ok() )
+            if ( penShadow[2].IsOk() )
             {
                 dc.SetPen(penShadow[2]);
                 dc.DrawLine(ptArrow[Point_Third].x - 1, ptArrow[Point_Third].y,
@@ -2161,7 +2159,7 @@ void wxGTKRenderer::DrawArrow(wxDC& dc,
             break;
 
         default:
-            wxFAIL_MSG(_T("unknown arrow direction"));
+            wxFAIL_MSG(wxT("unknown arrow direction"));
             return;
     }
 }
@@ -2266,12 +2264,13 @@ void wxGTKRenderer::AdjustSize(wxSize *size, const wxWindow *window)
 #if wxUSE_SCROLLBAR
     if ( wxDynamicCast(window, wxScrollBar) )
     {
-        // we only set the width of vert scrollbars and height of the
-        // horizontal ones
-        if ( window->GetWindowStyle() & wxSB_HORIZONTAL )
-            size->y = m_sizeScrollbarArrow.x;
-        else
-            size->x = m_sizeScrollbarArrow.x;
+        /*
+        Don't adjust the size for a scrollbar as its DoGetBestClientSize
+        already has the correct size set. Any size changes here would get
+        added to the best size, making the scrollbar larger.
+        Also skip border width adjustments, they don't make sense for us.
+        */
+        return;
     }
     else
 #endif // wxUSE_SCROLLBAR

@@ -3,7 +3,6 @@
 // Purpose:     wx wrappers for DirectFB interfaces
 // Author:      Vaclav Slavik
 // Created:     2006-08-23
-// RCS-ID:      $Id: wrapdfb.h 54748 2008-07-21 17:01:35Z VZ $
 // Copyright:   (c) 2006 REA Elektronik GmbH
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -11,11 +10,18 @@
 #ifndef _WX_DFB_WRAPDFB_H_
 #define _WX_DFB_WRAPDFB_H_
 
+#include "wx/dfb/dfbptr.h"
 #include "wx/gdicmn.h"
 #include "wx/vidmode.h"
-#include "wx/dfb/dfbptr.h"
 
 #include <directfb.h>
+#include <directfb_version.h>
+
+// DFB < 1.0 didn't have u8 type, only __u8
+#if DIRECTFB_MAJOR_VERSION == 0
+typedef __u8 u8;
+#endif
+
 
 wxDFB_DECLARE_INTERFACE(IDirectFB);
 wxDFB_DECLARE_INTERFACE(IDirectFBDisplayLayer);
@@ -207,6 +213,9 @@ struct wxIDirectFBSurface : public wxDfbWrapper<IDirectFBSurface>
     bool GetPixelFormat(DFBSurfacePixelFormat *caps)
         { return Check(m_ptr->GetPixelFormat(m_ptr, caps)); }
 
+    // convenience version of GetPixelFormat, returns DSPF_UNKNOWN if fails
+    DFBSurfacePixelFormat GetPixelFormat();
+
     bool SetClip(const DFBRegion *clip)
         { return Check(m_ptr->SetClip(m_ptr, clip)); }
 
@@ -285,7 +294,6 @@ struct wxIDirectFBSurface : public wxDfbWrapper<IDirectFBSurface>
                                         source_rect, dest_rect));
     }
 
-
     /// Returns bit depth used by the surface or -1 on error
     int GetDepth();
 
@@ -315,6 +323,36 @@ struct wxIDirectFBSurface : public wxDfbWrapper<IDirectFBSurface>
     wxIDirectFBSurfacePtr CreateCompatible(const wxSize& size = wxDefaultSize,
                                            int flags = 0);
 
+    bool Lock(DFBSurfaceLockFlags flags, void **ret_ptr, int *ret_pitch)
+        { return Check(m_ptr->Lock(m_ptr, flags, ret_ptr, ret_pitch)); }
+
+    bool Unlock()
+        { return Check(m_ptr->Unlock(m_ptr)); }
+
+    /// Helper struct for safe locking & unlocking of surfaces
+    struct Locked
+    {
+        Locked(const wxIDirectFBSurfacePtr& surface, DFBSurfaceLockFlags flags)
+            : m_surface(surface)
+        {
+            if ( !surface->Lock(flags, &ptr, &pitch) )
+                ptr = NULL;
+        }
+
+        ~Locked()
+        {
+            if ( ptr )
+                m_surface->Unlock();
+        }
+
+        void *ptr;
+        int pitch;
+
+    private:
+        wxIDirectFBSurfacePtr m_surface;
+    };
+
+
 private:
     // this is private because we want user code to use FlipToFront()
     bool Flip(const DFBRegion *region, int flags);
@@ -329,39 +367,9 @@ struct wxIDirectFBEventBuffer : public wxDfbWrapper<IDirectFBEventBuffer>
 {
     wxIDirectFBEventBuffer(IDirectFBEventBuffer *s) { Init(s); }
 
-    bool WakeUp()
+    bool CreateFileDescriptor(int *ret_fd)
     {
-        return Check(m_ptr->WakeUp(m_ptr));
-    }
-
-    bool HasEvent()
-    {
-        // returns DFB_OK if there is >=1 event, DFB_BUFFEREMPTY otherwise
-        DFBResult r = m_ptr->HasEvent(m_ptr);
-
-        // NB: Check() also returns true for DFB_BUFFEREMPTY, so we can't just
-        //     return it's return value:
-        Check(r);
-        return (r == DFB_OK);
-    }
-
-    bool WaitForEventWithTimeout(unsigned secs, unsigned millisecs)
-    {
-        DFBResult r = m_ptr->WaitForEventWithTimeout(m_ptr, secs, millisecs);
-
-        // DFB_TIMEOUT is not an error in this function:
-        if ( r == DFB_TIMEOUT )
-        {
-            m_lastResult = DFB_TIMEOUT;
-            return true;
-        }
-
-        return Check(r);
-    }
-
-    bool GetEvent(wxDFBEvent& event)
-    {
-        return Check(m_ptr->GetEvent(m_ptr, &event));
+        return Check(m_ptr->CreateFileDescriptor(m_ptr, ret_fd));
     }
 };
 
@@ -394,6 +402,12 @@ struct wxIDirectFBWindow : public wxDfbWrapper<IDirectFBWindow>
 
     bool SetStackingClass(DFBWindowStackingClass klass)
         { return Check(m_ptr->SetStackingClass(m_ptr, klass)); }
+
+    bool RaiseToTop()
+        { return Check(m_ptr->RaiseToTop(m_ptr)); }
+
+    bool LowerToBottom()
+        { return Check(m_ptr->LowerToBottom(m_ptr)); }
 
     wxIDirectFBSurfacePtr GetSurface()
     {

@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     22.01.01
-// RCS-ID:      $Id: scrarrow.cpp 42739 2006-10-30 18:08:21Z ABX $
 // Copyright:   (c) 2001 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -123,7 +122,7 @@ wxScrollArrows::wxScrollArrows(wxControlWithArrows *control)
 wxScrollArrows::~wxScrollArrows()
 {
     // it should have been destroyed
-    wxASSERT_MSG( !m_captureData, _T("memory leak in wxScrollArrows") );
+    wxASSERT_MSG( !m_captureData, wxT("memory leak in wxScrollArrows") );
 }
 
 // ----------------------------------------------------------------------------

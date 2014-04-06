@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/13/99
-// RCS-ID:      $Id: app.cpp 53612 2008-05-17 09:28:05Z SN $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -28,7 +27,7 @@
     #include "wx/dialog.h"
     #include "wx/msgdlg.h"
     #include "wx/intl.h"
-    #include "wx/wxchar.h"
+    #include "wx/crt.h"
     #include "wx/log.h"
     #include "wx/module.h"
 #endif
@@ -235,9 +234,7 @@ bool wxApp::Initialize(int& argc, wxChar **argv)
 
     // Some people may wish to use this, but
     // probably it shouldn't be here by default.
-#ifdef __WXDEBUG__
     //    wxRedirectIOToConsole();
-#endif
 
     wxWinHandleHash = new wxWinHashTable(wxKEY_INTEGER, 100);
 
@@ -388,8 +385,7 @@ bool wxApp::RegisterWindowClasses( HAB vHab )
 //
 void wxApp::CleanUp()
 {
-    delete[] wxBuffer;
-    wxBuffer = NULL;
+    wxDELETEA(wxBuffer);
 
     //
     // PM-SPECIFIC CLEANUP
@@ -416,8 +412,7 @@ void wxApp::CleanUp()
 // TODO:        ::DeleteObject( wxDisableButtonBrush );
     }
 
-    delete wxWinHandleHash;
-    wxWinHandleHash = NULL;
+    wxDELETE(wxWinHandleHash);
 
     // Delete Message queue
     if (wxTheApp->m_hMq)
@@ -448,8 +443,6 @@ bool wxApp::OnInitGui()
 
 wxApp::wxApp()
 {
-    argc = 0;
-    argv = NULL;
     m_nPrintMode = wxPRINT_WINDOWS;
     m_hMq = 0;
     m_maxSocketHandles = 0;
@@ -459,23 +452,11 @@ wxApp::wxApp()
 
 wxApp::~wxApp()
 {
-    //
-    // Delete command-line args
-    //
-#if wxUSE_UNICODE
-    int                             i;
-
-    for (i = 0; i < argc; i++)
-    {
-        delete[] argv[i];
-    }
-    delete[] argv;
-#endif
 } // end of wxApp::~wxApp
 
 bool gbInOnIdle = false;
 
-void wxApp::OnIdle( wxIdleEvent& rEvent )
+void wxApp::OnIdle( wxIdleEvent& WXUNUSED(rEvent) )
 {
     //
     // Avoid recursion (via ProcessEvent default case)
@@ -484,8 +465,6 @@ void wxApp::OnIdle( wxIdleEvent& rEvent )
         return;
 
     gbInOnIdle = true;
-
-    wxAppBase::OnIdle(rEvent);
 
 #if wxUSE_DC_CACHEING
     // automated DC cache management: clear the cached DCs and bitmap
@@ -519,62 +498,6 @@ void wxApp::OnQueryEndSession( wxCloseEvent& rEvent )
             rEvent.Veto(true);
     }
 } // end of wxApp::OnQueryEndSession
-
-//
-// Yield to incoming messages
-//
-bool wxApp::Yield(bool onlyIfNeeded)
-{
-    static bool s_inYield = false;
-
-    if ( s_inYield )
-    {
-        if ( !onlyIfNeeded )
-        {
-            wxFAIL_MSG( _T("wxYield() called recursively") );
-        }
-
-        return false;
-    }
-
-    HAB vHab = 0;
-    QMSG vMsg;
-
-    //
-    // Disable log flushing from here because a call to wxYield() shouldn't
-    // normally result in message boxes popping up &c
-    //
-    wxLog::Suspend();
-
-    s_inYield = true;
-
-    //
-    // We want to go back to the main message loop
-    // if we see a WM_QUIT. (?)
-    //
-    wxEventLoopGuarantor dummyLoopIfNeeded;
-    while (::WinPeekMsg(vHab, &vMsg, (HWND)NULL, 0, 0, PM_NOREMOVE) && vMsg.msg != WM_QUIT)
-    {
-#if wxUSE_THREADS
-        wxMutexGuiLeaveOrEnter();
-#endif // wxUSE_THREADS
-        if (!wxTheApp->Dispatch())
-            break;
-    }
-    //
-    // If they are pending events, we must process them.
-    //
-    if (wxTheApp)
-        wxTheApp->ProcessPendingEvents();
-
-    HandleSockets();
-    //
-    // Let the logs be flashed again
-    //
-    wxLog::Resume();
-    s_inYield = false;
-    return true;
-} // end of wxYield
 
 int wxApp::AddSocketHandler(int handle, int mask,
                             void (*callback)(void*), void * gsock)

@@ -3,7 +3,6 @@
 // Purpose:     private helpers for wxDFB implementation
 // Author:      Vaclav Slavik
 // Created:     2006-08-09
-// RCS-ID:      $Id: private.h 41154 2006-09-11 09:08:57Z VS $
 // Copyright:   (c) 2006 REA Elektronik GmbH
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -16,17 +15,6 @@
 
 #include "wx/dfb/wrapdfb.h"
 #include <directfb_version.h>
-
-//-----------------------------------------------------------------------------
-// strings conversion
-//-----------------------------------------------------------------------------
-
-// convert string from wxString to UTF-8 encoded const char*
-#if wxUSE_UNICODE
-    #define wxSTR_TO_DFB(s)    (s).mb_str(wxConvUTF8)
-#else
-    #define wxSTR_TO_DFB(s)    wxConvUTF8.cWC2MB((s).wc_str(*wxConvUI))
-#endif
 
 //-----------------------------------------------------------------------------
 // misc helpers

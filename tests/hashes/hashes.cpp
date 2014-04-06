@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin, Mattia Barbon
 // Modified:    Mike Wetherell
 // Created:     2004-05-16
-// RCS-ID:      $Id: hashes.cpp 36216 2005-11-20 21:55:35Z DS $
 // Copyright:   (c) 2004 Vadim Zeitlin, Mattia Barbon, 2005 M. Wetherell
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -111,7 +110,7 @@ private:
 // register in the unnamed registry so that these tests are run by default
 CPPUNIT_TEST_SUITE_REGISTRATION( HashesTestCase );
 
-// also include in it's own registry so that these tests can be run alone
+// also include in its own registry so that these tests can be run alone
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( HashesTestCase, "HashesTestCase" );
 
 void HashesTestCase::wxHashTableTest()
@@ -162,16 +161,16 @@ void HashesTestCase::wxHashTableTest()
         for ( i = 0; i < COUNT/2; ++i )
             CPPUNIT_ASSERT( hash.Get(i) == NULL);
 
-        hash2.Put(_T("foo"), &o + 1);
-        hash2.Put(_T("bar"), &o + 2);
-        hash2.Put(_T("baz"), &o + 3);
+        hash2.Put(wxT("foo"), &o + 1);
+        hash2.Put(wxT("bar"), &o + 2);
+        hash2.Put(wxT("baz"), &o + 3);
 
-        CPPUNIT_ASSERT(hash2.Get(_T("moo")) == NULL);
-        CPPUNIT_ASSERT(hash2.Get(_T("bar")) == &o + 2);
+        CPPUNIT_ASSERT(hash2.Get(wxT("moo")) == NULL);
+        CPPUNIT_ASSERT(hash2.Get(wxT("bar")) == &o + 2);
 
-        hash2.Put(_T("bar"), &o + 0);
+        hash2.Put(wxT("bar"), &o + 0);
 
-        CPPUNIT_ASSERT(hash2.Get(_T("bar")) == &o + 2);
+        CPPUNIT_ASSERT(hash2.Get(wxT("bar")) == &o + 2);
     }
 
     // and now some corner-case testing; 3 and 13 hash to the same bucket
@@ -264,16 +263,7 @@ void HashesTestCase::wxUntypedHashTableDeleteContents()
     CPPUNIT_ASSERT( FooObject::count == 0 );
 }
 
-#if WXWIN_COMPATIBILITY_2_4
-WX_DECLARE_LIST(Foo, wxListFoos);
-#endif
-
 WX_DECLARE_HASH(Foo, wxListFoos, wxHashFoos);
-
-#if WXWIN_COMPATIBILITY_2_4
-#include "wx/listimpl.cpp"
-WX_DEFINE_LIST(wxListFoos)
-#endif
 
 void HashesTestCase::wxTypedHashTableTest()
 {
@@ -365,7 +355,7 @@ IntT MakeKey(size_t i, size_t count)
     IntT max = 1;
     max <<= sizeof(KeyT) * 8 - 2;
     max -= count / 4 + 1;
-     
+
     return max / count * 4 * i + i / 3;
 }
 
@@ -389,11 +379,7 @@ void MakeKeyValuePair(size_t i, size_t count, T*& key, ValueT& value)
 template <class HashMapT>
 void HashMapTest()
 {
-#if wxUSE_STL && defined HAVE_STL_HASH_MAP
     typedef typename HashMapT::value_type::second_type value_type;
-#else
-    typedef typename HashMapT::value_type::t2 value_type;
-#endif
     typedef typename HashMapT::key_type key_type;
     typedef typename HashMapT::iterator Itor;
 
@@ -482,6 +468,12 @@ void HashesTestCase::LLongHashMapTest()  { HashMapTest<myLLongHashMap>();    }
 void HashesTestCase::ULLongHashMapTest() { HashMapTest<myULLongHashMap>();   }
 #endif
 
+#ifdef __VISUALC__
+    #if __VISUALC__ <= 1200
+        #pragma warning(disable:4284) // operator->() returns a non-UDT
+    #endif
+#endif // __VISUALC__
+
 // test compilation of basic set types
 WX_DECLARE_HASH_SET( int*, wxPointerHash, wxPointerEqual, myPtrHashSet );
 WX_DECLARE_HASH_SET( long, wxIntegerHash, wxIntegerEqual, myLongHashSet );
@@ -530,16 +522,16 @@ void HashesTestCase::wxHashSetTest()
 {
     wxStringHashSet set1;
 
-    set1.insert( _T("abc") );
+    set1.insert( wxT("abc") );
 
     CPPUNIT_ASSERT( set1.size() == 1 );
 
-    set1.insert( _T("bbc") );
-    set1.insert( _T("cbc") );
+    set1.insert( wxT("bbc") );
+    set1.insert( wxT("cbc") );
 
     CPPUNIT_ASSERT( set1.size() == 3 );
 
-    set1.insert( _T("abc") );
+    set1.insert( wxT("abc") );
 
     CPPUNIT_ASSERT( set1.size() == 3 );
 
@@ -547,11 +539,11 @@ void HashesTestCase::wxHashSetTest()
     int dummy;
     MyStruct tmp;
 
-    tmp.ptr = &dummy; tmp.str = _T("ABC");
+    tmp.ptr = &dummy; tmp.str = wxT("ABC");
     set2.insert( tmp );
     tmp.ptr = &dummy + 1;
     set2.insert( tmp );
-    tmp.ptr = &dummy; tmp.str = _T("CDE");
+    tmp.ptr = &dummy; tmp.str = wxT("CDE");
     set2.insert( tmp );
 
     CPPUNIT_ASSERT( set2.size() == 2 );
@@ -560,5 +552,5 @@ void HashesTestCase::wxHashSetTest()
 
     CPPUNIT_ASSERT( it != set2.end() );
     CPPUNIT_ASSERT( it->ptr == &dummy );
-    CPPUNIT_ASSERT( it->str == _T("ABC") );
+    CPPUNIT_ASSERT( it->str == wxT("ABC") );
 }

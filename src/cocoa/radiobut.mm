@@ -4,9 +4,8 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2003/03/16
-// RCS-ID:      $Id: radiobut.mm 48532 2007-09-03 18:16:03Z DE $
 // Copyright:   (c) 2003 David Elliott
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #include "wx/wxprec.h"
@@ -28,7 +27,6 @@
 
 WX_DEFINE_LIST(wxRadioButtonList);
 
-IMPLEMENT_DYNAMIC_CLASS(wxRadioButton, wxControl)
 // wxRadioButtonBase == wxControl
 BEGIN_EVENT_TABLE(wxRadioButton, wxControl)
 END_EVENT_TABLE()
@@ -183,7 +181,7 @@ void wxRadioButton::Cocoa_wxNSButtonAction(void)
     {
         Cocoa_DeselectOtherButtonsInTheGroup();
     }
-    wxCommandEvent event(wxEVT_COMMAND_RADIOBUTTON_SELECTED, GetId());
+    wxCommandEvent event(wxEVT_RADIOBUTTON, GetId());
     InitCommandEvent(event); //    event.SetEventObject(this);
     event.SetInt(GetValue());
     Command(event);

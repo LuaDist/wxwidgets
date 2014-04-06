@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/14/99
-// RCS-ID:      $Id: dialog.h 40784 2006-08-24 07:36:37Z SN $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -14,14 +13,14 @@
 
 #include "wx/panel.h"
 
-WXDLLEXPORT_DATA(extern const wxChar) wxDialogNameStr[];
+WXDLLIMPEXP_DATA_CORE(extern const char) wxDialogNameStr[];
 
-class WXDLLEXPORT wxDialogModalData;
+class WXDLLIMPEXP_FWD_CORE wxDialogModalData;
 
 //
 // Dialog boxes
 //
-class WXDLLEXPORT wxDialog: public wxDialogBase
+class WXDLLIMPEXP_CORE wxDialog: public wxDialogBase
 {
 public:
 
@@ -96,14 +95,6 @@ public:
 
 protected:
     //
-    // find the window to use as parent for this dialog if none has been
-    // specified explicitly by the user
-    //
-    // may return NULL
-    //
-    wxWindow *FindSuitableParent() const;
-
-    //
     // Common part of all ctors
     //
     void Init(void);
@@ -122,7 +113,7 @@ private:
     class wxWindowDisabler*         m_pWindowDisabler;
 
     DECLARE_DYNAMIC_CLASS(wxDialog)
-    DECLARE_NO_COPY_CLASS(wxDialog)
+    wxDECLARE_NO_COPY_CLASS(wxDialog);
 }; // end of CLASS wxDialog
 
 #endif // _WX_DIALOG_H_

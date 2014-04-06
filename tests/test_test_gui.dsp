@@ -17,20 +17,8 @@ CFG=test_gui - Win32 Debug
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "test_gui - Win32 DLL Universal Unicode Release" (based on "Win32 (x86) Console Application")
-!MESSAGE "test_gui - Win32 DLL Universal Unicode Debug" (based on "Win32 (x86) Console Application")
-!MESSAGE "test_gui - Win32 DLL Universal Release" (based on "Win32 (x86) Console Application")
-!MESSAGE "test_gui - Win32 DLL Universal Debug" (based on "Win32 (x86) Console Application")
-!MESSAGE "test_gui - Win32 DLL Unicode Release" (based on "Win32 (x86) Console Application")
-!MESSAGE "test_gui - Win32 DLL Unicode Debug" (based on "Win32 (x86) Console Application")
 !MESSAGE "test_gui - Win32 DLL Release" (based on "Win32 (x86) Console Application")
 !MESSAGE "test_gui - Win32 DLL Debug" (based on "Win32 (x86) Console Application")
-!MESSAGE "test_gui - Win32 Universal Unicode Release" (based on "Win32 (x86) Console Application")
-!MESSAGE "test_gui - Win32 Universal Unicode Debug" (based on "Win32 (x86) Console Application")
-!MESSAGE "test_gui - Win32 Universal Release" (based on "Win32 (x86) Console Application")
-!MESSAGE "test_gui - Win32 Universal Debug" (based on "Win32 (x86) Console Application")
-!MESSAGE "test_gui - Win32 Unicode Release" (based on "Win32 (x86) Console Application")
-!MESSAGE "test_gui - Win32 Unicode Debug" (based on "Win32 (x86) Console Application")
 !MESSAGE "test_gui - Win32 Release" (based on "Win32 (x86) Console Application")
 !MESSAGE "test_gui - Win32 Debug" (based on "Win32 (x86) Console Application")
 !MESSAGE 
@@ -42,122 +30,30 @@ CFG=test_gui - Win32 Debug
 CPP=cl.exe
 RSC=rc.exe
 
-!IF  "$(CFG)" == "test_gui - Win32 DLL Universal Unicode Release"
-
-# PROP BASE Use_MFC 0
-# PROP BASE Use_Debug_Libraries 0
-# PROP BASE Output_Dir "vc_mswunivudll"
-# PROP BASE Intermediate_Dir "vc_mswunivudll\test_gui"
-# PROP BASE Target_Dir ""
-# PROP Use_MFC 0
-# PROP Use_Debug_Libraries 0
-# PROP Output_Dir "vc_mswunivudll"
-# PROP Intermediate_Dir "vc_mswunivudll\test_gui"
-# PROP Target_Dir ""
-# ADD BASE CPP /nologo /FD /MD /Fdvc_mswunivudll\test_gui.pdb /O2 /GR /EHsc /I ".\..\lib\vc_dll\mswunivu" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswunivudll\testprec_test_gui.pch" /D "WIN32" /D "__WXMSW__" /D "__WXUNIVERSAL__" /D "NDEBUG" /D "_UNICODE" /D "WXUSINGDLL" /D "NOPCH" /D "_CONSOLE" /c
-# ADD CPP /nologo /FD /MD /Fdvc_mswunivudll\test_gui.pdb /O2 /GR /EHsc /I ".\..\lib\vc_dll\mswunivu" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswunivudll\testprec_test_gui.pch" /D "WIN32" /D "__WXMSW__" /D "__WXUNIVERSAL__" /D "NDEBUG" /D "_UNICODE" /D "WXUSINGDLL" /D "NOPCH" /D "_CONSOLE" /c
-# ADD BASE RSC /l 0x409 /d "__WXMSW__" /d "__WXUNIVERSAL__" /d "NDEBUG" /d "_UNICODE" /i ".\..\lib\vc_dll\mswunivu" /i ".\..\include" /i "." /d "WXUSINGDLL" /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-# ADD RSC /l 0x409 /d "__WXMSW__" /d "__WXUNIVERSAL__" /d "NDEBUG" /d "_UNICODE" /i ".\..\lib\vc_dll\mswunivu" /i ".\..\include" /i "." /d "WXUSINGDLL" /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-BSC32=bscmake.exe
-# ADD BASE BSC32 /nologo
-# ADD BSC32 /nologo
-LINK32=link.exe
-# ADD BASE LINK32 wxmswuniv28u_core.lib wxbase28u.lib wxtiff.lib wxjpeg.lib wxpng.lib wxzlib.lib wxregexu.lib wxexpat.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswunivudll\test_gui.exe" /pdb:"vc_mswunivudll\test_gui.pdb" /libpath:".\..\lib\vc_dll" /subsystem:console
-# ADD LINK32 wxmswuniv28u_core.lib wxbase28u.lib wxtiff.lib wxjpeg.lib wxpng.lib wxzlib.lib wxregexu.lib wxexpat.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswunivudll\test_gui.exe" /pdb:"vc_mswunivudll\test_gui.pdb" /libpath:".\..\lib\vc_dll" /subsystem:console
-
-!ELSEIF  "$(CFG)" == "test_gui - Win32 DLL Universal Unicode Debug"
+!IF  "$(CFG)" == "test_gui - Win32 DLL Release"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
-# PROP BASE Output_Dir "vc_mswunivuddll"
-# PROP BASE Intermediate_Dir "vc_mswunivuddll\test_gui"
-# PROP BASE Target_Dir ""
-# PROP Use_MFC 0
-# PROP Use_Debug_Libraries 1
-# PROP Output_Dir "vc_mswunivuddll"
-# PROP Intermediate_Dir "vc_mswunivuddll\test_gui"
-# PROP Target_Dir ""
-# ADD BASE CPP /nologo /FD /MDd /Zi /Fdvc_mswunivuddll\test_gui.pdb /Od /Gm /GR /EHsc /I ".\..\lib\vc_dll\mswunivud" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswunivuddll\testprec_test_gui.pch" /D "WIN32" /D "_DEBUG" /D "__WXMSW__" /D "__WXUNIVERSAL__" /D "__WXDEBUG__" /D "_UNICODE" /D "WXUSINGDLL" /D "NOPCH" /D "_CONSOLE" /c
-# ADD CPP /nologo /FD /MDd /Zi /Fdvc_mswunivuddll\test_gui.pdb /Od /Gm /GR /EHsc /I ".\..\lib\vc_dll\mswunivud" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswunivuddll\testprec_test_gui.pch" /D "WIN32" /D "_DEBUG" /D "__WXMSW__" /D "__WXUNIVERSAL__" /D "__WXDEBUG__" /D "_UNICODE" /D "WXUSINGDLL" /D "NOPCH" /D "_CONSOLE" /c
-# ADD BASE RSC /l 0x409 /d "_DEBUG" /d "__WXMSW__" /d "__WXUNIVERSAL__" /d "__WXDEBUG__" /d "_UNICODE" /i ".\..\lib\vc_dll\mswunivud" /i ".\..\include" /i "." /d "WXUSINGDLL" /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-# ADD RSC /l 0x409 /d "_DEBUG" /d "__WXMSW__" /d "__WXUNIVERSAL__" /d "__WXDEBUG__" /d "_UNICODE" /i ".\..\lib\vc_dll\mswunivud" /i ".\..\include" /i "." /d "WXUSINGDLL" /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-BSC32=bscmake.exe
-# ADD BASE BSC32 /nologo
-# ADD BSC32 /nologo
-LINK32=link.exe
-# ADD BASE LINK32 wxmswuniv28ud_core.lib wxbase28ud.lib wxtiffd.lib wxjpegd.lib wxpngd.lib wxzlibd.lib wxregexud.lib wxexpatd.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswunivuddll\test_gui.exe" /debug /pdb:"vc_mswunivuddll\test_gui.pdb" /libpath:".\..\lib\vc_dll" /subsystem:console
-# ADD LINK32 wxmswuniv28ud_core.lib wxbase28ud.lib wxtiffd.lib wxjpegd.lib wxpngd.lib wxzlibd.lib wxregexud.lib wxexpatd.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswunivuddll\test_gui.exe" /debug /pdb:"vc_mswunivuddll\test_gui.pdb" /libpath:".\..\lib\vc_dll" /subsystem:console
-
-!ELSEIF  "$(CFG)" == "test_gui - Win32 DLL Universal Release"
-
-# PROP BASE Use_MFC 0
-# PROP BASE Use_Debug_Libraries 0
-# PROP BASE Output_Dir "vc_mswunivdll"
-# PROP BASE Intermediate_Dir "vc_mswunivdll\test_gui"
-# PROP BASE Target_Dir ""
-# PROP Use_MFC 0
-# PROP Use_Debug_Libraries 0
-# PROP Output_Dir "vc_mswunivdll"
-# PROP Intermediate_Dir "vc_mswunivdll\test_gui"
-# PROP Target_Dir ""
-# ADD BASE CPP /nologo /FD /MD /Fdvc_mswunivdll\test_gui.pdb /O2 /GR /EHsc /I ".\..\lib\vc_dll\mswuniv" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswunivdll\testprec_test_gui.pch" /D "WIN32" /D "__WXMSW__" /D "__WXUNIVERSAL__" /D "NDEBUG" /D "WXUSINGDLL" /D "NOPCH" /D "_CONSOLE" /c
-# ADD CPP /nologo /FD /MD /Fdvc_mswunivdll\test_gui.pdb /O2 /GR /EHsc /I ".\..\lib\vc_dll\mswuniv" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswunivdll\testprec_test_gui.pch" /D "WIN32" /D "__WXMSW__" /D "__WXUNIVERSAL__" /D "NDEBUG" /D "WXUSINGDLL" /D "NOPCH" /D "_CONSOLE" /c
-# ADD BASE RSC /l 0x409 /d "__WXMSW__" /d "__WXUNIVERSAL__" /d "NDEBUG" /i ".\..\lib\vc_dll\mswuniv" /i ".\..\include" /i "." /d "WXUSINGDLL" /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-# ADD RSC /l 0x409 /d "__WXMSW__" /d "__WXUNIVERSAL__" /d "NDEBUG" /i ".\..\lib\vc_dll\mswuniv" /i ".\..\include" /i "." /d "WXUSINGDLL" /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-BSC32=bscmake.exe
-# ADD BASE BSC32 /nologo
-# ADD BSC32 /nologo
-LINK32=link.exe
-# ADD BASE LINK32 wxmswuniv28_core.lib wxbase28.lib wxtiff.lib wxjpeg.lib wxpng.lib wxzlib.lib wxregex.lib wxexpat.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswunivdll\test_gui.exe" /pdb:"vc_mswunivdll\test_gui.pdb" /libpath:".\..\lib\vc_dll" /subsystem:console
-# ADD LINK32 wxmswuniv28_core.lib wxbase28.lib wxtiff.lib wxjpeg.lib wxpng.lib wxzlib.lib wxregex.lib wxexpat.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswunivdll\test_gui.exe" /pdb:"vc_mswunivdll\test_gui.pdb" /libpath:".\..\lib\vc_dll" /subsystem:console
-
-!ELSEIF  "$(CFG)" == "test_gui - Win32 DLL Universal Debug"
-
-# PROP BASE Use_MFC 0
-# PROP BASE Use_Debug_Libraries 1
-# PROP BASE Output_Dir "vc_mswunivddll"
-# PROP BASE Intermediate_Dir "vc_mswunivddll\test_gui"
-# PROP BASE Target_Dir ""
-# PROP Use_MFC 0
-# PROP Use_Debug_Libraries 1
-# PROP Output_Dir "vc_mswunivddll"
-# PROP Intermediate_Dir "vc_mswunivddll\test_gui"
-# PROP Target_Dir ""
-# ADD BASE CPP /nologo /FD /MDd /Zi /Fdvc_mswunivddll\test_gui.pdb /Od /Gm /GR /EHsc /I ".\..\lib\vc_dll\mswunivd" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswunivddll\testprec_test_gui.pch" /D "WIN32" /D "_DEBUG" /D "__WXMSW__" /D "__WXUNIVERSAL__" /D "__WXDEBUG__" /D "WXUSINGDLL" /D "NOPCH" /D "_CONSOLE" /c
-# ADD CPP /nologo /FD /MDd /Zi /Fdvc_mswunivddll\test_gui.pdb /Od /Gm /GR /EHsc /I ".\..\lib\vc_dll\mswunivd" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswunivddll\testprec_test_gui.pch" /D "WIN32" /D "_DEBUG" /D "__WXMSW__" /D "__WXUNIVERSAL__" /D "__WXDEBUG__" /D "WXUSINGDLL" /D "NOPCH" /D "_CONSOLE" /c
-# ADD BASE RSC /l 0x409 /d "_DEBUG" /d "__WXMSW__" /d "__WXUNIVERSAL__" /d "__WXDEBUG__" /i ".\..\lib\vc_dll\mswunivd" /i ".\..\include" /i "." /d "WXUSINGDLL" /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-# ADD RSC /l 0x409 /d "_DEBUG" /d "__WXMSW__" /d "__WXUNIVERSAL__" /d "__WXDEBUG__" /i ".\..\lib\vc_dll\mswunivd" /i ".\..\include" /i "." /d "WXUSINGDLL" /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-BSC32=bscmake.exe
-# ADD BASE BSC32 /nologo
-# ADD BSC32 /nologo
-LINK32=link.exe
-# ADD BASE LINK32 wxmswuniv28d_core.lib wxbase28d.lib wxtiffd.lib wxjpegd.lib wxpngd.lib wxzlibd.lib wxregexd.lib wxexpatd.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswunivddll\test_gui.exe" /debug /pdb:"vc_mswunivddll\test_gui.pdb" /libpath:".\..\lib\vc_dll" /subsystem:console
-# ADD LINK32 wxmswuniv28d_core.lib wxbase28d.lib wxtiffd.lib wxjpegd.lib wxpngd.lib wxzlibd.lib wxregexd.lib wxexpatd.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswunivddll\test_gui.exe" /debug /pdb:"vc_mswunivddll\test_gui.pdb" /libpath:".\..\lib\vc_dll" /subsystem:console
-
-!ELSEIF  "$(CFG)" == "test_gui - Win32 DLL Unicode Release"
-
-# PROP BASE Use_MFC 0
-# PROP BASE Use_Debug_Libraries 0
 # PROP BASE Output_Dir "vc_mswudll"
 # PROP BASE Intermediate_Dir "vc_mswudll\test_gui"
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
-# PROP Use_Debug_Libraries 0
+# PROP Use_Debug_Libraries 1
 # PROP Output_Dir "vc_mswudll"
 # PROP Intermediate_Dir "vc_mswudll\test_gui"
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /FD /MD /Fdvc_mswudll\test_gui.pdb /O2 /GR /EHsc /I ".\..\lib\vc_dll\mswu" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswudll\testprec_test_gui.pch" /D "WIN32" /D "__WXMSW__" /D "NDEBUG" /D "_UNICODE" /D "WXUSINGDLL" /D "NOPCH" /D "_CONSOLE" /c
-# ADD CPP /nologo /FD /MD /Fdvc_mswudll\test_gui.pdb /O2 /GR /EHsc /I ".\..\lib\vc_dll\mswu" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswudll\testprec_test_gui.pch" /D "WIN32" /D "__WXMSW__" /D "NDEBUG" /D "_UNICODE" /D "WXUSINGDLL" /D "NOPCH" /D "_CONSOLE" /c
+# ADD BASE CPP /nologo /FD /MD /Zi /Fdvc_mswudll\test_gui.pdb /opt:ref /opt:icf /O2 /GR /EHsc /I ".\..\lib\vc_dll\mswu" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswudll\testprec_test_gui.pch" /D "WIN32" /D "__WXMSW__" /D "NDEBUG" /D "_UNICODE" /D "WXUSINGDLL" /D "NOPCH" /D "_CONSOLE" /c
+# ADD CPP /nologo /FD /MD /Zi /Fdvc_mswudll\test_gui.pdb /opt:ref /opt:icf /O2 /GR /EHsc /I ".\..\lib\vc_dll\mswu" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswudll\testprec_test_gui.pch" /D "WIN32" /D "__WXMSW__" /D "NDEBUG" /D "_UNICODE" /D "WXUSINGDLL" /D "NOPCH" /D "_CONSOLE" /c
 # ADD BASE RSC /l 0x409 /d "__WXMSW__" /d "NDEBUG" /d "_UNICODE" /i ".\..\lib\vc_dll\mswu" /i ".\..\include" /i "." /d "WXUSINGDLL" /i ".\..\samples" /d "NOPCH" /d _CONSOLE
 # ADD RSC /l 0x409 /d "__WXMSW__" /d "NDEBUG" /d "_UNICODE" /i ".\..\lib\vc_dll\mswu" /i ".\..\include" /i "." /d "WXUSINGDLL" /i ".\..\samples" /d "NOPCH" /d _CONSOLE
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 wxmsw28u_core.lib wxbase28u.lib wxtiff.lib wxjpeg.lib wxpng.lib wxzlib.lib wxregexu.lib wxexpat.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswudll\test_gui.exe" /pdb:"vc_mswudll\test_gui.pdb" /libpath:".\..\lib\vc_dll" /subsystem:console
-# ADD LINK32 wxmsw28u_core.lib wxbase28u.lib wxtiff.lib wxjpeg.lib wxpng.lib wxzlib.lib wxregexu.lib wxexpat.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswudll\test_gui.exe" /pdb:"vc_mswudll\test_gui.pdb" /libpath:".\..\lib\vc_dll" /subsystem:console
+# ADD BASE LINK32 wxmsw30u_webview.lib wxmsw30u_richtext.lib wxmsw30u_media.lib wxmsw30u_xrc.lib wxbase30u_xml.lib wxmsw30u_adv.lib wxmsw30u_html.lib wxmsw30u_core.lib wxbase30u_net.lib wxbase30u.lib wxtiff.lib wxjpeg.lib wxpng.lib wxzlib.lib wxregexu.lib wxexpat.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib wininet.lib /nologo /machine:i386 /out:"vc_mswudll\test_gui.exe" /debug /pdb:"vc_mswudll\test_gui.pdb" /libpath:".\..\lib\vc_dll" /subsystem:console
+# ADD LINK32 wxmsw30u_webview.lib wxmsw30u_richtext.lib wxmsw30u_media.lib wxmsw30u_xrc.lib wxbase30u_xml.lib wxmsw30u_adv.lib wxmsw30u_html.lib wxmsw30u_core.lib wxbase30u_net.lib wxbase30u.lib wxtiff.lib wxjpeg.lib wxpng.lib wxzlib.lib wxregexu.lib wxexpat.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib wininet.lib /nologo /machine:i386 /out:"vc_mswudll\test_gui.exe" /debug /pdb:"vc_mswudll\test_gui.pdb" /libpath:".\..\lib\vc_dll" /subsystem:console
 
-!ELSEIF  "$(CFG)" == "test_gui - Win32 DLL Unicode Debug"
+!ELSEIF  "$(CFG)" == "test_gui - Win32 DLL Debug"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
@@ -169,179 +65,41 @@ LINK32=link.exe
 # PROP Output_Dir "vc_mswuddll"
 # PROP Intermediate_Dir "vc_mswuddll\test_gui"
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /FD /MDd /Zi /Fdvc_mswuddll\test_gui.pdb /Od /Gm /GR /EHsc /I ".\..\lib\vc_dll\mswud" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswuddll\testprec_test_gui.pch" /D "WIN32" /D "_DEBUG" /D "__WXMSW__" /D "__WXDEBUG__" /D "_UNICODE" /D "WXUSINGDLL" /D "NOPCH" /D "_CONSOLE" /c
-# ADD CPP /nologo /FD /MDd /Zi /Fdvc_mswuddll\test_gui.pdb /Od /Gm /GR /EHsc /I ".\..\lib\vc_dll\mswud" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswuddll\testprec_test_gui.pch" /D "WIN32" /D "_DEBUG" /D "__WXMSW__" /D "__WXDEBUG__" /D "_UNICODE" /D "WXUSINGDLL" /D "NOPCH" /D "_CONSOLE" /c
-# ADD BASE RSC /l 0x409 /d "_DEBUG" /d "__WXMSW__" /d "__WXDEBUG__" /d "_UNICODE" /i ".\..\lib\vc_dll\mswud" /i ".\..\include" /i "." /d "WXUSINGDLL" /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-# ADD RSC /l 0x409 /d "_DEBUG" /d "__WXMSW__" /d "__WXDEBUG__" /d "_UNICODE" /i ".\..\lib\vc_dll\mswud" /i ".\..\include" /i "." /d "WXUSINGDLL" /i ".\..\samples" /d "NOPCH" /d _CONSOLE
+# ADD BASE CPP /nologo /FD /MDd /Zi /Fdvc_mswuddll\test_gui.pdb /Od /Gm /GR /EHsc /I ".\..\lib\vc_dll\mswud" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswuddll\testprec_test_gui.pch" /D "WIN32" /D "_DEBUG" /D "__WXMSW__" /D "_UNICODE" /D "WXUSINGDLL" /D "NOPCH" /D "_CONSOLE" /c
+# ADD CPP /nologo /FD /MDd /Zi /Fdvc_mswuddll\test_gui.pdb /Od /Gm /GR /EHsc /I ".\..\lib\vc_dll\mswud" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswuddll\testprec_test_gui.pch" /D "WIN32" /D "_DEBUG" /D "__WXMSW__" /D "_UNICODE" /D "WXUSINGDLL" /D "NOPCH" /D "_CONSOLE" /c
+# ADD BASE RSC /l 0x409 /d "_DEBUG" /d "__WXMSW__" /d "_UNICODE" /i ".\..\lib\vc_dll\mswud" /i ".\..\include" /i "." /d "WXUSINGDLL" /i ".\..\samples" /d "NOPCH" /d _CONSOLE
+# ADD RSC /l 0x409 /d "_DEBUG" /d "__WXMSW__" /d "_UNICODE" /i ".\..\lib\vc_dll\mswud" /i ".\..\include" /i "." /d "WXUSINGDLL" /i ".\..\samples" /d "NOPCH" /d _CONSOLE
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 wxmsw28ud_core.lib wxbase28ud.lib wxtiffd.lib wxjpegd.lib wxpngd.lib wxzlibd.lib wxregexud.lib wxexpatd.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswuddll\test_gui.exe" /debug /pdb:"vc_mswuddll\test_gui.pdb" /libpath:".\..\lib\vc_dll" /subsystem:console
-# ADD LINK32 wxmsw28ud_core.lib wxbase28ud.lib wxtiffd.lib wxjpegd.lib wxpngd.lib wxzlibd.lib wxregexud.lib wxexpatd.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswuddll\test_gui.exe" /debug /pdb:"vc_mswuddll\test_gui.pdb" /libpath:".\..\lib\vc_dll" /subsystem:console
+# ADD BASE LINK32 wxmsw30ud_webview.lib wxmsw30ud_richtext.lib wxmsw30ud_media.lib wxmsw30ud_xrc.lib wxbase30ud_xml.lib wxmsw30ud_adv.lib wxmsw30ud_html.lib wxmsw30ud_core.lib wxbase30ud_net.lib wxbase30ud.lib wxtiffd.lib wxjpegd.lib wxpngd.lib wxzlibd.lib wxregexud.lib wxexpatd.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib wininet.lib /nologo /machine:i386 /out:"vc_mswuddll\test_gui.exe" /debug /pdb:"vc_mswuddll\test_gui.pdb" /libpath:".\..\lib\vc_dll" /subsystem:console
+# ADD LINK32 wxmsw30ud_webview.lib wxmsw30ud_richtext.lib wxmsw30ud_media.lib wxmsw30ud_xrc.lib wxbase30ud_xml.lib wxmsw30ud_adv.lib wxmsw30ud_html.lib wxmsw30ud_core.lib wxbase30ud_net.lib wxbase30ud.lib wxtiffd.lib wxjpegd.lib wxpngd.lib wxzlibd.lib wxregexud.lib wxexpatd.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib wininet.lib /nologo /machine:i386 /out:"vc_mswuddll\test_gui.exe" /debug /pdb:"vc_mswuddll\test_gui.pdb" /libpath:".\..\lib\vc_dll" /subsystem:console
 
-!ELSEIF  "$(CFG)" == "test_gui - Win32 DLL Release"
-
-# PROP BASE Use_MFC 0
-# PROP BASE Use_Debug_Libraries 0
-# PROP BASE Output_Dir "vc_mswdll"
-# PROP BASE Intermediate_Dir "vc_mswdll\test_gui"
-# PROP BASE Target_Dir ""
-# PROP Use_MFC 0
-# PROP Use_Debug_Libraries 0
-# PROP Output_Dir "vc_mswdll"
-# PROP Intermediate_Dir "vc_mswdll\test_gui"
-# PROP Target_Dir ""
-# ADD BASE CPP /nologo /FD /MD /Fdvc_mswdll\test_gui.pdb /O2 /GR /EHsc /I ".\..\lib\vc_dll\msw" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswdll\testprec_test_gui.pch" /D "WIN32" /D "__WXMSW__" /D "NDEBUG" /D "WXUSINGDLL" /D "NOPCH" /D "_CONSOLE" /c
-# ADD CPP /nologo /FD /MD /Fdvc_mswdll\test_gui.pdb /O2 /GR /EHsc /I ".\..\lib\vc_dll\msw" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswdll\testprec_test_gui.pch" /D "WIN32" /D "__WXMSW__" /D "NDEBUG" /D "WXUSINGDLL" /D "NOPCH" /D "_CONSOLE" /c
-# ADD BASE RSC /l 0x409 /d "__WXMSW__" /d "NDEBUG" /i ".\..\lib\vc_dll\msw" /i ".\..\include" /i "." /d "WXUSINGDLL" /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-# ADD RSC /l 0x409 /d "__WXMSW__" /d "NDEBUG" /i ".\..\lib\vc_dll\msw" /i ".\..\include" /i "." /d "WXUSINGDLL" /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-BSC32=bscmake.exe
-# ADD BASE BSC32 /nologo
-# ADD BSC32 /nologo
-LINK32=link.exe
-# ADD BASE LINK32 wxmsw28_core.lib wxbase28.lib wxtiff.lib wxjpeg.lib wxpng.lib wxzlib.lib wxregex.lib wxexpat.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswdll\test_gui.exe" /pdb:"vc_mswdll\test_gui.pdb" /libpath:".\..\lib\vc_dll" /subsystem:console
-# ADD LINK32 wxmsw28_core.lib wxbase28.lib wxtiff.lib wxjpeg.lib wxpng.lib wxzlib.lib wxregex.lib wxexpat.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswdll\test_gui.exe" /pdb:"vc_mswdll\test_gui.pdb" /libpath:".\..\lib\vc_dll" /subsystem:console
-
-!ELSEIF  "$(CFG)" == "test_gui - Win32 DLL Debug"
+!ELSEIF  "$(CFG)" == "test_gui - Win32 Release"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
-# PROP BASE Output_Dir "vc_mswddll"
-# PROP BASE Intermediate_Dir "vc_mswddll\test_gui"
-# PROP BASE Target_Dir ""
-# PROP Use_MFC 0
-# PROP Use_Debug_Libraries 1
-# PROP Output_Dir "vc_mswddll"
-# PROP Intermediate_Dir "vc_mswddll\test_gui"
-# PROP Target_Dir ""
-# ADD BASE CPP /nologo /FD /MDd /Zi /Fdvc_mswddll\test_gui.pdb /Od /Gm /GR /EHsc /I ".\..\lib\vc_dll\mswd" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswddll\testprec_test_gui.pch" /D "WIN32" /D "_DEBUG" /D "__WXMSW__" /D "__WXDEBUG__" /D "WXUSINGDLL" /D "NOPCH" /D "_CONSOLE" /c
-# ADD CPP /nologo /FD /MDd /Zi /Fdvc_mswddll\test_gui.pdb /Od /Gm /GR /EHsc /I ".\..\lib\vc_dll\mswd" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswddll\testprec_test_gui.pch" /D "WIN32" /D "_DEBUG" /D "__WXMSW__" /D "__WXDEBUG__" /D "WXUSINGDLL" /D "NOPCH" /D "_CONSOLE" /c
-# ADD BASE RSC /l 0x409 /d "_DEBUG" /d "__WXMSW__" /d "__WXDEBUG__" /i ".\..\lib\vc_dll\mswd" /i ".\..\include" /i "." /d "WXUSINGDLL" /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-# ADD RSC /l 0x409 /d "_DEBUG" /d "__WXMSW__" /d "__WXDEBUG__" /i ".\..\lib\vc_dll\mswd" /i ".\..\include" /i "." /d "WXUSINGDLL" /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-BSC32=bscmake.exe
-# ADD BASE BSC32 /nologo
-# ADD BSC32 /nologo
-LINK32=link.exe
-# ADD BASE LINK32 wxmsw28d_core.lib wxbase28d.lib wxtiffd.lib wxjpegd.lib wxpngd.lib wxzlibd.lib wxregexd.lib wxexpatd.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswddll\test_gui.exe" /debug /pdb:"vc_mswddll\test_gui.pdb" /libpath:".\..\lib\vc_dll" /subsystem:console
-# ADD LINK32 wxmsw28d_core.lib wxbase28d.lib wxtiffd.lib wxjpegd.lib wxpngd.lib wxzlibd.lib wxregexd.lib wxexpatd.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswddll\test_gui.exe" /debug /pdb:"vc_mswddll\test_gui.pdb" /libpath:".\..\lib\vc_dll" /subsystem:console
-
-!ELSEIF  "$(CFG)" == "test_gui - Win32 Universal Unicode Release"
-
-# PROP BASE Use_MFC 0
-# PROP BASE Use_Debug_Libraries 0
-# PROP BASE Output_Dir "vc_mswunivu"
-# PROP BASE Intermediate_Dir "vc_mswunivu\test_gui"
-# PROP BASE Target_Dir ""
-# PROP Use_MFC 0
-# PROP Use_Debug_Libraries 0
-# PROP Output_Dir "vc_mswunivu"
-# PROP Intermediate_Dir "vc_mswunivu\test_gui"
-# PROP Target_Dir ""
-# ADD BASE CPP /nologo /FD /MD /Fdvc_mswunivu\test_gui.pdb /O2 /GR /EHsc /I ".\..\lib\vc_lib\mswunivu" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswunivu\testprec_test_gui.pch" /D "WIN32" /D "__WXMSW__" /D "__WXUNIVERSAL__" /D "NDEBUG" /D "_UNICODE" /D "NOPCH" /D "_CONSOLE" /c
-# ADD CPP /nologo /FD /MD /Fdvc_mswunivu\test_gui.pdb /O2 /GR /EHsc /I ".\..\lib\vc_lib\mswunivu" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswunivu\testprec_test_gui.pch" /D "WIN32" /D "__WXMSW__" /D "__WXUNIVERSAL__" /D "NDEBUG" /D "_UNICODE" /D "NOPCH" /D "_CONSOLE" /c
-# ADD BASE RSC /l 0x409 /d "__WXMSW__" /d "__WXUNIVERSAL__" /d "NDEBUG" /d "_UNICODE" /i ".\..\lib\vc_lib\mswunivu" /i ".\..\include" /i "." /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-# ADD RSC /l 0x409 /d "__WXMSW__" /d "__WXUNIVERSAL__" /d "NDEBUG" /d "_UNICODE" /i ".\..\lib\vc_lib\mswunivu" /i ".\..\include" /i "." /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-BSC32=bscmake.exe
-# ADD BASE BSC32 /nologo
-# ADD BSC32 /nologo
-LINK32=link.exe
-# ADD BASE LINK32 wxmswuniv28u_core.lib wxbase28u.lib wxtiff.lib wxjpeg.lib wxpng.lib wxzlib.lib wxregexu.lib wxexpat.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswunivu\test_gui.exe" /pdb:"vc_mswunivu\test_gui.pdb" /libpath:".\..\lib\vc_lib" /subsystem:console
-# ADD LINK32 wxmswuniv28u_core.lib wxbase28u.lib wxtiff.lib wxjpeg.lib wxpng.lib wxzlib.lib wxregexu.lib wxexpat.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswunivu\test_gui.exe" /pdb:"vc_mswunivu\test_gui.pdb" /libpath:".\..\lib\vc_lib" /subsystem:console
-
-!ELSEIF  "$(CFG)" == "test_gui - Win32 Universal Unicode Debug"
-
-# PROP BASE Use_MFC 0
-# PROP BASE Use_Debug_Libraries 1
-# PROP BASE Output_Dir "vc_mswunivud"
-# PROP BASE Intermediate_Dir "vc_mswunivud\test_gui"
-# PROP BASE Target_Dir ""
-# PROP Use_MFC 0
-# PROP Use_Debug_Libraries 1
-# PROP Output_Dir "vc_mswunivud"
-# PROP Intermediate_Dir "vc_mswunivud\test_gui"
-# PROP Target_Dir ""
-# ADD BASE CPP /nologo /FD /MDd /Zi /Fdvc_mswunivud\test_gui.pdb /Od /Gm /GR /EHsc /I ".\..\lib\vc_lib\mswunivud" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswunivud\testprec_test_gui.pch" /D "WIN32" /D "_DEBUG" /D "__WXMSW__" /D "__WXUNIVERSAL__" /D "__WXDEBUG__" /D "_UNICODE" /D "NOPCH" /D "_CONSOLE" /c
-# ADD CPP /nologo /FD /MDd /Zi /Fdvc_mswunivud\test_gui.pdb /Od /Gm /GR /EHsc /I ".\..\lib\vc_lib\mswunivud" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswunivud\testprec_test_gui.pch" /D "WIN32" /D "_DEBUG" /D "__WXMSW__" /D "__WXUNIVERSAL__" /D "__WXDEBUG__" /D "_UNICODE" /D "NOPCH" /D "_CONSOLE" /c
-# ADD BASE RSC /l 0x409 /d "_DEBUG" /d "__WXMSW__" /d "__WXUNIVERSAL__" /d "__WXDEBUG__" /d "_UNICODE" /i ".\..\lib\vc_lib\mswunivud" /i ".\..\include" /i "." /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-# ADD RSC /l 0x409 /d "_DEBUG" /d "__WXMSW__" /d "__WXUNIVERSAL__" /d "__WXDEBUG__" /d "_UNICODE" /i ".\..\lib\vc_lib\mswunivud" /i ".\..\include" /i "." /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-BSC32=bscmake.exe
-# ADD BASE BSC32 /nologo
-# ADD BSC32 /nologo
-LINK32=link.exe
-# ADD BASE LINK32 wxmswuniv28ud_core.lib wxbase28ud.lib wxtiffd.lib wxjpegd.lib wxpngd.lib wxzlibd.lib wxregexud.lib wxexpatd.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswunivud\test_gui.exe" /debug /pdb:"vc_mswunivud\test_gui.pdb" /libpath:".\..\lib\vc_lib" /subsystem:console
-# ADD LINK32 wxmswuniv28ud_core.lib wxbase28ud.lib wxtiffd.lib wxjpegd.lib wxpngd.lib wxzlibd.lib wxregexud.lib wxexpatd.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswunivud\test_gui.exe" /debug /pdb:"vc_mswunivud\test_gui.pdb" /libpath:".\..\lib\vc_lib" /subsystem:console
-
-!ELSEIF  "$(CFG)" == "test_gui - Win32 Universal Release"
-
-# PROP BASE Use_MFC 0
-# PROP BASE Use_Debug_Libraries 0
-# PROP BASE Output_Dir "vc_mswuniv"
-# PROP BASE Intermediate_Dir "vc_mswuniv\test_gui"
-# PROP BASE Target_Dir ""
-# PROP Use_MFC 0
-# PROP Use_Debug_Libraries 0
-# PROP Output_Dir "vc_mswuniv"
-# PROP Intermediate_Dir "vc_mswuniv\test_gui"
-# PROP Target_Dir ""
-# ADD BASE CPP /nologo /FD /MD /Fdvc_mswuniv\test_gui.pdb /O2 /GR /EHsc /I ".\..\lib\vc_lib\mswuniv" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswuniv\testprec_test_gui.pch" /D "WIN32" /D "__WXMSW__" /D "__WXUNIVERSAL__" /D "NDEBUG" /D "NOPCH" /D "_CONSOLE" /c
-# ADD CPP /nologo /FD /MD /Fdvc_mswuniv\test_gui.pdb /O2 /GR /EHsc /I ".\..\lib\vc_lib\mswuniv" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswuniv\testprec_test_gui.pch" /D "WIN32" /D "__WXMSW__" /D "__WXUNIVERSAL__" /D "NDEBUG" /D "NOPCH" /D "_CONSOLE" /c
-# ADD BASE RSC /l 0x409 /d "__WXMSW__" /d "__WXUNIVERSAL__" /d "NDEBUG" /i ".\..\lib\vc_lib\mswuniv" /i ".\..\include" /i "." /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-# ADD RSC /l 0x409 /d "__WXMSW__" /d "__WXUNIVERSAL__" /d "NDEBUG" /i ".\..\lib\vc_lib\mswuniv" /i ".\..\include" /i "." /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-BSC32=bscmake.exe
-# ADD BASE BSC32 /nologo
-# ADD BSC32 /nologo
-LINK32=link.exe
-# ADD BASE LINK32 wxmswuniv28_core.lib wxbase28.lib wxtiff.lib wxjpeg.lib wxpng.lib wxzlib.lib wxregex.lib wxexpat.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswuniv\test_gui.exe" /pdb:"vc_mswuniv\test_gui.pdb" /libpath:".\..\lib\vc_lib" /subsystem:console
-# ADD LINK32 wxmswuniv28_core.lib wxbase28.lib wxtiff.lib wxjpeg.lib wxpng.lib wxzlib.lib wxregex.lib wxexpat.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswuniv\test_gui.exe" /pdb:"vc_mswuniv\test_gui.pdb" /libpath:".\..\lib\vc_lib" /subsystem:console
-
-!ELSEIF  "$(CFG)" == "test_gui - Win32 Universal Debug"
-
-# PROP BASE Use_MFC 0
-# PROP BASE Use_Debug_Libraries 1
-# PROP BASE Output_Dir "vc_mswunivd"
-# PROP BASE Intermediate_Dir "vc_mswunivd\test_gui"
-# PROP BASE Target_Dir ""
-# PROP Use_MFC 0
-# PROP Use_Debug_Libraries 1
-# PROP Output_Dir "vc_mswunivd"
-# PROP Intermediate_Dir "vc_mswunivd\test_gui"
-# PROP Target_Dir ""
-# ADD BASE CPP /nologo /FD /MDd /Zi /Fdvc_mswunivd\test_gui.pdb /Od /Gm /GR /EHsc /I ".\..\lib\vc_lib\mswunivd" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswunivd\testprec_test_gui.pch" /D "WIN32" /D "_DEBUG" /D "__WXMSW__" /D "__WXUNIVERSAL__" /D "__WXDEBUG__" /D "NOPCH" /D "_CONSOLE" /c
-# ADD CPP /nologo /FD /MDd /Zi /Fdvc_mswunivd\test_gui.pdb /Od /Gm /GR /EHsc /I ".\..\lib\vc_lib\mswunivd" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswunivd\testprec_test_gui.pch" /D "WIN32" /D "_DEBUG" /D "__WXMSW__" /D "__WXUNIVERSAL__" /D "__WXDEBUG__" /D "NOPCH" /D "_CONSOLE" /c
-# ADD BASE RSC /l 0x409 /d "_DEBUG" /d "__WXMSW__" /d "__WXUNIVERSAL__" /d "__WXDEBUG__" /i ".\..\lib\vc_lib\mswunivd" /i ".\..\include" /i "." /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-# ADD RSC /l 0x409 /d "_DEBUG" /d "__WXMSW__" /d "__WXUNIVERSAL__" /d "__WXDEBUG__" /i ".\..\lib\vc_lib\mswunivd" /i ".\..\include" /i "." /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-BSC32=bscmake.exe
-# ADD BASE BSC32 /nologo
-# ADD BSC32 /nologo
-LINK32=link.exe
-# ADD BASE LINK32 wxmswuniv28d_core.lib wxbase28d.lib wxtiffd.lib wxjpegd.lib wxpngd.lib wxzlibd.lib wxregexd.lib wxexpatd.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswunivd\test_gui.exe" /debug /pdb:"vc_mswunivd\test_gui.pdb" /libpath:".\..\lib\vc_lib" /subsystem:console
-# ADD LINK32 wxmswuniv28d_core.lib wxbase28d.lib wxtiffd.lib wxjpegd.lib wxpngd.lib wxzlibd.lib wxregexd.lib wxexpatd.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswunivd\test_gui.exe" /debug /pdb:"vc_mswunivd\test_gui.pdb" /libpath:".\..\lib\vc_lib" /subsystem:console
-
-!ELSEIF  "$(CFG)" == "test_gui - Win32 Unicode Release"
-
-# PROP BASE Use_MFC 0
-# PROP BASE Use_Debug_Libraries 0
 # PROP BASE Output_Dir "vc_mswu"
 # PROP BASE Intermediate_Dir "vc_mswu\test_gui"
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
-# PROP Use_Debug_Libraries 0
+# PROP Use_Debug_Libraries 1
 # PROP Output_Dir "vc_mswu"
 # PROP Intermediate_Dir "vc_mswu\test_gui"
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /FD /MD /Fdvc_mswu\test_gui.pdb /O2 /GR /EHsc /I ".\..\lib\vc_lib\mswu" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswu\testprec_test_gui.pch" /D "WIN32" /D "__WXMSW__" /D "NDEBUG" /D "_UNICODE" /D "NOPCH" /D "_CONSOLE" /c
-# ADD CPP /nologo /FD /MD /Fdvc_mswu\test_gui.pdb /O2 /GR /EHsc /I ".\..\lib\vc_lib\mswu" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswu\testprec_test_gui.pch" /D "WIN32" /D "__WXMSW__" /D "NDEBUG" /D "_UNICODE" /D "NOPCH" /D "_CONSOLE" /c
+# ADD BASE CPP /nologo /FD /MD /Zi /Fdvc_mswu\test_gui.pdb /opt:ref /opt:icf /O2 /GR /EHsc /I ".\..\lib\vc_lib\mswu" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswu\testprec_test_gui.pch" /D "WIN32" /D "__WXMSW__" /D "NDEBUG" /D "_UNICODE" /D "NOPCH" /D "_CONSOLE" /c
+# ADD CPP /nologo /FD /MD /Zi /Fdvc_mswu\test_gui.pdb /opt:ref /opt:icf /O2 /GR /EHsc /I ".\..\lib\vc_lib\mswu" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswu\testprec_test_gui.pch" /D "WIN32" /D "__WXMSW__" /D "NDEBUG" /D "_UNICODE" /D "NOPCH" /D "_CONSOLE" /c
 # ADD BASE RSC /l 0x409 /d "__WXMSW__" /d "NDEBUG" /d "_UNICODE" /i ".\..\lib\vc_lib\mswu" /i ".\..\include" /i "." /i ".\..\samples" /d "NOPCH" /d _CONSOLE
 # ADD RSC /l 0x409 /d "__WXMSW__" /d "NDEBUG" /d "_UNICODE" /i ".\..\lib\vc_lib\mswu" /i ".\..\include" /i "." /i ".\..\samples" /d "NOPCH" /d _CONSOLE
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 wxmsw28u_core.lib wxbase28u.lib wxtiff.lib wxjpeg.lib wxpng.lib wxzlib.lib wxregexu.lib wxexpat.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswu\test_gui.exe" /pdb:"vc_mswu\test_gui.pdb" /libpath:".\..\lib\vc_lib" /subsystem:console
-# ADD LINK32 wxmsw28u_core.lib wxbase28u.lib wxtiff.lib wxjpeg.lib wxpng.lib wxzlib.lib wxregexu.lib wxexpat.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswu\test_gui.exe" /pdb:"vc_mswu\test_gui.pdb" /libpath:".\..\lib\vc_lib" /subsystem:console
+# ADD BASE LINK32 wxmsw30u_webview.lib wxmsw30u_richtext.lib wxmsw30u_media.lib wxmsw30u_xrc.lib wxbase30u_xml.lib wxmsw30u_adv.lib wxmsw30u_html.lib wxmsw30u_core.lib wxbase30u_net.lib wxbase30u.lib wxtiff.lib wxjpeg.lib wxpng.lib wxzlib.lib wxregexu.lib wxexpat.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib wininet.lib /nologo /machine:i386 /out:"vc_mswu\test_gui.exe" /debug /pdb:"vc_mswu\test_gui.pdb" /libpath:".\..\lib\vc_lib" /subsystem:console
+# ADD LINK32 wxmsw30u_webview.lib wxmsw30u_richtext.lib wxmsw30u_media.lib wxmsw30u_xrc.lib wxbase30u_xml.lib wxmsw30u_adv.lib wxmsw30u_html.lib wxmsw30u_core.lib wxbase30u_net.lib wxbase30u.lib wxtiff.lib wxjpeg.lib wxpng.lib wxzlib.lib wxregexu.lib wxexpat.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib wininet.lib /nologo /machine:i386 /out:"vc_mswu\test_gui.exe" /debug /pdb:"vc_mswu\test_gui.pdb" /libpath:".\..\lib\vc_lib" /subsystem:console
 
-!ELSEIF  "$(CFG)" == "test_gui - Win32 Unicode Debug"
+!ELSEIF  "$(CFG)" == "test_gui - Win32 Debug"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
@@ -353,86 +111,112 @@ LINK32=link.exe
 # PROP Output_Dir "vc_mswud"
 # PROP Intermediate_Dir "vc_mswud\test_gui"
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /FD /MDd /Zi /Fdvc_mswud\test_gui.pdb /Od /Gm /GR /EHsc /I ".\..\lib\vc_lib\mswud" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswud\testprec_test_gui.pch" /D "WIN32" /D "_DEBUG" /D "__WXMSW__" /D "__WXDEBUG__" /D "_UNICODE" /D "NOPCH" /D "_CONSOLE" /c
-# ADD CPP /nologo /FD /MDd /Zi /Fdvc_mswud\test_gui.pdb /Od /Gm /GR /EHsc /I ".\..\lib\vc_lib\mswud" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswud\testprec_test_gui.pch" /D "WIN32" /D "_DEBUG" /D "__WXMSW__" /D "__WXDEBUG__" /D "_UNICODE" /D "NOPCH" /D "_CONSOLE" /c
-# ADD BASE RSC /l 0x409 /d "_DEBUG" /d "__WXMSW__" /d "__WXDEBUG__" /d "_UNICODE" /i ".\..\lib\vc_lib\mswud" /i ".\..\include" /i "." /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-# ADD RSC /l 0x409 /d "_DEBUG" /d "__WXMSW__" /d "__WXDEBUG__" /d "_UNICODE" /i ".\..\lib\vc_lib\mswud" /i ".\..\include" /i "." /i ".\..\samples" /d "NOPCH" /d _CONSOLE
+# ADD BASE CPP /nologo /FD /MDd /Zi /Fdvc_mswud\test_gui.pdb /Od /Gm /GR /EHsc /I ".\..\lib\vc_lib\mswud" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswud\testprec_test_gui.pch" /D "WIN32" /D "_DEBUG" /D "__WXMSW__" /D "_UNICODE" /D "NOPCH" /D "_CONSOLE" /c
+# ADD CPP /nologo /FD /MDd /Zi /Fdvc_mswud\test_gui.pdb /Od /Gm /GR /EHsc /I ".\..\lib\vc_lib\mswud" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswud\testprec_test_gui.pch" /D "WIN32" /D "_DEBUG" /D "__WXMSW__" /D "_UNICODE" /D "NOPCH" /D "_CONSOLE" /c
+# ADD BASE RSC /l 0x409 /d "_DEBUG" /d "__WXMSW__" /d "_UNICODE" /i ".\..\lib\vc_lib\mswud" /i ".\..\include" /i "." /i ".\..\samples" /d "NOPCH" /d _CONSOLE
+# ADD RSC /l 0x409 /d "_DEBUG" /d "__WXMSW__" /d "_UNICODE" /i ".\..\lib\vc_lib\mswud" /i ".\..\include" /i "." /i ".\..\samples" /d "NOPCH" /d _CONSOLE
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 wxmsw28ud_core.lib wxbase28ud.lib wxtiffd.lib wxjpegd.lib wxpngd.lib wxzlibd.lib wxregexud.lib wxexpatd.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswud\test_gui.exe" /debug /pdb:"vc_mswud\test_gui.pdb" /libpath:".\..\lib\vc_lib" /subsystem:console
-# ADD LINK32 wxmsw28ud_core.lib wxbase28ud.lib wxtiffd.lib wxjpegd.lib wxpngd.lib wxzlibd.lib wxregexud.lib wxexpatd.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswud\test_gui.exe" /debug /pdb:"vc_mswud\test_gui.pdb" /libpath:".\..\lib\vc_lib" /subsystem:console
-
-!ELSEIF  "$(CFG)" == "test_gui - Win32 Release"
-
-# PROP BASE Use_MFC 0
-# PROP BASE Use_Debug_Libraries 0
-# PROP BASE Output_Dir "vc_msw"
-# PROP BASE Intermediate_Dir "vc_msw\test_gui"
-# PROP BASE Target_Dir ""
-# PROP Use_MFC 0
-# PROP Use_Debug_Libraries 0
-# PROP Output_Dir "vc_msw"
-# PROP Intermediate_Dir "vc_msw\test_gui"
-# PROP Target_Dir ""
-# ADD BASE CPP /nologo /FD /MD /Fdvc_msw\test_gui.pdb /O2 /GR /EHsc /I ".\..\lib\vc_lib\msw" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_msw\testprec_test_gui.pch" /D "WIN32" /D "__WXMSW__" /D "NDEBUG" /D "NOPCH" /D "_CONSOLE" /c
-# ADD CPP /nologo /FD /MD /Fdvc_msw\test_gui.pdb /O2 /GR /EHsc /I ".\..\lib\vc_lib\msw" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_msw\testprec_test_gui.pch" /D "WIN32" /D "__WXMSW__" /D "NDEBUG" /D "NOPCH" /D "_CONSOLE" /c
-# ADD BASE RSC /l 0x409 /d "__WXMSW__" /d "NDEBUG" /i ".\..\lib\vc_lib\msw" /i ".\..\include" /i "." /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-# ADD RSC /l 0x409 /d "__WXMSW__" /d "NDEBUG" /i ".\..\lib\vc_lib\msw" /i ".\..\include" /i "." /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-BSC32=bscmake.exe
-# ADD BASE BSC32 /nologo
-# ADD BSC32 /nologo
-LINK32=link.exe
-# ADD BASE LINK32 wxmsw28_core.lib wxbase28.lib wxtiff.lib wxjpeg.lib wxpng.lib wxzlib.lib wxregex.lib wxexpat.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_msw\test_gui.exe" /pdb:"vc_msw\test_gui.pdb" /libpath:".\..\lib\vc_lib" /subsystem:console
-# ADD LINK32 wxmsw28_core.lib wxbase28.lib wxtiff.lib wxjpeg.lib wxpng.lib wxzlib.lib wxregex.lib wxexpat.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_msw\test_gui.exe" /pdb:"vc_msw\test_gui.pdb" /libpath:".\..\lib\vc_lib" /subsystem:console
-
-!ELSEIF  "$(CFG)" == "test_gui - Win32 Debug"
-
-# PROP BASE Use_MFC 0
-# PROP BASE Use_Debug_Libraries 1
-# PROP BASE Output_Dir "vc_mswd"
-# PROP BASE Intermediate_Dir "vc_mswd\test_gui"
-# PROP BASE Target_Dir ""
-# PROP Use_MFC 0
-# PROP Use_Debug_Libraries 1
-# PROP Output_Dir "vc_mswd"
-# PROP Intermediate_Dir "vc_mswd\test_gui"
-# PROP Target_Dir ""
-# ADD BASE CPP /nologo /FD /MDd /Zi /Fdvc_mswd\test_gui.pdb /Od /Gm /GR /EHsc /I ".\..\lib\vc_lib\mswd" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswd\testprec_test_gui.pch" /D "WIN32" /D "_DEBUG" /D "__WXMSW__" /D "__WXDEBUG__" /D "NOPCH" /D "_CONSOLE" /c
-# ADD CPP /nologo /FD /MDd /Zi /Fdvc_mswd\test_gui.pdb /Od /Gm /GR /EHsc /I ".\..\lib\vc_lib\mswd" /I ".\..\include" /W4 /I "." /I ".\..\samples" /Yu"testprec.h" /Fp"vc_mswd\testprec_test_gui.pch" /D "WIN32" /D "_DEBUG" /D "__WXMSW__" /D "__WXDEBUG__" /D "NOPCH" /D "_CONSOLE" /c
-# ADD BASE RSC /l 0x409 /d "_DEBUG" /d "__WXMSW__" /d "__WXDEBUG__" /i ".\..\lib\vc_lib\mswd" /i ".\..\include" /i "." /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-# ADD RSC /l 0x409 /d "_DEBUG" /d "__WXMSW__" /d "__WXDEBUG__" /i ".\..\lib\vc_lib\mswd" /i ".\..\include" /i "." /i ".\..\samples" /d "NOPCH" /d _CONSOLE
-BSC32=bscmake.exe
-# ADD BASE BSC32 /nologo
-# ADD BSC32 /nologo
-LINK32=link.exe
-# ADD BASE LINK32 wxmsw28d_core.lib wxbase28d.lib wxtiffd.lib wxjpegd.lib wxpngd.lib wxzlibd.lib wxregexd.lib wxexpatd.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswd\test_gui.exe" /debug /pdb:"vc_mswd\test_gui.pdb" /libpath:".\..\lib\vc_lib" /subsystem:console
-# ADD LINK32 wxmsw28d_core.lib wxbase28d.lib wxtiffd.lib wxjpegd.lib wxpngd.lib wxzlibd.lib wxregexd.lib wxexpatd.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib /nologo /machine:i386 /out:"vc_mswd\test_gui.exe" /debug /pdb:"vc_mswd\test_gui.pdb" /libpath:".\..\lib\vc_lib" /subsystem:console
+# ADD BASE LINK32 wxmsw30ud_webview.lib wxmsw30ud_richtext.lib wxmsw30ud_media.lib wxmsw30ud_xrc.lib wxbase30ud_xml.lib wxmsw30ud_adv.lib wxmsw30ud_html.lib wxmsw30ud_core.lib wxbase30ud_net.lib wxbase30ud.lib wxtiffd.lib wxjpegd.lib wxpngd.lib wxzlibd.lib wxregexud.lib wxexpatd.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib wininet.lib /nologo /machine:i386 /out:"vc_mswud\test_gui.exe" /debug /pdb:"vc_mswud\test_gui.pdb" /libpath:".\..\lib\vc_lib" /subsystem:console
+# ADD LINK32 wxmsw30ud_webview.lib wxmsw30ud_richtext.lib wxmsw30ud_media.lib wxmsw30ud_xrc.lib wxbase30ud_xml.lib wxmsw30ud_adv.lib wxmsw30ud_html.lib wxmsw30ud_core.lib wxbase30ud_net.lib wxbase30ud.lib wxtiffd.lib wxjpegd.lib wxpngd.lib wxzlibd.lib wxregexud.lib wxexpatd.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib wininet.lib /nologo /machine:i386 /out:"vc_mswud\test_gui.exe" /debug /pdb:"vc_mswud\test_gui.pdb" /libpath:".\..\lib\vc_lib" /subsystem:console
 
 !ENDIF
 
 # Begin Target
 
-# Name "test_gui - Win32 DLL Universal Unicode Release"
-# Name "test_gui - Win32 DLL Universal Unicode Debug"
-# Name "test_gui - Win32 DLL Universal Release"
-# Name "test_gui - Win32 DLL Universal Debug"
-# Name "test_gui - Win32 DLL Unicode Release"
-# Name "test_gui - Win32 DLL Unicode Debug"
 # Name "test_gui - Win32 DLL Release"
 # Name "test_gui - Win32 DLL Debug"
-# Name "test_gui - Win32 Universal Unicode Release"
-# Name "test_gui - Win32 Universal Unicode Debug"
-# Name "test_gui - Win32 Universal Release"
-# Name "test_gui - Win32 Universal Debug"
-# Name "test_gui - Win32 Unicode Release"
-# Name "test_gui - Win32 Unicode Debug"
 # Name "test_gui - Win32 Release"
 # Name "test_gui - Win32 Debug"
 # Begin Group "Source Files"
 
 # PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=.\menu\accelentry.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\graphics\affinematrix.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\asserthelper.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\graphics\bitmap.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\bitmapcomboboxtest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\bitmaptogglebuttontest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\bookctrlbasetest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\sizers\boxsizer.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\buttontest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\checkboxtest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\checklistboxtest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\choicebooktest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\choicetest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\window\clientsize.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\events\clone.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\graphics\colour.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\comboboxtest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\config\config.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\dataviewctrltest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\datepickerctrltest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\dialogtest.cpp
+# End Source File
 # Begin Source File
 
 SOURCE=.\dummy.cpp
@@ -441,7 +225,147 @@ SOURCE=.\dummy.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\graphics\ellipsization.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\events\evtlooptest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\exec\exec.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\font\fonttest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\frametest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\misc\garbage.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\gaugetest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\gridtest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\misc\guifuncs.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\headerctrltest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\htmllboxtest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\html\htmlparser.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\html\htmlwindow.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\hyperlinkctrltest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\image\image.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\itemcontainertest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\events\keyboard.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\label.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\listbasetest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\listbooktest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\listboxtest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\listctrltest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\listviewtest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\markuptest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\graphics\measuring.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\menu\menu.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\notebooktest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\ownerdrawncomboboxtest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\pickerbasetest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\pickertest.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\geometry\point.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\events\propagation.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\radioboxtest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\radiobuttontest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\image\rawbmp.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\rearrangelisttest.cpp
 # End Source File
 # Begin Source File
 
@@ -449,7 +373,39 @@ SOURCE=.\geometry\rect.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\geometry\region.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\richtextctrltest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\misc\safearrayconverttest.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\..\samples\sample.rc
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\searchctrltest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\misc\selstoretest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\window\setsize.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\misc\settings.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\simplebooktest.cpp
 # End Source File
 # Begin Source File
 
@@ -457,7 +413,83 @@ SOURCE=.\geometry\size.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\controls\slidertest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\net\socket.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\spinctrldbltest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\spinctrltest.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\test.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\testableframe.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\textctrltest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\textentrytest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\togglebuttontest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\toolbooktest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\toplevel\toplevel.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\treebooktest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\treectrltest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\treelistctrltest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\validators\valnum.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\virtlistctrltest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\webtest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\controls\windowtest.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\sizers\wrapsizer.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\xml\xrctest.cpp
 # End Source File
 # End Group
 # End Target

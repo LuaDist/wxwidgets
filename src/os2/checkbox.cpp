@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/13/99
-// RCS-ID:      $Id: checkbox.cpp 39428 2006-05-29 08:13:19Z ABX $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -27,7 +26,6 @@
 // macros
 // ----------------------------------------------------------------------------
 
-IMPLEMENT_DYNAMIC_CLASS(wxCheckBox, wxControl)
 IMPLEMENT_DYNAMIC_CLASS(wxBitmapCheckBox, wxCheckBox)
 
 extern void  wxAssociateWinWithHandle( HWND         hWnd
@@ -45,7 +43,7 @@ extern void  wxAssociateWinWithHandle( HWND         hWnd
 bool wxCheckBox::OS2Command( WXUINT WXUNUSED(uParam),
                              WXWORD WXUNUSED(wId) )
 {
-    wxCommandEvent rEvent( wxEVT_COMMAND_CHECKBOX_CLICKED, m_windowId );
+    wxCommandEvent rEvent( wxEVT_CHECKBOX, m_windowId );
     rEvent.SetInt(GetValue());
     rEvent.SetEventObject(this);
     ProcessCommand(rEvent);
@@ -96,7 +94,7 @@ bool wxCheckBox::Create(wxWindow* pParent,
 void wxCheckBox::SetLabel( const wxString& rsLabel )
 {
     wxString  sLabel=::wxPMTextToLabel(rsLabel);
-    ::WinSetWindowText(GetHwnd(), (PSZ)sLabel.c_str());
+    ::WinSetWindowText(GetHwnd(), sLabel.c_str());
 } // end of wxCheckBox::SetLabel
 
 wxSize wxCheckBox::DoGetBestSize() const

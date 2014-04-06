@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: button.h 40325 2006-07-25 14:31:55Z ABX $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -13,10 +12,8 @@
 #define _WX_BUTTON_H_
 
 // Pushbutton
-class WXDLLEXPORT wxButton: public wxButtonBase
+class WXDLLIMPEXP_CORE wxButton: public wxButtonBase
 {
-    DECLARE_DYNAMIC_CLASS(wxButton)
-
 public:
     wxButton() { }
     wxButton(wxWindow *parent,
@@ -37,23 +34,23 @@ public:
         const wxValidator& validator = wxDefaultValidator,
         const wxString& name = wxButtonNameStr);
 
-    virtual void SetDefault();
+    virtual wxWindow *SetDefault();
     virtual void Command(wxCommandEvent& event);
 
     static wxSize GetDefaultSize();
 
     // Implementation
-protected:
+    virtual wxSize GetMinSize() const;
 
+protected:
     virtual wxSize DoGetBestSize() const;
 
 private:
-
-    virtual wxSize GetMinSize() const;
     wxSize OldGetBestSize() const;
     wxSize OldGetMinSize() const;
     void SetDefaultShadowThicknessAndResize();
+
+    DECLARE_DYNAMIC_CLASS(wxButton)
 };
 
-#endif
-// _WX_BUTTON_H_
+#endif // _WX_BUTTON_H_

@@ -1,10 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Name:        src/univ/frame.cpp
+// Name:        src/univ/framuniv.cpp
 // Purpose:     wxFrame class for wxUniversal
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     19.05.01
-// RCS-ID:      $Id: framuniv.cpp 42664 2006-10-29 20:39:31Z VZ $
 // Copyright:   (c) 2001 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -41,8 +40,6 @@ BEGIN_EVENT_TABLE(wxFrame, wxFrameBase)
     EVT_SIZE(wxFrame::OnSize)
     EVT_SYS_COLOUR_CHANGED(wxFrame::OnSysColourChanged)
 END_EVENT_TABLE()
-
-IMPLEMENT_DYNAMIC_CLASS(wxFrame, wxTopLevelWindow)
 
 // ----------------------------------------------------------------------------
 // ctors
@@ -90,13 +87,6 @@ void wxFrame::OnSize(wxSizeEvent& event)
 #endif // wxUSE_TOOLBAR
 
     event.Skip();
-}
-
-void wxFrame::SendSizeEvent()
-{
-    wxSizeEvent event(GetSize(), GetId());
-    event.SetEventObject(this);
-    GetEventHandler()->ProcessEvent(event);
 }
 
 #if wxUSE_MENUS
@@ -271,10 +261,6 @@ void wxFrame::DoSetClientSize(int width, int height)
 #if wxUSE_TOOLBAR
     if ( m_frameToolBar )
     {
-#if wxUSE_STATUSBAR
-        height += m_frameStatusBar->GetSize().y;
-#endif // wxUSE_STATUSBAR
-
         if ( m_frameToolBar->GetWindowStyleFlag() & wxTB_VERTICAL )
             width += m_frameToolBar->GetSize().x;
         else

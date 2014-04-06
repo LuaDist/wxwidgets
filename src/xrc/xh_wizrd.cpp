@@ -3,7 +3,6 @@
 // Purpose:     XRC resource for wxWizard
 // Author:      Vaclav Slavik
 // Created:     2003/03/01
-// RCS-ID:      $Id: xh_wizrd.cpp 55976 2008-09-30 11:51:28Z VS $
 // Copyright:   (c) 2000 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -75,7 +74,7 @@ wxObject *wxWizardXmlHandler::DoCreateResource()
         {
             if ( !m_instance )
             {
-                wxLogError(wxT("wxWizardPage is abstract class, must be subclassed"));
+                ReportError("wxWizardPage is abstract class and must be subclassed");
                 return NULL;
             }
 

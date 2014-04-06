@@ -1,22 +1,13 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        gtk/scrolwin.cpp
+// Name:        src/gtk/scrolwin.cpp
 // Purpose:     wxScrolledWindow implementation
 // Author:      Robert Roebling
 // Modified by: Ron Lee
 //              Vadim Zeitlin: removed 90% of duplicated common code
 // Created:     01/02/97
-// RCS-ID:      $Id: scrolwin.cpp 45529 2007-04-18 17:24:52Z PC $
 // Copyright:   (c) Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
-
-// ============================================================================
-// declarations
-// ============================================================================
-
-// ----------------------------------------------------------------------------
-// headers
-// ----------------------------------------------------------------------------
 
 // For compilers that support precompilation, includes "wx.h".
 #include "wx/wxprec.h"
@@ -26,69 +17,38 @@
 #endif
 
 #include "wx/scrolwin.h"
-#include "wx/gtk/private.h"
 
-// ============================================================================
-// implementation
-// ============================================================================
+#include <gtk/gtk.h>
+#include "wx/gtk/private/gtk2-compat.h"
 
 // ----------------------------------------------------------------------------
 // wxScrollHelper implementation
 // ----------------------------------------------------------------------------
 
-void wxScrollHelperNative::SetScrollbars(int pixelsPerUnitX, int pixelsPerUnitY,
-                                         int noUnitsX, int noUnitsY,
-                                         int xPos, int yPos,
-                                         bool noRefresh)
+void wxScrollHelper::SetScrollbars(int pixelsPerUnitX, int pixelsPerUnitY,
+                                   int noUnitsX, int noUnitsY,
+                                   int xPos, int yPos,
+                                   bool noRefresh)
 {
-    int xs, ys;
-    GetViewStart(& xs, & ys);
+    // prevent programmatic position changes from causing scroll events
+    m_win->SetScrollPos(wxHORIZONTAL, xPos);
+    m_win->SetScrollPos(wxVERTICAL, yPos);
 
-    int old_x = m_xScrollPixelsPerLine * xs;
-    int old_y = m_yScrollPixelsPerLine * ys;
-
-    m_xScrollPixelsPerLine = pixelsPerUnitX;
-    m_yScrollPixelsPerLine = pixelsPerUnitY;
-
-    m_win->m_scrollBar[wxWindow::ScrollDir_Horz]->adjustment->value =
-    m_xScrollPosition = xPos;
-    m_win->m_scrollBar[wxWindow::ScrollDir_Vert]->adjustment->value =
-    m_yScrollPosition = yPos;
-
-    // Setting hints here should arguably be deprecated, but without it
-    // a sizer might override this manual scrollbar setting in old code.
-    // m_targetWindow->SetVirtualSizeHints( noUnitsX * pixelsPerUnitX, noUnitsY * pixelsPerUnitY );
-
-    int w = noUnitsX * pixelsPerUnitX;
-    int h = noUnitsY * pixelsPerUnitY;
-    m_targetWindow->SetVirtualSize( w ? w : wxDefaultCoord,
-                                    h ? h : wxDefaultCoord);
-
-    // If the target is not the same as the window with the scrollbars,
-    // then we need to update the scrollbars here, since they won't have
-    // been updated by SetVirtualSize().
-    if (m_targetWindow != m_win)
-    {
-        AdjustScrollbars();
-    }
-
-    if (!noRefresh)
-    {
-        int new_x = m_xScrollPixelsPerLine * m_xScrollPosition;
-        int new_y = m_yScrollPixelsPerLine * m_yScrollPosition;
-
-        m_targetWindow->ScrollWindow( old_x - new_x, old_y - new_y );
-    }
+    base_type::SetScrollbars(
+        pixelsPerUnitX, pixelsPerUnitY, noUnitsX, noUnitsY, xPos, yPos, noRefresh);
 }
 
-void wxScrollHelperNative::DoAdjustScrollbar(GtkRange* range,
-                                             int pixelsPerLine,
-                                             int winSize,
-                                             int virtSize,
-                                             int *pos,
-                                             int *lines,
-                                             int *linesPerPage)
+void wxScrollHelper::DoAdjustScrollbar(GtkRange* range,
+                                       int pixelsPerLine,
+                                       int winSize,
+                                       int virtSize,
+                                       int *pos,
+                                       int *lines,
+                                       int *linesPerPage)
 {
+    if (!range)
+        return;
+
     int upper;
     int page_size;
     if (pixelsPerLine > 0 && winSize > 0 && winSize < virtSize)
@@ -108,10 +68,8 @@ void wxScrollHelperNative::DoAdjustScrollbar(GtkRange* range,
         *linesPerPage = 0;
     }
 
-    GtkAdjustment* adj = range->adjustment;
-    adj->step_increment = 1;
-    adj->page_increment =
-    adj->page_size = page_size;
+    gtk_range_set_increments(range, 1, page_size);
+    gtk_adjustment_set_page_size(gtk_range_get_adjustment(range), page_size);
     gtk_range_set_range(range, 0, upper);
 
     // ensure that the scroll position is always in valid range
@@ -119,20 +77,29 @@ void wxScrollHelperNative::DoAdjustScrollbar(GtkRange* range,
         *pos = *lines;
 }
 
-void wxScrollHelperNative::AdjustScrollbars()
+void wxScrollHelper::AdjustScrollbars()
 {
-    // this flag indicates which window has the scrollbars
-    m_win->m_hasScrolling = m_xScrollPixelsPerLine != 0 ||
-                                m_yScrollPixelsPerLine != 0;
-
     int vw, vh;
-    m_targetWindow->GetVirtualSize( &vw, &vh );
+    m_targetWindow->GetVirtualSize(&vw, &vh);
 
-    int w;
+    int w, h;
+    const wxSize availSize = GetSizeAvailableForScrollTarget(
+        m_win->GetSize() - m_win->GetWindowBorderSize());
+    if ( availSize.x >= vw && availSize.y >= vh )
+    {
+        w = availSize.x;
+        h = availSize.y;
+
+        // we know that the scrollbars will be removed
+        DoAdjustHScrollbar(w, vw);
+        DoAdjustVScrollbar(h, vh);
+
+        return;
+    }
+
     m_targetWindow->GetClientSize(&w, NULL);
     DoAdjustHScrollbar(w, vw);
 
-    int h;
     m_targetWindow->GetClientSize(NULL, &h);
     DoAdjustVScrollbar(h, vh);
 
@@ -154,7 +121,7 @@ void wxScrollHelperNative::AdjustScrollbars()
     }
 }
 
-void wxScrollHelperNative::DoScroll(int orient,
+void wxScrollHelper::DoScrollOneDir(int orient,
                                     int pos,
                                     int pixelsPerLine,
                                     int *posOld)
@@ -172,10 +139,72 @@ void wxScrollHelperNative::DoScroll(int orient,
     }
 }
 
-void wxScrollHelperNative::Scroll( int x_pos, int y_pos )
+void wxScrollHelper::DoScroll( int x_pos, int y_pos )
 {
-    wxCHECK_RET( m_targetWindow != 0, _T("No target window") );
+    wxCHECK_RET( m_targetWindow != 0, wxT("No target window") );
 
-    DoScroll(wxHORIZONTAL, x_pos, m_xScrollPixelsPerLine, &m_xScrollPosition);
-    DoScroll(wxVERTICAL, y_pos, m_yScrollPixelsPerLine, &m_yScrollPosition);
+    DoScrollOneDir(wxHORIZONTAL, x_pos, m_xScrollPixelsPerLine, &m_xScrollPosition);
+    DoScrollOneDir(wxVERTICAL, y_pos, m_yScrollPixelsPerLine, &m_yScrollPosition);
+}
+
+// ----------------------------------------------------------------------------
+// scrollbars visibility
+// ----------------------------------------------------------------------------
+
+namespace
+{
+
+GtkPolicyType GtkPolicyFromWX(wxScrollbarVisibility visibility)
+{
+    GtkPolicyType policy;
+    switch ( visibility )
+    {
+        case wxSHOW_SB_NEVER:
+            policy = GTK_POLICY_NEVER;
+            break;
+
+        case wxSHOW_SB_DEFAULT:
+            policy = GTK_POLICY_AUTOMATIC;
+            break;
+
+        default:
+            wxFAIL_MSG( wxS("unknown scrollbar visibility") );
+            // fall through
+
+        case wxSHOW_SB_ALWAYS:
+            policy = GTK_POLICY_ALWAYS;
+            break;
+    }
+
+    return policy;
+}
+
+} // anonymous namespace
+
+bool wxScrollHelper::IsScrollbarShown(int orient) const
+{
+    GtkScrolledWindow * const scrolled = GTK_SCROLLED_WINDOW(m_win->m_widget);
+    if ( !scrolled )
+    {
+        // By default, all windows are scrollable.
+        return true;
+    }
+
+    GtkPolicyType hpolicy, vpolicy;
+    gtk_scrolled_window_get_policy(scrolled, &hpolicy, &vpolicy);
+
+    GtkPolicyType policy = orient == wxHORIZONTAL ? hpolicy : vpolicy;
+
+    return policy != GTK_POLICY_NEVER;
+}
+
+void wxScrollHelper::DoShowScrollbars(wxScrollbarVisibility horz,
+                                      wxScrollbarVisibility vert)
+{
+    GtkScrolledWindow * const scrolled = GTK_SCROLLED_WINDOW(m_win->m_widget);
+    wxCHECK_RET( scrolled, "window must be created" );
+
+    gtk_scrolled_window_set_policy(scrolled,
+                                   GtkPolicyFromWX(horz),
+                                   GtkPolicyFromWX(vert));
 }

@@ -18,9 +18,9 @@
  * Boston, MA 02111-1307, USA.
  */
 
-/* 
+/*
 
-Permission to use this file under wxWindows license given by
+Permission to use this file under wxWindows licence given by
 copyright holder:
 --------
 From andersca@gnu.org Tue Dec  9 13:01:56 2003
@@ -81,22 +81,22 @@ X-KMail-SignatureState:
 On tis, 2003-12-09 at 11:42 +0100, Vaclav Slavik wrote:
 > Hi,
 > 
-> I'm working on the wxWindows cross-platform GUI toolkit 
-> (http://www.wxwindows.org) which uses GTK+ and it would save me a lot 
-> of time if I could use your eggtrayicon code to implement tray icons 
-> on X11. Unfortunately I can't use it right now because it is not part 
-> of any library we could depend on (as we do depend on GTK+) and would 
-> have to be included in our sources and it is under the LGPL license. 
-> The problem is that wxWindows' license is more permissive (see 
-> http://www.opensource.org/licenses/wxwindows.php for details) and so 
-> I can't take your code and put it under wxWindows License. And I 
-> can't put code that can't be used under the terms of wxWindows 
-> License into wxWindows either. Do you think it would be possible to 
+> I'm working on the wxWindows cross-platform GUI toolkit
+> (http://www.wxwindows.org) which uses GTK+ and it would save me a lot
+> of time if I could use your eggtrayicon code to implement tray icons
+> on X11. Unfortunately I can't use it right now because it is not part
+> of any library we could depend on (as we do depend on GTK+) and would
+> have to be included in our sources and it is under the LGPL license.
+> The problem is that wxWindows' license is more permissive (see
+> http://www.opensource.org/licenses/wxwindows.php for details) and so
+> I can't take your code and put it under wxWindows License. And I
+> can't put code that can't be used under the terms of wxWindows
+> License into wxWindows either. Do you think it would be possible to
 > get permission to include eggtrayicon under wxWindows license?
-> 
+>
 > Thanks,
 > Vaclav
-> 
+>
 
 Sure, that's fine by me.
 
@@ -104,9 +104,12 @@ Anders
 --------
 */
 
+
 #include "wx/platform.h"
 
-#include <gtk/gtkversion.h>
+#if wxUSE_TASKBARICON
+
+#include <gtk/gtk.h>
 #if GTK_CHECK_VERSION(2, 1, 0)
 
 #include <string.h>
@@ -120,6 +123,7 @@ Anders
 #include <gdk/gdkwin32.h>
 #endif
 
+
 #define SYSTEM_TRAY_REQUEST_DOCK    0
 #define SYSTEM_TRAY_BEGIN_MESSAGE   1
 #define SYSTEM_TRAY_CANCEL_MESSAGE  2
@@ -131,7 +135,7 @@ enum {
   PROP_0,
   PROP_ORIENTATION
 };
-         
+
 static GtkPlugClass *parent_class = NULL;
 
 static void egg_tray_icon_init (EggTrayIcon *icon);
@@ -185,7 +189,7 @@ egg_tray_icon_init (EggTrayIcon *icon)
 {
   icon->stamp = 1;
   icon->orientation = GTK_ORIENTATION_HORIZONTAL;
-  
+
   gtk_widget_add_events (GTK_WIDGET (icon), GDK_PROPERTY_CHANGE_MASK);
 }
 
@@ -251,7 +255,7 @@ egg_tray_icon_get_orientation_property (EggTrayIcon *icon)
   int error, result;
 
   g_assert (icon->manager_window != None);
-  
+
   xdisplay = GDK_DISPLAY_XDISPLAY (gtk_widget_get_display (GTK_WIDGET (icon)));
 
   gdk_error_trap_push ();
@@ -315,7 +319,7 @@ egg_tray_icon_manager_filter (GdkXEvent *xevent, GdkEvent *event, gpointer user_
   return GDK_FILTER_CONTINUE;
 }
 
-#endif  
+#endif
 
 static void
 egg_tray_icon_unrealize (GtkWidget *widget)
@@ -355,7 +359,7 @@ egg_tray_icon_send_manager_message (EggTrayIcon *icon,
 {
   XClientMessageEvent ev;
   Display *display;
-  
+
   ev.type = ClientMessage;
   ev.window = window;
   ev.message_type = icon->system_tray_opcode_atom;
@@ -367,7 +371,7 @@ egg_tray_icon_send_manager_message (EggTrayIcon *icon,
   ev.data.l[4] = data3;
 
   display = GDK_DISPLAY_XDISPLAY (gtk_widget_get_display (GTK_WIDGET (icon)));
-  
+
   gdk_error_trap_push ();
   XSendEvent (display,
 	      icon->manager_window, False, NoEventMask, (XEvent *)&ev);
@@ -390,14 +394,14 @@ egg_tray_icon_update_manager_window (EggTrayIcon *icon,
 				     gboolean     dock_if_realized)
 {
   Display *xdisplay;
-  
+
   if (icon->manager_window != None)
     return;
 
   xdisplay = GDK_DISPLAY_XDISPLAY (gtk_widget_get_display (GTK_WIDGET (icon)));
-  
+
   XGrabServer (xdisplay);
-  
+
   icon->manager_window = XGetSelectionOwner (xdisplay,
 					     icon->selection_atom);
 
@@ -407,14 +411,14 @@ egg_tray_icon_update_manager_window (EggTrayIcon *icon,
 
   XUngrabServer (xdisplay);
   XFlush (xdisplay);
-  
+
   if (icon->manager_window != None)
     {
       GdkWindow *gdkwin;
 
       gdkwin = gdk_window_lookup_for_display (gtk_widget_get_display (GTK_WIDGET (icon)),
 					      icon->manager_window);
-      
+
       gdk_window_add_filter (gdkwin, egg_tray_icon_manager_filter, icon);
 
       if (dock_if_realized && GTK_WIDGET_REALIZED (icon))
@@ -428,12 +432,12 @@ static void
 egg_tray_icon_manager_window_destroyed (EggTrayIcon *icon)
 {
   GdkWindow *gdkwin;
-  
+
   g_return_if_fail (icon->manager_window != None);
 
   gdkwin = gdk_window_lookup_for_display (gtk_widget_get_display (GTK_WIDGET (icon)),
 					  icon->manager_window);
-      
+
   gdk_window_remove_filter (gdkwin, egg_tray_icon_manager_filter, icon);
 
   icon->manager_window = None;
@@ -471,7 +475,7 @@ make_transparent (GtkWidget *widget, gpointer user_data)
 		    G_CALLBACK (transparent_expose_event), NULL);
   g_signal_connect_after (widget, "style_set",
 			  G_CALLBACK (make_transparent_again), NULL);
-}	
+}
 
 static void
 egg_tray_icon_realize (GtkWidget *widget)
@@ -499,9 +503,9 @@ egg_tray_icon_realize (GtkWidget *widget)
 	      gdk_screen_get_number (screen));
 
   icon->selection_atom = XInternAtom (xdisplay, buffer, False);
-  
+
   icon->manager_atom = XInternAtom (xdisplay, "MANAGER", False);
-  
+
   icon->system_tray_opcode_atom = XInternAtom (xdisplay,
 						   "_NET_SYSTEM_TRAY_OPCODE",
 						   False);
@@ -514,7 +518,7 @@ egg_tray_icon_realize (GtkWidget *widget)
   egg_tray_icon_send_dock_request (icon);
 
   root_window = gdk_screen_get_root_window (screen);
-  
+
   /* Add a root window filter so that we get changes on MANAGER */
   gdk_window_add_filter (root_window,
 			 egg_tray_icon_manager_filter, icon);
@@ -550,11 +554,11 @@ egg_tray_icon_send_message (EggTrayIcon *icon,
 			    gint         len)
 {
   guint stamp;
-  
+
   g_return_val_if_fail (EGG_IS_TRAY_ICON (icon), 0);
   g_return_val_if_fail (timeout >= 0, 0);
   g_return_val_if_fail (message != NULL, 0);
-		     
+
 #ifdef GDK_WINDOWING_X11
   if (icon->manager_window == None)
     return 0;
@@ -564,7 +568,7 @@ egg_tray_icon_send_message (EggTrayIcon *icon,
     len = strlen (message);
 
   stamp = icon->stamp++;
-  
+
 #ifdef GDK_WINDOWING_X11
   /* Get ready to send the message */
   egg_tray_icon_send_manager_message (icon, SYSTEM_TRAY_BEGIN_MESSAGE,
@@ -579,7 +583,7 @@ egg_tray_icon_send_message (EggTrayIcon *icon,
       Display *xdisplay;
 
       xdisplay = GDK_DISPLAY_XDISPLAY (gtk_widget_get_display (GTK_WIDGET (icon)));
-      
+
       ev.type = ClientMessage;
       ev.window = icon->manager_window;
       ev.format = 8;
@@ -613,7 +617,7 @@ egg_tray_icon_cancel_message (EggTrayIcon *icon,
 {
   g_return_if_fail (EGG_IS_TRAY_ICON (icon));
   g_return_if_fail (id > 0);
-#ifdef GDK_WINDOWING_X11  
+#ifdef GDK_WINDOWING_X11
   egg_tray_icon_send_manager_message (icon, SYSTEM_TRAY_CANCEL_MESSAGE,
 				      (Window)gtk_plug_get_id (GTK_PLUG (icon)),
 				      id, 0, 0);
@@ -630,4 +634,7 @@ egg_tray_icon_get_orientation (EggTrayIcon *icon)
 
 
 
+
+
 #endif /* GTK_CHECK_VERSION(2, 1, 0) */
+#endif /* wxUSE_TASKBARICON */

@@ -2,7 +2,6 @@
 // Name:        src/gtk/gauge.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: gauge.cpp 42816 2006-10-31 08:50:17Z RD $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -20,8 +19,6 @@
 // wxGauge
 //-----------------------------------------------------------------------------
 
-IMPLEMENT_DYNAMIC_CLASS(wxGauge, wxControl)
-
 bool wxGauge::Create( wxWindow *parent,
                       wxWindowID id,
                       int range,
@@ -31,8 +28,6 @@ bool wxGauge::Create( wxWindow *parent,
                       const wxValidator& validator,
                       const wxString& name )
 {
-    m_needParent = true;
-
     if (!PreCreation( parent, pos, size ) ||
         !CreateBase( parent, id, pos, size, style, validator, name ))
     {
@@ -43,10 +38,16 @@ bool wxGauge::Create( wxWindow *parent,
     m_rangeMax = range;
 
     m_widget = gtk_progress_bar_new();
+    g_object_ref(m_widget);
     if ( style & wxGA_VERTICAL )
     {
+#ifdef __WXGTK3__
+        gtk_orientable_set_orientation(GTK_ORIENTABLE(m_widget), GTK_ORIENTATION_VERTICAL);
+        gtk_progress_bar_set_inverted(GTK_PROGRESS_BAR(m_widget), true);
+#else
         gtk_progress_bar_set_orientation( GTK_PROGRESS_BAR(m_widget),
                                           GTK_PROGRESS_BOTTOM_TO_TOP );
+#endif
     }
 
     // when using the gauge in indeterminate mode, we need this:
@@ -63,7 +64,7 @@ bool wxGauge::Create( wxWindow *parent,
 void wxGauge::DoSetGauge()
 {
     wxASSERT_MSG( 0 <= m_gaugePos && m_gaugePos <= m_rangeMax,
-                  _T("invalid gauge position in DoSetGauge()") );
+                  wxT("invalid gauge position in DoSetGauge()") );
 
     gtk_progress_bar_set_fraction (GTK_PROGRESS_BAR (m_widget),
                                    m_rangeMax ? ((double)m_gaugePos)/m_rangeMax : 0.0);
@@ -91,7 +92,7 @@ void wxGauge::SetRange( int range )
 
 void wxGauge::SetValue( int pos )
 {
-    wxCHECK_RET( pos <= m_rangeMax, _T("invalid value in wxGauge::SetValue()") );
+    wxCHECK_RET( pos <= m_rangeMax, wxT("invalid value in wxGauge::SetValue()") );
 
     m_gaugePos = pos;
 
@@ -126,7 +127,7 @@ wxVisualAttributes wxGauge::GetDefaultAttributes() const
 wxVisualAttributes
 wxGauge::GetClassDefaultAttributes(wxWindowVariant WXUNUSED(variant))
 {
-    return GetDefaultAttributesFromGTKWidget(gtk_progress_bar_new,
+    return GetDefaultAttributesFromGTKWidget(gtk_progress_bar_new(),
                                              false, GTK_STATE_ACTIVE);
 }
 

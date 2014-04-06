@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/12/99
-// RCS-ID:      $Id: notebook.cpp 50855 2007-12-20 10:51:33Z JS $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -53,18 +52,12 @@
 // event table
 // ----------------------------------------------------------------------------
 
-DEFINE_EVENT_TYPE(wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGED)
-DEFINE_EVENT_TYPE(wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGING)
-
 BEGIN_EVENT_TABLE(wxNotebook, wxBookCtrlBase)
     EVT_NOTEBOOK_PAGE_CHANGED(wxID_ANY, wxNotebook::OnSelChange)
     EVT_SIZE(wxNotebook::OnSize)
     EVT_SET_FOCUS(wxNotebook::OnSetFocus)
     EVT_NAVIGATION_KEY(wxNotebook::OnNavigationKey)
 END_EVENT_TABLE()
-
-IMPLEMENT_DYNAMIC_CLASS(wxNotebook, wxBookCtrlBase)
-IMPLEMENT_DYNAMIC_CLASS(wxNotebookEvent, wxNotifyEvent)
 
 // ============================================================================
 // implementation
@@ -79,8 +72,6 @@ IMPLEMENT_DYNAMIC_CLASS(wxNotebookEvent, wxNotifyEvent)
 //
 void wxNotebook::Init()
 {
-    m_imageList  = NULL;
-    m_nSelection = -1;
     m_nTabSize   = 0;
 } // end of wxNotebook::Init
 
@@ -214,23 +205,23 @@ int wxNotebook::SetSelection( size_t nPage )
 {
     wxCHECK_MSG( IS_VALID_PAGE(nPage), wxNOT_FOUND, wxT("notebook page out of range") );
 
-    if (nPage != (size_t)m_nSelection)
+    if (nPage != (size_t)m_selection)
     {
-        wxNotebookEvent             vEvent( wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGING
+        wxBookCtrlEvent             vEvent( wxEVT_NOTEBOOK_PAGE_CHANGING
                                            ,m_windowId
                                           );
 
         vEvent.SetSelection(nPage);
-        vEvent.SetOldSelection(m_nSelection);
+        vEvent.SetOldSelection(m_selection);
         vEvent.SetEventObject(this);
-        if (!GetEventHandler()->ProcessEvent(vEvent) || vEvent.IsAllowed())
+        if (!HandleWindowEvent(vEvent) || vEvent.IsAllowed())
         {
 
             //
             // Program allows the page change
             //
-            vEvent.SetEventType(wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGED);
-            GetEventHandler()->ProcessEvent(vEvent);
+            vEvent.SetEventType(wxEVT_NOTEBOOK_PAGE_CHANGED);
+            HandleWindowEvent(vEvent);
 
             ::WinSendMsg( GetHWND()
                          ,BKM_TURNTOPAGE
@@ -239,7 +230,7 @@ int wxNotebook::SetSelection( size_t nPage )
                         );
         }
     }
-    m_nSelection = nPage;
+    m_selection = nPage;
     return nPage;
 } // end of wxNotebook::SetSelection
 
@@ -247,7 +238,7 @@ int wxNotebook::ChangeSelection( size_t nPage )
 {
     wxCHECK_MSG( IS_VALID_PAGE(nPage), wxNOT_FOUND, wxT("notebook page out of range") );
 
-    if (nPage != (size_t)m_nSelection)
+    if (nPage != (size_t)m_selection)
     {
         ::WinSendMsg( GetHWND()
                 ,BKM_TURNTOPAGE
@@ -255,7 +246,7 @@ int wxNotebook::ChangeSelection( size_t nPage )
                         ,(MPARAM)0
                     );
     }
-    m_nSelection = nPage;
+    m_selection = nPage;
     return nPage;
 }
 
@@ -266,7 +257,7 @@ bool wxNotebook::SetPageText( size_t nPage,
     return (bool)::WinSendMsg( m_hWnd
                               ,BKM_SETTABTEXT
                               ,MPFROMLONG((ULONG)m_alPageId[nPage])
-                              ,MPFROMP((PSZ)rsStrText.c_str())
+                              ,MPFROMP((const char*)rsStrText.c_str())
                              );
 } // end of wxNotebook::SetPageText
 
@@ -332,7 +323,7 @@ bool wxNotebook::SetPageImage (
 , int                               nImage
 )
 {
-    wxBitmap                        vBitmap = (wxBitmap)m_imageList->GetBitmap(nImage);
+    wxBitmap                        vBitmap = (wxBitmap)GetImageList()->GetBitmap(nImage);
 
     return (bool)::WinSendMsg( GetHWND()
                               ,BKM_SETTABBITMAP
@@ -408,7 +399,7 @@ wxNotebookPage* wxNotebook::DoRemovePage ( size_t nPage )
         //
         // No selection any more, the notebook becamse empty
         //
-        m_nSelection = -1;
+        m_selection = wxNOT_FOUND;
     }
     else // notebook still not empty
     {
@@ -417,23 +408,23 @@ wxNotebookPage* wxNotebook::DoRemovePage ( size_t nPage )
         //
         int                         nSelNew;
 
-        if (m_nSelection == (int)GetPageCount())
+        if (m_selection == (int)GetPageCount())
         {
             //
             // Last page deleted, make the new last page the new selection
             //
-            nSelNew = m_nSelection - 1;
+            nSelNew = m_selection - 1;
         }
-        else if (nPage <= (size_t)m_nSelection)
+        else if (nPage <= (size_t)m_selection)
         {
             //
             // We must show another page, even if it has the same index
             //
-            nSelNew = m_nSelection;
+            nSelNew = m_selection;
         }
         else // nothing changes for the currently selected page
         {
-            nSelNew = -1;
+            nSelNew = wxNOT_FOUND;
 
             //
             // We still must refresh the current page: this needs to be done
@@ -441,16 +432,16 @@ wxNotebookPage* wxNotebook::DoRemovePage ( size_t nPage )
             // control (i.e. when there are too many pages) -- otherwise after
             // deleting a page nothing at all is shown
             //
-            m_pages[m_nSelection]->Refresh();
+            m_pages[m_selection]->Refresh();
         }
 
-        if (nSelNew != -1)
+        if (nSelNew != wxNOT_FOUND)
         {
             //
-            // m_nSelection must be always valid so reset it before calling
+            // m_selection must be always valid so reset it before calling
             // SetSelection()
             //
-            m_nSelection = -1;
+            m_selection = wxNOT_FOUND;
             SetSelection(nSelNew);
         }
     }
@@ -473,7 +464,7 @@ bool wxNotebook::DeleteAllPages()
                  ,(MPARAM)0
                  ,(MPARAM)BKA_ALL
                 );
-    m_nSelection = -1;
+    m_selection = wxNOT_FOUND;
 
     return true;
 } // end of wxNotebook::DeleteAllPages
@@ -573,12 +564,12 @@ bool wxNotebook::InsertPage ( size_t          nPage,
     // If the inserted page is before the selected one, we must update the
     // index of the selected page
     //
-    if (nPage <= (size_t)m_nSelection)
+    if (nPage <= (size_t)m_selection)
     {
         //
         // One extra page added
         //
-        m_nSelection++;
+        m_selection++;
     }
 
     if (pPage)
@@ -653,19 +644,7 @@ bool wxNotebook::InsertPage ( size_t          nPage,
         pPage->Show(false);
     }
 
-    //
-    // Some page should be selected: either this one or the first one if there is
-    // still no selection
-    //
-    int nSelNew = -1;
-
-    if (bSelect)
-        nSelNew = nPage;
-    else if ( m_nSelection == -1 )
-        nSelNew = 0;
-
-    if (nSelNew != -1)
-        SetSelection(nSelNew);
+    DoSetSelectionAfterInsertion(nPage, bSelect);
 
     InvalidateBestSize();
 
@@ -683,7 +662,7 @@ void wxNotebook::OnSize(
 } // end of wxNotebook::OnSize
 
 void wxNotebook::OnSelChange (
-  wxNotebookEvent&                  rEvent
+  wxBookCtrlEvent&                  rEvent
 )
 {
     //
@@ -729,7 +708,7 @@ void wxNotebook::OnSelChange (
         wxNotebookPage*         pPage = m_pages[nSel];
 
         pPage->Show(true);
-        m_nSelection = nSel;
+        m_selection = nSel;
     }
 
     //
@@ -750,8 +729,8 @@ void wxNotebook::OnSetFocus (
     //
     // set focus to the currently selected page if any
     //
-    if (m_nSelection != -1)
-        m_pages[m_nSelection]->SetFocus();
+    if (m_selection != wxNOT_FOUND)
+        m_pages[m_selection]->SetFocus();
     rEvent.Skip();
 } // end of wxNotebook::OnSetFocus
 
@@ -790,7 +769,7 @@ void wxNotebook::OnNavigationKey (
             //
             // No, it doesn't come from child, case (b): forward to a page
             //
-            if (m_nSelection != -1)
+            if (m_selection != wxNOT_FOUND)
             {
                 //
                 // So that the page knows that the event comes from it's parent
@@ -798,9 +777,9 @@ void wxNotebook::OnNavigationKey (
                 //
                 rEvent.SetEventObject(this);
 
-                wxWindow*           pPage = m_pages[m_nSelection];
+                wxWindow*           pPage = m_pages[m_selection];
 
-                if (!pPage->GetEventHandler()->ProcessEvent(rEvent))
+                if (!pPage->HandleWindowEvent(rEvent))
                 {
                     pPage->SetFocus();
                 }
@@ -822,7 +801,7 @@ void wxNotebook::OnNavigationKey (
             if (pParent)
             {
                 rEvent.SetCurrentFocus(this);
-                pParent->GetEventHandler()->ProcessEvent(rEvent);
+                pParent->HandleWindowEvent(rEvent);
             }
         }
     }

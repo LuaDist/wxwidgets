@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     28.06.99
-// RCS-ID:      $Id: tipdlg.cpp 52000 2008-02-22 18:37:18Z VS $
 // Copyright:   (c) Vadim Zeitlin
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -71,6 +70,7 @@ static const int wxID_NEXT_TIP = 32000;  // whatever
 
 // an implementation which takes the tips from the text file - each line
 // represents a tip
+#if wxUSE_TEXTFILE
 class WXDLLIMPEXP_ADV wxFileTipProvider : public wxTipProvider
 {
 public:
@@ -81,8 +81,9 @@ public:
 private:
     wxTextFile m_textfile;
 
-    DECLARE_NO_COPY_CLASS(wxFileTipProvider)
+    wxDECLARE_NO_COPY_CLASS(wxFileTipProvider);
 };
+#endif // wxUSE_TEXTFILE
 
 #ifdef __WIN32__
 // TODO an implementation which takes the tips from the given registry key
@@ -127,7 +128,7 @@ private:
     wxCheckBox *m_checkbox;
 
     DECLARE_EVENT_TABLE()
-    DECLARE_NO_COPY_CLASS(wxTipDialog)
+    wxDECLARE_NO_COPY_CLASS(wxTipDialog);
 };
 
 // ============================================================================
@@ -137,7 +138,7 @@ private:
 // ----------------------------------------------------------------------------
 // wxFileTipProvider
 // ----------------------------------------------------------------------------
-
+#if wxUSE_TEXTFILE
 wxFileTipProvider::wxFileTipProvider(const wxString& filename,
                                      size_t currentTip)
                  : wxTipProvider(currentTip), m_textfile(filename)
@@ -203,6 +204,7 @@ wxString wxFileTipProvider::GetTip()
 
     return tip;
 }
+#endif // wxUSE_TEXTFILE
 
 // ----------------------------------------------------------------------------
 // wxTipDialog
@@ -215,7 +217,7 @@ END_EVENT_TABLE()
 wxTipDialog::wxTipDialog(wxWindow *parent,
                          wxTipProvider *tipProvider,
                          bool showAtStartup)
-           : wxDialog(parent, wxID_ANY, _("Tip of the Day"),
+           : wxDialog(GetParentForModalDialog(parent, 0), wxID_ANY, _("Tip of the Day"),
                       wxDefaultPosition, wxDefaultSize,
                       wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER
                       )
@@ -328,11 +330,13 @@ wxTipDialog::wxTipDialog(wxWindow *parent,
 // our public interface
 // ----------------------------------------------------------------------------
 
+#if wxUSE_TEXTFILE
 wxTipProvider *wxCreateFileTipProvider(const wxString& filename,
                                        size_t currentTip)
 {
     return new wxFileTipProvider(filename, currentTip);
 }
+#endif // wxUSE_TEXTFILE
 
 bool wxShowTip(wxWindow *parent,
                wxTipProvider *tipProvider,

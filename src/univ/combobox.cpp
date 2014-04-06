@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     15.12.00
-// RCS-ID:      $Id: combobox.cpp 45655 2007-04-26 02:23:51Z VZ $
 // Copyright:   (c) 2000 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -92,6 +91,8 @@ protected:
     void OnLeftUp(wxMouseEvent& event);
 
 private:
+    friend class wxComboBox; // it accesses our DoGetItemClientData()
+
     DECLARE_EVENT_TABLE()
 };
 
@@ -102,8 +103,6 @@ private:
 BEGIN_EVENT_TABLE(wxComboListBox, wxListBox)
     EVT_LEFT_UP(wxComboListBox::OnLeftUp)
 END_EVENT_TABLE()
-
-IMPLEMENT_DYNAMIC_CLASS2(wxComboBox, wxControl, wxComboCtrl)
 
 // ============================================================================
 // implementation
@@ -180,10 +179,10 @@ void wxComboListBox::OnLeftUp(wxMouseEvent& event)
     m_combo->SetValue(wxListBox::GetStringSelection());
 
     // next let the user code have the event
-    wxCommandEvent evt(wxEVT_COMMAND_COMBOBOX_SELECTED,m_combo->GetId());
+    wxCommandEvent evt(wxEVT_COMBOBOX,m_combo->GetId());
     evt.SetInt(wxListBox::GetSelection());
     evt.SetEventObject(m_combo);
-    m_combo->ProcessEvent(evt);
+    m_combo->ProcessWindowEvent(evt);
 
     event.Skip();
 }
@@ -203,7 +202,7 @@ wxSize wxComboListBox::GetAdjustedSize(int minWidth,
 
 void wxComboBox::Init()
 {
-    m_lbox = (wxListBox *)NULL;
+    m_lbox = NULL;
 }
 
 wxComboBox::wxComboBox(wxWindow *parent,
@@ -271,14 +270,22 @@ wxComboBox::~wxComboBox()
 // wxComboBox methods forwarded to wxTextCtrl
 // ----------------------------------------------------------------------------
 
-wxString wxComboBox::GetValue() const
+wxString wxComboBox::DoGetValue() const
 {
-    return wxComboCtrl::GetValue();
+    return GetTextCtrl() ? GetTextCtrl()->GetValue() : m_valueString;
 }
 
 void wxComboBox::SetValue(const wxString& value)
 {
-    wxComboCtrl::SetValue(value);
+    if ( GetTextCtrl() )
+        GetTextCtrl()->SetValue(value);
+    else
+        m_valueString = value;
+}
+
+void wxComboBox::WriteText(const wxString& value)
+{
+    if ( GetTextCtrl() ) GetTextCtrl()->WriteText(value);
 }
 
 void wxComboBox::Copy()
@@ -335,6 +342,11 @@ void wxComboBox::SetSelection(long from, long to)
     if ( GetTextCtrl() ) GetTextCtrl()->SetSelection(from, to);
 }
 
+void wxComboBox::GetSelection(long *from, long *to) const
+{
+    if ( GetTextCtrl() ) GetTextCtrl()->GetSelection(from, to);
+}
+
 void wxComboBox::SetEditable(bool editable)
 {
     if ( GetTextCtrl() ) GetTextCtrl()->SetEditable(editable);
@@ -344,18 +356,18 @@ void wxComboBox::SetEditable(bool editable)
 // wxComboBox methods forwarded to wxListBox
 // ----------------------------------------------------------------------------
 
-void wxComboBox::Clear()
+void wxComboBox::DoClear()
 {
     GetLBox()->Clear();
-    if ( GetTextCtrl() ) GetTextCtrl()->SetValue(wxEmptyString);
+    SetValue(wxEmptyString);
 }
 
-void wxComboBox::Delete(unsigned int n)
+void wxComboBox::DoDeleteOneItem(unsigned int n)
 {
-    wxCHECK_RET( IsValid(n), _T("invalid index in wxComboBox::Delete") );
+    wxCHECK_RET( IsValid(n), wxT("invalid index in wxComboBox::Delete") );
 
     if (GetSelection() == (int)n)
-        if ( GetTextCtrl() ) GetTextCtrl()->SetValue(wxEmptyString);
+        SetValue(wxEmptyString);
 
     GetLBox()->Delete(n);
 }
@@ -367,14 +379,14 @@ unsigned int wxComboBox::GetCount() const
 
 wxString wxComboBox::GetString(unsigned int n) const
 {
-    wxCHECK_MSG( IsValid(n), wxEmptyString, _T("invalid index in wxComboBox::GetString") );
+    wxCHECK_MSG( IsValid(n), wxEmptyString, wxT("invalid index in wxComboBox::GetString") );
 
     return GetLBox()->GetString(n);
 }
 
 void wxComboBox::SetString(unsigned int n, const wxString& s)
 {
-    wxCHECK_RET( IsValid(n), _T("invalid index in wxComboBox::SetString") );
+    wxCHECK_RET( IsValid(n), wxT("invalid index in wxComboBox::SetString") );
 
     GetLBox()->SetString(n, s);
 }
@@ -386,7 +398,7 @@ int wxComboBox::FindString(const wxString& s, bool bCase) const
 
 void wxComboBox::SetSelection(int n)
 {
-    wxCHECK_RET( (n == wxNOT_FOUND || IsValid(n)), _T("invalid index in wxComboBox::Select") );
+    wxCHECK_RET( (n == wxNOT_FOUND || IsValid(n)), wxT("invalid index in wxComboBox::Select") );
 
     GetLBox()->SetSelection(n);
 
@@ -399,7 +411,7 @@ void wxComboBox::SetSelection(int n)
 
 int wxComboBox::GetSelection() const
 {
-#if 1 // FIXME:: What is the correct behavior?
+#if 1 // FIXME:: What is the correct behaviour?
     // if the current value isn't one of the listbox strings, return -1
     return GetLBox()->GetSelection();
 #else
@@ -410,41 +422,36 @@ int wxComboBox::GetSelection() const
 #endif
 }
 
-int wxComboBox::DoAppend(const wxString& item)
+wxString wxComboBox::GetStringSelection() const
 {
-    return GetLBox()->Append(item);
+    return GetLBox()->GetStringSelection();
 }
 
-int wxComboBox::DoInsert(const wxString& item, unsigned int pos)
+wxClientDataType wxComboBox::GetClientDataType() const
 {
-    wxCHECK_MSG(!(GetWindowStyle() & wxCB_SORT), -1, wxT("can't insert into sorted list"));
-    wxCHECK_MSG(IsValidInsert(pos), -1, wxT("invalid index"));
+    return GetLBox()->GetClientDataType();
+}
 
-    if (pos == GetCount())
-        return DoAppend(item);
+void wxComboBox::SetClientDataType(wxClientDataType clientDataItemsType)
+{
+    GetLBox()->SetClientDataType(clientDataItemsType);
+}
 
-    GetLBox()->Insert(item, pos);
-    return pos;
+int wxComboBox::DoInsertItems(const wxArrayStringsAdapter & items,
+                              unsigned int pos,
+                              void **clientData, wxClientDataType type)
+{
+    return GetLBox()->DoInsertItems(items, pos, clientData, type);
 }
 
 void wxComboBox::DoSetItemClientData(unsigned int n, void* clientData)
 {
-    GetLBox()->SetClientData(n, clientData);
+    GetLBox()->DoSetItemClientData(n, clientData);
 }
 
 void *wxComboBox::DoGetItemClientData(unsigned int n) const
 {
-    return GetLBox()->GetClientData(n);
-}
-
-void wxComboBox::DoSetItemClientObject(unsigned int n, wxClientData* clientData)
-{
-    GetLBox()->SetClientObject(n, clientData);
-}
-
-wxClientData* wxComboBox::DoGetItemClientObject(unsigned int n) const
-{
-    return GetLBox()->GetClientObject(n);
+    return GetLBox()->DoGetItemClientData(n);
 }
 
 bool wxComboBox::IsEditable() const

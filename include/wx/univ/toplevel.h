@@ -1,8 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        wx/toplevel.h
+// Name:        wx/univ/toplevel.h
 // Purpose:     Top level window, abstraction of wxFrame and wxDialog
 // Author:      Vaclav Slavik
-// Id:          $Id: toplevel.h 61872 2009-09-09 22:37:05Z VZ $
 // Copyright:   (c) 2001-2002 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -88,7 +87,7 @@ enum
 // wxTopLevelWindow
 //-----------------------------------------------------------------------------
 
-class WXDLLEXPORT wxTopLevelWindow : public wxTopLevelWindowNative,
+class WXDLLIMPEXP_CORE wxTopLevelWindow : public wxTopLevelWindowNative,
                                      public wxInputConsumer
 {
 public:
@@ -130,7 +129,6 @@ public:
     // implement base class pure virtuals
     virtual bool ShowFullScreen(bool show, long style = wxFULLSCREEN_ALL);
     virtual wxPoint GetClientAreaOrigin() const;
-    virtual void SetIcon(const wxIcon& icon) { SetIcons( wxIconBundle( icon ) ); }
     virtual void SetIcons(const wxIconBundle& icons);
 
     // implementation from now on
@@ -154,7 +152,7 @@ public:
 
     virtual wxSize GetMinSize() const;
 
-    virtual wxWindow *GetInputWindow() const { return wx_const_cast(wxTopLevelWindow*, this); }
+    virtual wxWindow *GetInputWindow() const { return const_cast<wxTopLevelWindow*>(this); }
 
 protected:
     virtual void DoGetClientSize(int *width, int *height) const;

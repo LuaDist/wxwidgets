@@ -2,9 +2,8 @@
 // Name:        tests/filetype/filetype.cpp
 // Purpose:     Test wxGetFileKind and wxStreamBase::IsSeekable
 // Author:      Mike Wetherell
-// RCS-ID:      $Id: filekind.cpp 33877 2005-04-25 10:32:55Z MW $
 // Copyright:   (c) 2005 Mike Wetherell
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "testprec.h"
@@ -18,6 +17,8 @@
     #include "wx/wx.h"
 #endif
 
+#if wxUSE_STREAMS
+
 #ifdef __UNIX__
     #include <sys/socket.h>
 #endif
@@ -30,7 +31,11 @@
 #include "wx/sckstrm.h"
 #include "wx/mstream.h"
 
-#if wxUSE_STREAMS
+#ifdef __VISUALC__
+    #define isatty _isatty
+    #define fdopen _fdopen
+    #define fileno _fileno
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 // The test case
@@ -107,7 +112,7 @@ void FileKindTestCase::File()
 {
     TempFile tmp; // put first
     wxFile file;
-    tmp.m_name = wxFileName::CreateTempFileName(_T("wxft"), &file);
+    tmp.m_name = wxFileName::CreateTempFileName(wxT("wxft"), &file);
     TestFd(file, true);
     file.Close();
 
@@ -121,11 +126,13 @@ void FileKindTestCase::File()
 void FileKindTestCase::Pipe()
 {
     int afd[2];
+    int rc;
 #ifdef __UNIX__
-    pipe(afd);
+    rc = pipe(afd);
 #else
-    _pipe(afd, 256, O_BINARY);
+    rc = _pipe(afd, 256, O_BINARY);
 #endif
+    CPPUNIT_ASSERT_EQUAL_MESSAGE("Failed to create pipe", 0, rc);
 
     wxFile file0(afd[0]);
     wxFile file1(afd[1]);
@@ -200,7 +207,7 @@ void FileKindTestCase::Stdin()
 // register in the unnamed registry so that these tests are run by default
 CPPUNIT_TEST_SUITE_REGISTRATION(FileKindTestCase);
 
-// also include in it's own registry so that these tests can be run alone
+// also include in its own registry so that these tests can be run alone
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(FileKindTestCase, "FileKindTestCase");
 
 #endif // wxUSE_STREAMS

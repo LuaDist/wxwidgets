@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: imaglist.cpp 43786 2006-12-04 02:09:59Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -38,6 +37,9 @@
 #endif
 
 #include "wx/imaglist.h"
+#include "wx/dc.h"
+#include "wx/msw/dc.h"
+#include "wx/msw/dib.h"
 #include "wx/msw/private.h"
 
 // ----------------------------------------------------------------------------
@@ -74,17 +76,15 @@ bool wxImageList::Create(int width, int height, bool mask, int initial)
 {
     UINT flags = 0;
 
-    // set appropriate color depth
+    // as we want to be able to use 32bpp bitmaps in the image lists, we always
+    // use ILC_COLOR32, even if the display resolution is less -- the system
+    // will make the best effort to show the bitmap if we do this resulting in
+    // quite acceptable display while using a lower depth ILC_COLOR constant
+    // (e.g. ILC_COLOR16) shows completely broken bitmaps
 #ifdef __WXWINCE__
     flags |= ILC_COLOR;
 #else
-    int dd = wxDisplayDepth();
-
-    if (dd <= 4)       flags |= ILC_COLOR;   // 16 color
-    else if (dd <= 8)  flags |= ILC_COLOR8;  // 256 color
-    else if (dd <= 16) flags |= ILC_COLOR16; // 64k hi-color
-    else if (dd <= 24) flags |= ILC_COLOR24; // 16m truecolor
-    else if (dd <= 32) flags |= ILC_COLOR32; // 16m truecolor
+    flags |= ILC_COLOR32;
 #endif
 
     if ( mask )
@@ -117,7 +117,7 @@ wxImageList::~wxImageList()
 // Returns the number of images in the image list.
 int wxImageList::GetImageCount() const
 {
-    wxASSERT_MSG( m_hImageList, _T("invalid image list") );
+    wxASSERT_MSG( m_hImageList, wxT("invalid image list") );
 
     return ImageList_GetImageCount(GetHImageList());
 }
@@ -125,7 +125,7 @@ int wxImageList::GetImageCount() const
 // Returns the size (same for all images) of the images in the list
 bool wxImageList::GetSize(int WXUNUSED(index), int &width, int &height) const
 {
-    wxASSERT_MSG( m_hImageList, _T("invalid image list") );
+    wxASSERT_MSG( m_hImageList, wxT("invalid image list") );
 
     return ImageList_GetIconSize(GetHImageList(), &width, &height) != 0;
 }
@@ -139,15 +139,32 @@ bool wxImageList::GetSize(int WXUNUSED(index), int &width, int &height) const
 // 'bitmap' and 'mask'.
 int wxImageList::Add(const wxBitmap& bitmap, const wxBitmap& mask)
 {
-    HBITMAP hbmpMask = GetMaskForImage(bitmap, mask);
+    HBITMAP hbmp;
 
-    int index = ImageList_Add(GetHImageList(), GetHbitmapOf(bitmap), hbmpMask);
+#if wxUSE_WXDIB && wxUSE_IMAGE
+    // wxBitmap normally stores alpha in pre-multiplied format but
+    // ImageList_Draw() does pre-multiplication internally so we need to undo
+    // the pre-multiplication here. Converting back and forth like this is, of
+    // course, very inefficient but it's better than wrong appearance so we do
+    // this for now until a better way can be found.
+    AutoHBITMAP hbmpRelease;
+    if ( bitmap.HasAlpha() )
+    {
+        hbmp = wxDIB(bitmap.ConvertToImage(),
+                     wxDIB::PixelFormat_NotPreMultiplied).Detach();
+        hbmpRelease.Init(hbmp);
+    }
+    else
+#endif // wxUSE_WXDIB && wxUSE_IMAGE
+        hbmp = GetHbitmapOf(bitmap);
+
+    AutoHBITMAP hbmpMask(GetMaskForImage(bitmap, mask));
+
+    int index = ImageList_Add(GetHImageList(), hbmp, hbmpMask);
     if ( index == -1 )
     {
         wxLogError(_("Couldn't add an image to the image list."));
     }
-
-    ::DeleteObject(hbmpMask);
 
     return index;
 }
@@ -157,8 +174,23 @@ int wxImageList::Add(const wxBitmap& bitmap, const wxBitmap& mask)
 // 'bitmap'.
 int wxImageList::Add(const wxBitmap& bitmap, const wxColour& maskColour)
 {
+    HBITMAP hbmp;
+
+#if wxUSE_WXDIB && wxUSE_IMAGE
+    // See the comment in overloaded Add() above.
+    AutoHBITMAP hbmpRelease;
+    if ( bitmap.HasAlpha() )
+    {
+        hbmp = wxDIB(bitmap.ConvertToImage(),
+                     wxDIB::PixelFormat_NotPreMultiplied).Detach();
+        hbmpRelease.Init(hbmp);
+    }
+    else
+#endif // wxUSE_WXDIB && wxUSE_IMAGE
+        hbmp = GetHbitmapOf(bitmap);
+
     int index = ImageList_AddMasked(GetHImageList(),
-                                    GetHbitmapOf(bitmap),
+                                    hbmp,
                                     wxColourToRGB(maskColour));
     if ( index == -1 )
     {
@@ -184,20 +216,33 @@ int wxImageList::Add(const wxIcon& icon)
 // Note that wxImageList creates new bitmaps, so you may delete
 // 'bitmap' and 'mask'.
 bool wxImageList::Replace(int index,
-                          const wxBitmap& bitmap, const wxBitmap& mask)
+                          const wxBitmap& bitmap,
+                          const wxBitmap& mask)
 {
-    HBITMAP hbmpMask = GetMaskForImage(bitmap, mask);
+    HBITMAP hbmp;
 
-    bool ok = ImageList_Replace(GetHImageList(), index,
-                                GetHbitmapOf(bitmap), hbmpMask) != 0;
-    if ( !ok )
+#if wxUSE_WXDIB && wxUSE_IMAGE
+    // See the comment in Add() above.
+    AutoHBITMAP hbmpRelease;
+    if ( bitmap.HasAlpha() )
+    {
+        hbmp = wxDIB(bitmap.ConvertToImage(),
+                     wxDIB::PixelFormat_NotPreMultiplied).Detach();
+        hbmpRelease.Init(hbmp);
+    }
+    else
+#endif // wxUSE_WXDIB && wxUSE_IMAGE
+        hbmp = GetHbitmapOf(bitmap);
+
+    AutoHBITMAP hbmpMask(GetMaskForImage(bitmap, mask));
+
+    if ( !ImageList_Replace(GetHImageList(), index, hbmp, hbmpMask) )
     {
         wxLogLastError(wxT("ImageList_Replace()"));
+        return false;
     }
 
-    ::DeleteObject(hbmpMask);
-
-    return ok;
+    return true;
 }
 
 // Replaces a bitmap and mask from an icon.
@@ -241,14 +286,19 @@ bool wxImageList::Draw(int index,
                        int flags,
                        bool solidBackground)
 {
-    HDC hDC = GetHdcOf(dc);
-    wxCHECK_MSG( hDC, false, _T("invalid wxDC in wxImageList::Draw") );
+    wxDCImpl *impl = dc.GetImpl();
+    wxMSWDCImpl *msw_impl = wxDynamicCast( impl, wxMSWDCImpl );
+    if (!msw_impl)
+       return false;
+
+    HDC hDC = GetHdcOf(*msw_impl);
+    wxCHECK_MSG( hDC, false, wxT("invalid wxDC in wxImageList::Draw") );
 
     COLORREF clr = CLR_NONE;    // transparent by default
     if ( solidBackground )
     {
         const wxBrush& brush = dc.GetBackground();
-        if ( brush.Ok() )
+        if ( brush.IsOk() )
         {
             clr = wxColourToRGB(brush.GetColour());
         }
@@ -278,7 +328,7 @@ bool wxImageList::Draw(int index,
 // Get the bitmap
 wxBitmap wxImageList::GetBitmap(int index) const
 {
-#if wxUSE_WXDIB
+#if wxUSE_WXDIB && wxUSE_IMAGE
     int bmp_width = 0, bmp_height = 0;
     GetSize(index, bmp_width, bmp_height);
 
@@ -348,7 +398,7 @@ static HBITMAP GetMaskForImage(const wxBitmap& bitmap, const wxBitmap& mask)
     wxMask *pMask;
     bool deleteMask = false;
 
-    if ( mask.Ok() )
+    if ( mask.IsOk() )
     {
         hbmpMask = GetHbitmapOf(mask);
         pMask = NULL;

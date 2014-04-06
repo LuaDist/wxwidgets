@@ -2,7 +2,6 @@
 // Name:        wx/gtk1/colour.h
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: colour.h 41751 2006-10-08 21:56:55Z VZ $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -20,12 +19,12 @@
 // classes
 //-----------------------------------------------------------------------------
 
-class WXDLLIMPEXP_CORE wxDC;
-class WXDLLIMPEXP_CORE wxPaintDC;
-class WXDLLIMPEXP_CORE wxBitmap;
-class WXDLLIMPEXP_CORE wxWindow;
+class WXDLLIMPEXP_FWD_CORE wxDC;
+class WXDLLIMPEXP_FWD_CORE wxPaintDC;
+class WXDLLIMPEXP_FWD_CORE wxBitmap;
+class WXDLLIMPEXP_FWD_CORE wxWindow;
 
-class WXDLLIMPEXP_CORE wxColour;
+class WXDLLIMPEXP_FWD_CORE wxColour;
 
 //-----------------------------------------------------------------------------
 // wxColour
@@ -36,20 +35,14 @@ class WXDLLIMPEXP_CORE wxColour : public wxColourBase
 public:
     // constructors
     // ------------
-
-    // default
-    wxColour() { }
     DEFINE_STD_WXCOLOUR_CONSTRUCTORS
 
     virtual ~wxColour();
 
-    virtual bool FromString(const wxChar *str);
+    virtual bool FromString(const wxString& str);
 
-    bool Ok() const { return IsOk(); }
-    bool IsOk() const { return m_refData != NULL; }
-
-    bool operator == ( const wxColour& col ) const;
-    bool operator != ( const wxColour& col ) const { return !(*this == col); }
+    bool operator==(const wxColour& col) const;
+    bool operator!=(const wxColour& col) const { return !(*this == col); }
 
     unsigned char Red() const;
     unsigned char Green() const;
@@ -63,8 +56,8 @@ public:
 
 protected:
     // ref counting code
-    virtual wxObjectRefData *CreateRefData() const;
-    virtual wxObjectRefData *CloneRefData(const wxObjectRefData *data) const;
+    virtual wxGDIRefData *CreateGDIRefData() const;
+    virtual wxGDIRefData *CloneGDIRefData(const wxGDIRefData *data) const;
 
     virtual void
     InitRGBA(unsigned char r, unsigned char g, unsigned char b, unsigned char a);

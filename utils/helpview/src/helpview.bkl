@@ -1,5 +1,4 @@
 <?xml version="1.0" ?>
-<!-- $Id: helpview.bkl 38446 2006-03-30 11:32:39Z JS $ -->
 
 <makefile>
 
@@ -9,7 +8,6 @@
         <if cond="FORMAT=='autoconf'">
             <wx-mac-app-bundle/>
             <ldflags>$(SAMPLES_RPATH_FLAG)</ldflags>
-            <postlink-command>$(SAMPLES_RPATH_POSTLINK)</postlink-command>
         </if>
         <sources>
             helpview.cpp

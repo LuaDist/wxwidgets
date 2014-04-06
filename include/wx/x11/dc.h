@@ -1,10 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        dc.h
+// Name:        wx/x11/dc.h
 // Purpose:     wxDC class
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: dc.h 42638 2006-10-29 18:07:27Z RR $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -19,93 +18,34 @@
 #include "wx/gdicmn.h"
 
 //-----------------------------------------------------------------------------
-// constants
-//-----------------------------------------------------------------------------
-
-#ifndef MM_TEXT
-#define MM_TEXT         0
-#define MM_ISOTROPIC    1
-#define MM_ANISOTROPIC  2
-#define MM_LOMETRIC     3
-#define MM_HIMETRIC     4
-#define MM_TWIPS        5
-#define MM_POINTS       6
-#define MM_METRIC       7
-#endif
-
-//-----------------------------------------------------------------------------
 // wxDC
 //-----------------------------------------------------------------------------
 
-class WXDLLEXPORT wxDC : public wxDCBase
+class WXDLLIMPEXP_CORE wxX11DCImpl : public wxDCImpl
 {
 public:
-    wxDC();
-    virtual ~wxDC() { }
-
-    // implement base class pure virtuals
-    // ----------------------------------
+    wxX11DCImpl( wxDC *owner );
+    virtual ~wxX11DCImpl() { }
 
     virtual wxSize GetPPI() const;
-
-    virtual void SetMapMode(int mode);
-    virtual void SetUserScale(double x, double y);
-    virtual void SetLogicalScale(double x, double y);
-    virtual void SetLogicalOrigin(wxCoord x, wxCoord y);
-    virtual void SetDeviceOrigin(wxCoord x, wxCoord y);
-    virtual void SetAxisOrientation(bool xLeftRight, bool yBottomUp);
 
 protected:
     virtual void DoSetClippingRegion(wxCoord x, wxCoord y,
         wxCoord width, wxCoord height);
     virtual void DoGetSizeMM(int* width, int* height) const;
 
-public:
-    virtual void ComputeScaleAndOrigin();
-
-    wxCoord XDEV2LOG(wxCoord x) const
-    {
-        return wxRound((double)(x - m_deviceOriginX) / m_scaleX) * m_signX + m_logicalOriginX;
-    }
-    wxCoord XDEV2LOGREL(wxCoord x) const
-    {
-        return wxRound((double)(x) / m_scaleX);
-    }
-    wxCoord YDEV2LOG(wxCoord y) const
-    {
-        return wxRound((double)(y - m_deviceOriginY) / m_scaleY) * m_signY + m_logicalOriginY;
-    }
-    wxCoord YDEV2LOGREL(wxCoord y) const
-    {
-        return wxRound((double)(y) / m_scaleY);
-    }
-    wxCoord XLOG2DEV(wxCoord x) const
-    {
-        return wxRound((double)(x - m_logicalOriginX) * m_scaleX) * m_signX + m_deviceOriginX;
-    }
-    wxCoord XLOG2DEVREL(wxCoord x) const
-    {
-        return wxRound((double)(x) * m_scaleX);
-    }
-    wxCoord YLOG2DEV(wxCoord y) const
-    {
-        return wxRound((double)(y - m_logicalOriginY) * m_scaleY) * m_signY + m_deviceOriginY;
-    }
-    wxCoord YLOG2DEVREL(wxCoord y) const
-    {
-        return wxRound((double)(y) * m_scaleY);
-    }
-
-public:
-    // not sure what for, but what is a mm on a screen you don't know the size of?
-    double       m_mm_to_pix_x,m_mm_to_pix_y;
-
-    // recompute scale?
-    bool         m_needComputeScaleX, m_needComputeScaleY;
-
+    // implementation
+    wxCoord XDEV2LOG(wxCoord x) const       { return DeviceToLogicalX(x); }
+    wxCoord XDEV2LOGREL(wxCoord x) const    { return DeviceToLogicalXRel(x); }
+    wxCoord YDEV2LOG(wxCoord y) const       { return DeviceToLogicalY(y); }
+    wxCoord YDEV2LOGREL(wxCoord y) const    { return DeviceToLogicalYRel(y); }
+    wxCoord XLOG2DEV(wxCoord x) const       { return LogicalToDeviceX(x); }
+    wxCoord XLOG2DEVREL(wxCoord x) const    { return LogicalToDeviceXRel(x); }
+    wxCoord YLOG2DEV(wxCoord y) const       { return LogicalToDeviceY(y); }
+    wxCoord YLOG2DEVREL(wxCoord y) const    { return LogicalToDeviceYRel(y); }
 
 private:
-    DECLARE_ABSTRACT_CLASS(wxDC)
+    DECLARE_CLASS(wxX11DCImpl)
 };
 
 #endif

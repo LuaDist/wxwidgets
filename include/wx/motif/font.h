@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: font.h 39411 2006-05-29 00:03:36Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -13,12 +12,11 @@
 #define _WX_FONT_H_
 
 #if __WXMOTIF20__ && !__WXLESSTIF__
-    #define wxMOTIF_NEW_FONT_HANDLING 1
     #define wxMOTIF_USE_RENDER_TABLE 1
 #else
-    #define wxMOTIF_NEW_FONT_HANDLING 0
     #define wxMOTIF_USE_RENDER_TABLE 0
 #endif
+#define wxMOTIF_NEW_FONT_HANDLING wxMOTIF_USE_RENDER_TABLE
 
 class wxXFont;
 
@@ -29,26 +27,65 @@ public:
     // ctors and such
     wxFont() { }
 
-    wxFont(int size,
-        int family,
-        int style,
-        int weight,
-        bool underlined = false,
-        const wxString& face = wxEmptyString,
-        wxFontEncoding encoding = wxFONTENCODING_DEFAULT)
+    wxFont(const wxFontInfo& info)
     {
-        (void)Create(size, family, style, weight, underlined, face, encoding);
+        Create(info.GetPointSize(),
+               info.GetFamily(),
+               info.GetStyle(),
+               info.GetWeight(),
+               info.IsUnderlined(),
+               info.GetFaceName(),
+               info.GetEncoding());
+
+        if ( info.IsUsingSizeInPixels() )
+            SetPixelSize(info.GetPixelSize());
     }
 
     wxFont(const wxNativeFontInfo& info);
 
+#if FUTURE_WXWIN_COMPATIBILITY_3_0
+    wxFont(int size,
+           int family,
+           int style,
+           int weight,
+           bool underlined = false,
+           const wxString& face = wxEmptyString,
+           wxFontEncoding encoding = wxFONTENCODING_DEFAULT)
+    {
+        (void)Create(size, (wxFontFamily)family, (wxFontStyle)style, (wxFontWeight)weight, underlined, face, encoding);
+    }
+#endif
+
+    wxFont(int size,
+           wxFontFamily family,
+           wxFontStyle style,
+           wxFontWeight weight,
+           bool underlined = false,
+           const wxString& face = wxEmptyString,
+           wxFontEncoding encoding = wxFONTENCODING_DEFAULT)
+    {
+        Create(size, family, style, weight, underlined, face, encoding);
+    }
+
+    wxFont(const wxSize& pixelSize,
+           wxFontFamily family,
+           wxFontStyle style,
+           wxFontWeight weight,
+           bool underlined = false,
+           const wxString& face = wxEmptyString,
+           wxFontEncoding encoding = wxFONTENCODING_DEFAULT)
+    {
+        Create(10, family, style, weight, underlined, face, encoding);
+        SetPixelSize(pixelSize);
+    }
+
     bool Create(int size,
-        int family,
-        int style,
-        int weight,
-        bool underlined = false,
-        const wxString& face = wxEmptyString,
-        wxFontEncoding encoding = wxFONTENCODING_DEFAULT);
+                wxFontFamily family,
+                wxFontStyle style,
+                wxFontWeight weight,
+                bool underlined = false,
+                const wxString& face = wxEmptyString,
+                wxFontEncoding encoding = wxFONTENCODING_DEFAULT);
 
     // wxMOTIF-specific
     bool Create(const wxString& fontname,
@@ -59,21 +96,22 @@ public:
 
     // implement base class pure virtuals
     virtual int GetPointSize() const;
-    virtual int GetFamily() const;
-    virtual int GetStyle() const;
-    virtual int GetWeight() const;
+    virtual wxFontStyle GetStyle() const;
+    virtual wxFontWeight GetWeight() const;
     virtual bool GetUnderlined() const;
     virtual wxString GetFaceName() const;
     virtual wxFontEncoding GetEncoding() const;
     virtual const wxNativeFontInfo *GetNativeFontInfo() const;
 
     virtual void SetPointSize(int pointSize);
-    virtual void SetFamily(int family);
-    virtual void SetStyle(int style);
-    virtual void SetWeight(int weight);
+    virtual void SetFamily(wxFontFamily family);
+    virtual void SetStyle(wxFontStyle style);
+    virtual void SetWeight(wxFontWeight weight);
     virtual bool SetFaceName(const wxString& faceName);
     virtual void SetUnderlined(bool underlined);
     virtual void SetEncoding(wxFontEncoding encoding);
+
+    wxDECLARE_COMMON_FONT_METHODS();
 
     // Implementation
 
@@ -93,26 +131,28 @@ public:
         WXDisplay* display = NULL) const;
 
     // These two are helper functions for convenient access of the above.
-#if wxMOTIF_NEW_FONT_HANDLING
-    WXFontSet GetFontSet(double scale, WXDisplay* display = NULL) const;
-#else // if !wxMOTIF_NEW_FONT_HANDLING
-    WXFontStructPtr GetFontStruct(double scale = 1.0,
-        WXDisplay* display = NULL) const;
-#endif // wxMOTIF_NEW_FONT_HANDLING
 #if wxMOTIF_USE_RENDER_TABLE
+    WXFontSet GetFontSet(double scale, WXDisplay* display = NULL) const;
     WXRenderTable GetRenderTable(WXDisplay* display) const;
 #else // if !wxMOTIF_USE_RENDER_TABLE
+    WXFontStructPtr GetFontStruct(double scale = 1.0,
+        WXDisplay* display = NULL) const;
     WXFontList GetFontList(double scale = 1.0,
         WXDisplay* display = NULL) const;
-#endif // wxMOTIF_USE_RENDER_TABLE
+#endif // !wxMOTIF_USE_RENDER_TABLE
     // returns either a XmFontList or XmRenderTable, depending
     // on Motif version
     WXFontType GetFontType(WXDisplay* display) const;
     // like the function above but does a copy for XmFontList
     WXFontType GetFontTypeC(WXDisplay* display) const;
     static WXString GetFontTag();
+
 protected:
+    virtual wxGDIRefData *CreateGDIRefData() const;
+    virtual wxGDIRefData *CloneGDIRefData(const wxGDIRefData *data) const;
+
     virtual void DoSetNativeFontInfo( const wxNativeFontInfo& info );
+    virtual wxFontFamily DoGetFamily() const;
 
     void Unshare();
 
@@ -120,5 +160,4 @@ private:
     DECLARE_DYNAMIC_CLASS(wxFont)
 };
 
-#endif
-// _WX_FONT_H_
+#endif // _WX_FONT_H_

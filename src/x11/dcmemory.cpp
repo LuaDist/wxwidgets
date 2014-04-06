@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: dcmemory.cpp 42755 2006-10-30 19:41:46Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -20,10 +19,30 @@
 #endif
 
 #include "wx/x11/private.h"
+#include "wx/x11/dcmemory.h"
 
-IMPLEMENT_DYNAMIC_CLASS(wxMemoryDC,wxWindowDC)
+IMPLEMENT_ABSTRACT_CLASS(wxMemoryDCImpl,wxWindowDCImpl)
 
-void wxMemoryDC::Init()
+wxMemoryDCImpl::wxMemoryDCImpl( wxDC *owner )
+  : wxWindowDCImpl( owner )
+{
+    Init();
+}
+
+wxMemoryDCImpl::wxMemoryDCImpl(  wxDC *owner, wxBitmap& bitmap )
+  : wxWindowDCImpl( owner )
+{
+    Init();
+    DoSelect(bitmap);
+}
+
+wxMemoryDCImpl::wxMemoryDCImpl( wxDC* owner, wxDC *WXUNUSED(dc) )
+  : wxWindowDCImpl( owner )
+{
+    Init();
+}
+
+void wxMemoryDCImpl::Init()
 {
     m_ok = false;
 
@@ -33,30 +52,24 @@ void wxMemoryDC::Init()
     m_cmap = (WXColormap) DefaultColormap( wxGlobalDisplay(), screen );
 }
 
-wxMemoryDC::wxMemoryDC( wxDC *WXUNUSED(dc) )
-  : wxWindowDC()
-{
-    Init();
-}
-
-wxMemoryDC::~wxMemoryDC()
+wxMemoryDCImpl::~wxMemoryDCImpl()
 {
 }
 
-void wxMemoryDC::DoSelect( const wxBitmap& bitmap )
+void wxMemoryDCImpl::DoSelect( const wxBitmap& bitmap )
 {
     Destroy();
 
     m_selected = bitmap;
-    if (m_selected.Ok())
+    if (m_selected.IsOk())
     {
         if (m_selected.GetPixmap())
         {
-            m_window = (WXWindow) m_selected.GetPixmap();
+            m_x11window = (WXWindow) m_selected.GetPixmap();
         }
         else
         {
-            m_window = m_selected.GetBitmap();
+            m_x11window = m_selected.GetBitmap();
         }
 
         m_isMemDC = true;
@@ -66,13 +79,13 @@ void wxMemoryDC::DoSelect( const wxBitmap& bitmap )
     else
     {
         m_ok = false;
-        m_window = NULL;
+        m_x11window = NULL;
     }
 }
 
-void wxMemoryDC::DoGetSize( int *width, int *height ) const
+void wxMemoryDCImpl::DoGetSize( int *width, int *height ) const
 {
-    if (m_selected.Ok())
+    if (m_selected.IsOk())
     {
         if (width) (*width) = m_selected.GetWidth();
         if (height) (*height) = m_selected.GetHeight();
@@ -82,4 +95,14 @@ void wxMemoryDC::DoGetSize( int *width, int *height ) const
         if (width) (*width) = 0;
         if (height) (*height) = 0;
     }
+}
+
+const wxBitmap& wxMemoryDCImpl::GetSelectedBitmap() const
+{
+    return m_selected;
+}
+
+wxBitmap& wxMemoryDCImpl::GetSelectedBitmap()
+{
+    return m_selected;
 }

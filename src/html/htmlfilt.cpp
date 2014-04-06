@@ -2,7 +2,6 @@
 // Name:        src/html/htmlfilt.cpp
 // Purpose:     wxHtmlFilter - input filter for translating into HTML format
 // Author:      Vaclav Slavik
-// RCS-ID:      $Id: htmlfilt.cpp 38788 2006-04-18 08:11:26Z ABX $
 // Copyright:   (c) 1999 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -15,43 +14,23 @@
 
 #if wxUSE_HTML && wxUSE_STREAMS
 
-#ifndef WXPRECOMP
+#ifndef WX_PRECOMP
     #include "wx/log.h"
     #include "wx/intl.h"
 #endif
 
 #include "wx/strconv.h"
+#include "wx/sstream.h"
 #include "wx/html/htmlfilt.h"
 #include "wx/html/htmlwin.h"
 
-// utility function: read a wxString from a wxInputStream
+// utility function: read entire contents of an wxInputStream into a wxString
+//
+// TODO: error handling?
 static void ReadString(wxString& str, wxInputStream* s, wxMBConv& conv)
 {
-    size_t streamSize = s->GetSize();
-
-    if (streamSize == ~(size_t)0)
-    {
-        const size_t bufSize = 4095;
-        char buffer[bufSize+1];
-        size_t lastRead;
-
-        do
-        {
-            s->Read(buffer, bufSize);
-            lastRead = s->LastRead();
-            buffer[lastRead] = 0;
-            str.Append(wxString(buffer, conv));
-        }
-        while (lastRead == bufSize);
-    }
-    else
-    {
-        char* src = new char[streamSize+1];
-        s->Read(src, streamSize);
-        src[streamSize] = 0;
-        str = wxString(src, conv);
-        delete[] src;
-    }
+    wxStringOutputStream out(&str, conv);
+    s->Read(out);
 }
 
 /*
@@ -165,7 +144,7 @@ wxString wxHtmlFilterHTML::ReadFile(const wxFSFile& file) const
     //     tag if we used Content-Type header).
 #if wxUSE_UNICODE
     int charsetPos;
-    if ((charsetPos = file.GetMimeType().Find(_T("; charset="))) != wxNOT_FOUND)
+    if ((charsetPos = file.GetMimeType().Find(wxT("; charset="))) != wxNOT_FOUND)
     {
         wxString charset = file.GetMimeType().Mid(charsetPos + 10);
         wxCSConv conv(charset);
@@ -173,15 +152,18 @@ wxString wxHtmlFilterHTML::ReadFile(const wxFSFile& file) const
     }
     else
     {
-        wxString tmpdoc;
-        ReadString(tmpdoc, s, wxConvISO8859_1);
+        size_t size = s->GetSize();
+        wxCharBuffer buf( size );
+        s->Read( buf.data(), size );
+        wxString tmpdoc( buf, wxConvISO8859_1);
+
         wxString charset = wxHtmlParser::ExtractCharsetInformation(tmpdoc);
         if (charset.empty())
             doc = tmpdoc;
         else
         {
             wxCSConv conv(charset);
-            doc = wxString(tmpdoc.mb_str(wxConvISO8859_1), conv);
+            doc = wxString( buf, conv );
         }
     }
 #else // !wxUSE_UNICODE
@@ -191,7 +173,7 @@ wxString wxHtmlFilterHTML::ReadFile(const wxFSFile& file) const
     {
         wxString hdr;
         wxString mime = file.GetMimeType();
-        hdr.Printf(_T("<meta http-equiv=\"Content-Type\" content=\"%s\">"), mime.c_str());
+        hdr.Printf(wxT("<meta http-equiv=\"Content-Type\" content=\"%s\">"), mime.c_str());
         return hdr+doc;
     }
 #endif

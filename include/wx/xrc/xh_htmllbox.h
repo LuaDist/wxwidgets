@@ -3,7 +3,6 @@
 // Purpose:     XML resource handler for wxSimpleHtmlListBox
 // Author:      Francesco Montorsi
 // Created:     2006/10/21
-// RCS-ID:      $Id: xh_htmllbox.h 42257 2006-10-22 22:09:16Z VZ $
 // Copyright:   (c) 2006 Francesco Montorsi
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

@@ -2,7 +2,6 @@
 // Name:        src/html/htmltag.cpp
 // Purpose:     wxHtmlTag class (represents single tag)
 // Author:      Vaclav Slavik
-// RCS-ID:      $Id: htmltag.cpp 53433 2008-05-03 00:40:29Z VZ $
 // Copyright:   (c) 1999 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -17,14 +16,18 @@
 
 #include "wx/html/htmltag.h"
 
-#ifndef WXPRECOMP
+#ifndef WX_PRECOMP
     #include "wx/colour.h"
+    #include "wx/wxcrtvararg.h"
 #endif
 
 #include "wx/html/htmlpars.h"
+#include "wx/html/styleparams.h"
+
+#include "wx/vector.h"
+
 #include <stdio.h> // for vsscanf
 #include <stdarg.h>
-
 
 //-----------------------------------------------------------------------------
 // wxHtmlTagsCache
@@ -34,177 +37,255 @@ struct wxHtmlCacheItem
 {
     // this is "pos" value passed to wxHtmlTag's constructor.
     // it is position of '<' character of the tag
-    int Key;
+    wxString::const_iterator Key;
+
+    // Tag type
+    enum Type
+    {
+        Type_Normal, // normal tag with a matching ending tag
+        Type_NoMatchingEndingTag, // there's no ending tag for this tag
+        Type_EndingTag // this is ending tag </..>
+    };
+    Type type;
 
     // end positions for the tag:
     // end1 is '<' of ending tag,
     // end2 is '>' or both are
-    // -1 if there is no ending tag for this one...
-    // or -2 if this is ending tag  </...>
-    int End1, End2;
+    wxString::const_iterator End1, End2;
 
     // name of this tag
     wxChar *Name;
 };
 
-
-IMPLEMENT_CLASS(wxHtmlTagsCache,wxObject)
-
-#define CACHE_INCREMENT  64
+// NB: this is an empty class and not typedef because of forward declaration
+class wxHtmlTagsCacheData : public wxVector<wxHtmlCacheItem>
+{
+};
 
 bool wxIsCDATAElement(const wxChar *tag)
 {
-    return (wxStrcmp(tag, _T("SCRIPT")) == 0) ||
-           (wxStrcmp(tag, _T("STYLE")) == 0);
+    return (wxStrcmp(tag, wxT("SCRIPT")) == 0) ||
+           (wxStrcmp(tag, wxT("STYLE")) == 0);
+}
+
+bool wxIsCDATAElement(const wxString& tag)
+{
+    return (wxStrcmp(tag.wx_str(), wxS("SCRIPT")) == 0) ||
+           (wxStrcmp(tag.wx_str(), wxS("STYLE")) == 0);
 }
 
 wxHtmlTagsCache::wxHtmlTagsCache(const wxString& source)
 {
-    const wxChar *src = source.c_str();
-    int lng = source.length();
-    wxChar tagBuffer[256];
-
-    m_Cache = NULL;
-    m_CacheSize = 0;
+    m_Cache = new wxHtmlTagsCacheData;
     m_CachePos = 0;
 
-    int pos = 0;
-    while (pos < lng)
+    wxChar tagBuffer[256];
+
+    const wxString::const_iterator end = source.end();
+    for ( wxString::const_iterator pos = source.begin(); pos < end; ++pos )
     {
-        if (src[pos] == wxT('<'))   // tag found:
+        if (*pos != wxT('<'))
+            continue;
+
+        // possible tag start found:
+
+        // don't cache comment tags
+        if ( wxHtmlParser::SkipCommentTag(pos, end) )
+            continue;
+
+        // Remember the starting tag position.
+        wxString::const_iterator stpos = pos++;
+
+        // And look for the ending one.
+        int i;
+        for ( i = 0;
+              pos < end && i < (int)WXSIZEOF(tagBuffer) - 1 &&
+              *pos != wxT('>') && !wxIsspace(*pos);
+              ++i, ++pos )
         {
-            if (m_CacheSize % CACHE_INCREMENT == 0)
-                m_Cache = (wxHtmlCacheItem*) realloc(m_Cache, (m_CacheSize + CACHE_INCREMENT) * sizeof(wxHtmlCacheItem));
-            int tg = m_CacheSize++;
-            int stpos = pos++;
-            m_Cache[tg].Key = stpos;
+            tagBuffer[i] = (wxChar)wxToupper(*pos);
+        }
+        tagBuffer[i] = wxT('\0');
 
-            int i;
-            for ( i = 0;
-                  pos < lng && i < (int)WXSIZEOF(tagBuffer) - 1 &&
-                  src[pos] != wxT('>') && !wxIsspace(src[pos]);
-                  i++, pos++ )
+        while (pos < end && *pos != wxT('>'))
+            ++pos;
+
+        if ( pos == end )
+        {
+            // We didn't find a closing bracket, this is not a valid tag after
+            // all. Notice that we need to roll back pos to avoid creating an
+            // invalid iterator when "++pos" is done in the loop statement.
+            --pos;
+
+            continue;
+        }
+
+        // We have a valid tag, add it to the cache.
+        size_t tg = Cache().size();
+        Cache().push_back(wxHtmlCacheItem());
+        Cache()[tg].Key = stpos;
+        Cache()[tg].Name = new wxChar[i+1];
+        memcpy(Cache()[tg].Name, tagBuffer, (i+1)*sizeof(wxChar));
+
+        if ((stpos+1) < end && *(stpos+1) == wxT('/')) // ending tag:
+        {
+            Cache()[tg].type = wxHtmlCacheItem::Type_EndingTag;
+            // find matching begin tag:
+            for (i = tg; i >= 0; i--)
             {
-                tagBuffer[i] = (wxChar)wxToupper(src[pos]);
-            }
-            tagBuffer[i] = _T('\0');
-
-            m_Cache[tg].Name = new wxChar[i+1];
-            memcpy(m_Cache[tg].Name, tagBuffer, (i+1)*sizeof(wxChar));
-
-            while (pos < lng && src[pos] != wxT('>')) pos++;
-
-            if (src[stpos+1] == wxT('/')) // ending tag:
-            {
-                m_Cache[tg].End1 = m_Cache[tg].End2 = -2;
-                // find matching begin tag:
-                for (i = tg; i >= 0; i--)
-                    if ((m_Cache[i].End1 == -1) && (wxStrcmp(m_Cache[i].Name, tagBuffer+1) == 0))
-                    {
-                        m_Cache[i].End1 = stpos;
-                        m_Cache[i].End2 = pos + 1;
-                        break;
-                    }
-            }
-            else
-            {
-                m_Cache[tg].End1 = m_Cache[tg].End2 = -1;
-
-                if (wxIsCDATAElement(tagBuffer))
+                if ((Cache()[i].type == wxHtmlCacheItem::Type_NoMatchingEndingTag) && (wxStrcmp(Cache()[i].Name, tagBuffer+1) == 0))
                 {
-                    // store the orig pos in case we are missing the closing
-                    // tag (see below)
-                    wxInt32 old_pos = pos;
-                    bool foundCloseTag = false;
-
-                    // find next matching tag
-                    int tag_len = wxStrlen(tagBuffer);
-                    while (pos < lng)
-                    {
-                        // find the ending tag
-                        while (pos + 1 < lng &&
-                               (src[pos] != '<' || src[pos+1] != '/'))
-                            ++pos;
-                        if (src[pos] == '<')
-                            ++pos;
-
-                        // see if it matches
-                        int match_pos = 0;
-                        while (pos < lng && match_pos < tag_len && src[pos] != '>' && src[pos] != '<') {
-                            // cast to wxChar needed to suppress warning in
-                            // Unicode build
-                            if ((wxChar)wxToupper(src[pos]) == tagBuffer[match_pos]) {
-                                ++match_pos;
-                            }
-                            else if (src[pos] == wxT(' ') || src[pos] == wxT('\n') ||
-                                src[pos] == wxT('\r') || src[pos] == wxT('\t')) {
-                                // need to skip over these
-                            }
-                            else {
-                                match_pos = 0;
-                            }
-                            ++pos;
-                        }
-
-                        // found a match
-                        if (match_pos == tag_len)
-                        {
-                            pos = pos - tag_len - 3;
-                            foundCloseTag = true;
-                            break;
-                        }
-                        else // keep looking for the closing tag
-                        {
-                            ++pos;
-                        }
-                    }
-                    if (!foundCloseTag)
-                    {
-                        // we didn't find closing tag; this means the markup
-                        // is incorrect and the best thing we can do is to
-                        // ignore the unclosed tag and continue parsing as if
-                        // it didn't exist:
-                        pos = old_pos;
-                    }
+                    Cache()[i].type = wxHtmlCacheItem::Type_Normal;
+                    Cache()[i].End1 = stpos;
+                    Cache()[i].End2 = pos + 1;
+                    break;
                 }
             }
         }
+        else
+        {
+            Cache()[tg].type = wxHtmlCacheItem::Type_NoMatchingEndingTag;
 
-        pos++;
+            if (wxIsCDATAElement(tagBuffer))
+            {
+                // store the orig pos in case we are missing the closing
+                // tag (see below)
+                const wxString::const_iterator old_pos = pos;
+                bool foundCloseTag = false;
+
+                // find next matching tag
+                int tag_len = wxStrlen(tagBuffer);
+                while (pos < end)
+                {
+                    // find the ending tag
+                    while (pos + 1 < end &&
+                           (*pos != '<' || *(pos+1) != '/'))
+                        ++pos;
+                    if (*pos == '<')
+                        ++pos;
+
+                    // see if it matches
+                    int match_pos = 0;
+                    while (pos < end && match_pos < tag_len )
+                    {
+                        wxChar c = *pos;
+                        if ( c == '>' || c == '<' )
+                            break;
+
+                        // cast to wxChar needed to suppress warning in
+                        // Unicode build
+                        if ((wxChar)wxToupper(c) == tagBuffer[match_pos])
+                        {
+                            ++match_pos;
+                        }
+                        else if (c == wxT(' ') || c == wxT('\n') ||
+                            c == wxT('\r') || c == wxT('\t'))
+                        {
+                            // need to skip over these
+                        }
+                        else
+                        {
+                            match_pos = 0;
+                        }
+                        ++pos;
+                    }
+
+                    // found a match
+                    if (match_pos == tag_len)
+                    {
+                        pos = pos - tag_len - 3;
+                        foundCloseTag = true;
+                        break;
+                    }
+                    else // keep looking for the closing tag
+                    {
+                        ++pos;
+                    }
+                }
+                if (!foundCloseTag)
+                {
+                    // we didn't find closing tag; this means the markup
+                    // is incorrect and the best thing we can do is to
+                    // ignore the unclosed tag and continue parsing as if
+                    // it didn't exist:
+                    pos = old_pos;
+                }
+            }
+        }
     }
 
     // ok, we're done, now we'll free .Name members of cache - we don't need it anymore:
-    for (int i = 0; i < m_CacheSize; i++)
+    for ( wxHtmlTagsCacheData::iterator i = Cache().begin();
+          i != Cache().end(); ++i )
     {
-        delete[] m_Cache[i].Name;
-        m_Cache[i].Name = NULL;
+        wxDELETEA(i->Name);
     }
 }
 
-void wxHtmlTagsCache::QueryTag(int at, int* end1, int* end2)
+wxHtmlTagsCache::~wxHtmlTagsCache()
 {
-    if (m_Cache == NULL) return;
-    if (m_Cache[m_CachePos].Key != at)
+    delete m_Cache;
+}
+
+void wxHtmlTagsCache::QueryTag(const wxString::const_iterator& at,
+                               const wxString::const_iterator& inputEnd,
+                               wxString::const_iterator *end1,
+                               wxString::const_iterator *end2,
+                               bool *hasEnding)
+{
+    if (Cache().empty())
     {
-        int delta = (at < m_Cache[m_CachePos].Key) ? -1 : 1;
+        *end1 =
+        *end2 = inputEnd;
+        *hasEnding = true;
+        return;
+    }
+
+    if (Cache()[m_CachePos].Key != at)
+    {
+        int delta = (at < Cache()[m_CachePos].Key) ? -1 : 1;
         do
         {
-            if ( m_CachePos < 0 || m_CachePos == m_CacheSize )
+            m_CachePos += delta;
+
+            if ( m_CachePos < 0 || m_CachePos >= (int)Cache().size() )
             {
+                if ( m_CachePos < 0 )
+                    m_CachePos = 0;
+                else
+                    m_CachePos = Cache().size() - 1;
                 // something is very wrong with HTML, give up by returning an
                 // impossibly large value which is going to be ignored by the
                 // caller
                 *end1 =
-                *end2 = INT_MAX;
+                *end2 = inputEnd;
+                *hasEnding = true;
                 return;
             }
-
-            m_CachePos += delta;
         }
-        while (m_Cache[m_CachePos].Key != at);
+        while (Cache()[m_CachePos].Key != at);
     }
-    *end1 = m_Cache[m_CachePos].End1;
-    *end2 = m_Cache[m_CachePos].End2;
+
+    switch ( Cache()[m_CachePos].type )
+    {
+        case wxHtmlCacheItem::Type_Normal:
+            *end1 = Cache()[m_CachePos].End1;
+            *end2 = Cache()[m_CachePos].End2;
+            *hasEnding = true;
+            break;
+
+        case wxHtmlCacheItem::Type_EndingTag:
+            wxFAIL_MSG("QueryTag called for ending tag - can't be");
+            // but if it does happen, fall through, better than crashing
+
+        case wxHtmlCacheItem::Type_NoMatchingEndingTag:
+            // If input HTML is invalid and there's no closing tag for this
+            // one, pretend that it runs all the way to the end of input
+            *end1 = inputEnd;
+            *end2 = inputEnd;
+            *hasEnding = false;
+            break;
+    }
 }
 
 
@@ -214,12 +295,12 @@ void wxHtmlTagsCache::QueryTag(int at, int* end1, int* end2)
 // wxHtmlTag
 //-----------------------------------------------------------------------------
 
-IMPLEMENT_CLASS(wxHtmlTag,wxObject)
-
 wxHtmlTag::wxHtmlTag(wxHtmlTag *parent,
-                     const wxString& source, int pos, int end_pos,
+                     const wxString *source,
+                     const wxString::const_iterator& pos,
+                     const wxString::const_iterator& end_pos,
                      wxHtmlTagsCache *cache,
-                     wxHtmlEntitiesParser *entParser) : wxObject()
+                     wxHtmlEntitiesParser *entParser)
 {
     /* Setup DOM relations */
 
@@ -240,17 +321,16 @@ wxHtmlTag::wxHtmlTag(wxHtmlTag *parent,
 
     /* Find parameters and their values: */
 
-    int i;
-    wxChar c;
+    wxChar c wxDUMMY_INITIALIZE(0);
 
     // fill-in name, params and begin pos:
-    i = pos+1;
+    wxString::const_iterator i(pos+1);
 
     // find tag's name and convert it to uppercase:
     while ((i < end_pos) &&
-           ((c = source[i++]) != wxT(' ') && c != wxT('\r') &&
+           ((c = *(i++)) != wxT(' ') && c != wxT('\r') &&
              c != wxT('\n') && c != wxT('\t') &&
-             c != wxT('>')))
+             c != wxT('>') && c != wxT('/')))
     {
         if ((c >= wxT('a')) && (c <= wxT('z')))
             c -= (wxT('a') - wxT('A'));
@@ -260,7 +340,7 @@ wxHtmlTag::wxHtmlTag(wxHtmlTag *parent,
     // if the tag has parameters, read them and "normalize" them,
     // i.e. convert to uppercase, replace whitespaces by spaces and
     // remove whitespaces around '=':
-    if (source[i-1] != wxT('>'))
+    if (*(i-1) != wxT('>'))
     {
         #define IS_WHITE(c) (c == wxT(' ') || c == wxT('\r') || \
                              c == wxT('\n') || c == wxT('\t'))
@@ -279,14 +359,14 @@ wxHtmlTag::wxHtmlTag(wxHtmlTag *parent,
         state = ST_BEFORE_NAME;
         while (i < end_pos)
         {
-            c = source[i++];
+            c = *(i++);
 
             if (c == wxT('>') && !(state == ST_VALUE && quote != 0))
             {
                 if (state == ST_BEFORE_EQ || state == ST_NAME)
                 {
                     m_ParamNames.Add(pname);
-                    m_ParamValues.Add(wxEmptyString);
+                    m_ParamValues.Add(wxGetEmptyString());
                 }
                 else if (state == ST_VALUE && quote == 0)
                 {
@@ -321,7 +401,7 @@ wxHtmlTag::wxHtmlTag(wxHtmlTag *parent,
                     else if (!IS_WHITE(c))
                     {
                         m_ParamNames.Add(pname);
-                        m_ParamValues.Add(wxEmptyString);
+                        m_ParamValues.Add(wxGetEmptyString());
                         pname = c;
                         state = ST_NAME;
                     }
@@ -330,7 +410,7 @@ wxHtmlTag::wxHtmlTag(wxHtmlTag *parent,
                     if (!IS_WHITE(c))
                     {
                         if (c == wxT('"') || c == wxT('\''))
-                            quote = c, pvalue = wxEmptyString;
+                            quote = c, pvalue = wxGetEmptyString();
                         else
                             quote = 0, pvalue = c;
                         state = ST_VALUE;
@@ -362,10 +442,40 @@ wxHtmlTag::wxHtmlTag(wxHtmlTag *parent,
         #undef IS_WHITE
     }
     m_Begin = i;
-
-    cache->QueryTag(pos, &m_End1, &m_End2);
+    cache->QueryTag(pos, source->end(), &m_End1, &m_End2, &m_hasEnding);
     if (m_End1 > end_pos) m_End1 = end_pos;
     if (m_End2 > end_pos) m_End2 = end_pos;
+
+#if WXWIN_COMPATIBILITY_2_8
+    m_sourceStart = source->begin();
+#endif
+
+    // Try to parse any style parameters that can be handled simply by
+    // converting them to the equivalent HTML 3 attributes: this is a far cry
+    // from perfect but better than nothing.
+    static const struct EquivAttr
+    {
+        const char *style;
+        const char *attr;
+    } equivAttrs[] =
+    {
+        { "text-align",         "ALIGN"         },
+        { "width",              "WIDTH"         },
+        { "vertical-align",     "VALIGN"        },
+        { "background",         "BGCOLOR"       },
+        { "background-color",   "BGCOLOR"       },
+    };
+
+    wxHtmlStyleParams styleParams(*this);
+    for ( unsigned n = 0; n < WXSIZEOF(equivAttrs); n++ )
+    {
+        const EquivAttr& ea = equivAttrs[n];
+        if ( styleParams.HasParam(ea.style) && !HasParam(ea.attr) )
+        {
+            m_ParamNames.Add(ea.attr);
+            m_ParamValues.Add(styleParams.GetParam(ea.style));
+        }
+    }
 }
 
 wxHtmlTag::~wxHtmlTag()
@@ -385,12 +495,12 @@ bool wxHtmlTag::HasParam(const wxString& par) const
     return (m_ParamNames.Index(par, false) != wxNOT_FOUND);
 }
 
-wxString wxHtmlTag::GetParam(const wxString& par, bool with_commas) const
+wxString wxHtmlTag::GetParam(const wxString& par, bool with_quotes) const
 {
     int index = m_ParamNames.Index(par, false);
     if (index == wxNOT_FOUND)
-        return wxEmptyString;
-    if (with_commas)
+        return wxGetEmptyString();
+    if (with_quotes)
     {
         // VS: backward compatibility, seems to be never used by wxHTML...
         wxString s;
@@ -401,25 +511,45 @@ wxString wxHtmlTag::GetParam(const wxString& par, bool with_commas) const
         return m_ParamValues[index];
 }
 
+bool wxHtmlTag::GetParamAsString(const wxString& par, wxString *str) const
+{
+    wxCHECK_MSG( str, false, wxT("NULL output string argument") );
+
+    int index = m_ParamNames.Index(par, false);
+    if (index == wxNOT_FOUND)
+        return false;
+
+    *str = m_ParamValues[index];
+
+    return true;
+}
+
 int wxHtmlTag::ScanParam(const wxString& par,
-                         const wxChar *format,
+                         const char *format,
                          void *param) const
 {
     wxString parval = GetParam(par);
     return wxSscanf(parval, format, param);
 }
 
-bool wxHtmlTag::GetParamAsColour(const wxString& par, wxColour *clr) const
+int wxHtmlTag::ScanParam(const wxString& par,
+                         const wchar_t *format,
+                         void *param) const
 {
-    wxCHECK_MSG( clr, false, _T("invalid colour argument") );
+    wxString parval = GetParam(par);
+    return wxSscanf(parval, format, param);
+}
 
-    wxString str = GetParam(par);
+/* static */
+bool wxHtmlTag::ParseAsColour(const wxString& str, wxColour *clr)
+{
+    wxCHECK_MSG( clr, false, wxT("invalid colour argument") );
 
     // handle colours defined in HTML 4.0 first:
-    if (str.length() > 1 && str[0] != _T('#'))
+    if (str.length() > 1 && str[0] != wxT('#'))
     {
         #define HTML_COLOUR(name, r, g, b)              \
-            if (str.IsSameAs(wxT(name), false))         \
+            if (str.IsSameAs(wxS(name), false))         \
                 { clr->Set(r, g, b); return true; }
         HTML_COLOUR("black",   0x00,0x00,0x00)
         HTML_COLOUR("silver",  0xC0,0xC0,0xC0)
@@ -450,6 +580,12 @@ bool wxHtmlTag::GetParamAsColour(const wxString& par, wxColour *clr) const
     return false;
 }
 
+bool wxHtmlTag::GetParamAsColour(const wxString& par, wxColour *clr) const
+{
+    const wxString str = GetParam(par);
+    return !str.empty() && ParseAsColour(str, clr);
+}
+
 bool wxHtmlTag::GetParamAsInt(const wxString& par, int *clr) const
 {
     if ( !HasParam(par) )
@@ -460,6 +596,38 @@ bool wxHtmlTag::GetParamAsInt(const wxString& par, int *clr) const
         return false;
 
     *clr = (int)i;
+    return true;
+}
+
+bool
+wxHtmlTag::GetParamAsIntOrPercent(const wxString& par,
+                                  int* value,
+                                  bool& isPercent) const
+{
+    const wxString param = GetParam(par);
+    if ( param.empty() )
+        return false;
+
+    wxString num;
+    if ( param.EndsWith("%", &num) )
+    {
+        isPercent = true;
+    }
+    else
+    {
+        isPercent = false;
+        num = param;
+    }
+
+    long lValue;
+    if ( !num.ToLong(&lValue) )
+        return false;
+
+    if ( lValue > INT_MAX || lValue < INT_MIN )
+        return false;
+
+    *value = static_cast<int>(lValue);
+
     return true;
 }
 

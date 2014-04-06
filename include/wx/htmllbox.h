@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     31.05.03
-// RCS-ID:      $Id: htmllbox.h 49804 2007-11-10 01:09:42Z VZ $
 // Copyright:   (c) 2003 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -25,8 +24,8 @@ class WXDLLIMPEXP_FWD_HTML wxHtmlWinParser;
 class WXDLLIMPEXP_FWD_HTML wxHtmlListBoxCache;
 class WXDLLIMPEXP_FWD_HTML wxHtmlListBoxStyle;
 
-extern WXDLLIMPEXP_DATA_HTML(const wxChar) wxHtmlListBoxNameStr[];
-extern WXDLLIMPEXP_DATA_HTML(const wxChar) wxSimpleHtmlListBoxNameStr[];
+extern WXDLLIMPEXP_DATA_HTML(const char) wxHtmlListBoxNameStr[];
+extern WXDLLIMPEXP_DATA_HTML(const char) wxSimpleHtmlListBoxNameStr[];
 
 // ----------------------------------------------------------------------------
 // wxHtmlListBox
@@ -69,8 +68,8 @@ public:
     virtual ~wxHtmlListBox();
 
     // override some base class virtuals
-    virtual void RefreshLine(size_t line);
-    virtual void RefreshLines(size_t from, size_t to);
+    virtual void RefreshRow(size_t line);
+    virtual void RefreshRows(size_t from, size_t to);
     virtual void RefreshAll();
     virtual void SetItemCount(size_t count);
 
@@ -111,8 +110,11 @@ protected:
     virtual void OnDrawItem(wxDC& dc, const wxRect& rect, size_t n) const;
     virtual wxCoord OnMeasureItem(size_t n) const;
 
-    // This method may be overriden to handle clicking on a link in
-    // the listbox. By default, clicking links is ignored.
+    // override this one to draw custom background for selected items correctly
+    virtual void OnDrawBackground(wxDC& dc, const wxRect& rect, size_t n) const;
+
+    // this method may be overridden to handle clicking on a link in the
+    // listbox (by default, clicks on links are simply ignored)
     virtual void OnLinkClicked(size_t n, const wxHtmlLinkInfo& link);
 
     // event handlers
@@ -182,7 +184,7 @@ private:
 
 
     DECLARE_EVENT_TABLE()
-    DECLARE_NO_COPY_CLASS(wxHtmlListBox)
+    wxDECLARE_NO_COPY_CLASS(wxHtmlListBox);
 };
 
 
@@ -193,9 +195,10 @@ private:
 #define wxHLB_DEFAULT_STYLE     wxBORDER_SUNKEN
 #define wxHLB_MULTIPLE          wxLB_MULTIPLE
 
-class WXDLLIMPEXP_HTML wxSimpleHtmlListBox : public wxHtmlListBox,
-                                             public wxItemContainer
+class WXDLLIMPEXP_HTML wxSimpleHtmlListBox :
+    public wxWindowWithItems<wxHtmlListBox, wxItemContainer>
 {
+    DECLARE_ABSTRACT_CLASS(wxSimpleHtmlListBox)
 public:
     // wxListbox-compatible constructors
     // ---------------------------------
@@ -250,9 +253,6 @@ public:
     int GetSelection() const
         { return wxVListBox::GetSelection(); }
 
-    // see ctrlsub.h for more info about this:
-    wxCONTROL_ITEMCONTAINER_CLIENTDATAOBJECT_RECAST
-
 
     // accessing strings
     // -----------------
@@ -268,48 +268,44 @@ public:
 
     virtual void SetString(unsigned int n, const wxString& s);
 
-    virtual void Clear();
-    virtual void Delete(unsigned int n);
-
-    // override default unoptimized wxItemContainer::Append() function
-    void Append(const wxArrayString& strings);
-
-    // since we override one Append() overload, we need to overload all others too
-    int Append(const wxString& item)
-        { return wxItemContainer::Append(item); }
-    int Append(const wxString& item, void *clientData)
-        { return wxItemContainer::Append(item, clientData); }
-    int Append(const wxString& item, wxClientData *clientData)
-        { return wxItemContainer::Append(item, clientData); }
-
+    // resolve ambiguity between wxItemContainer and wxVListBox versions
+    void Clear();
 
 protected:
-
-    virtual int DoAppend(const wxString& item);
-    virtual int DoInsert(const wxString& item, unsigned int pos);
+    virtual int DoInsertItems(const wxArrayStringsAdapter & items,
+                              unsigned int pos,
+                              void **clientData, wxClientDataType type);
 
     virtual void DoSetItemClientData(unsigned int n, void *clientData)
         { m_HTMLclientData[n] = clientData; }
 
     virtual void *DoGetItemClientData(unsigned int n) const
         { return m_HTMLclientData[n]; }
-    virtual void DoSetItemClientObject(unsigned int n, wxClientData *clientData)
-        { m_HTMLclientData[n] = (void *)clientData; }
-    virtual wxClientData *DoGetItemClientObject(unsigned int n) const
-        { return (wxClientData *)m_HTMLclientData[n]; }
+
+    // wxItemContainer methods
+    virtual void DoClear();
+    virtual void DoDeleteOneItem(unsigned int n);
 
     // calls wxHtmlListBox::SetItemCount() and RefreshAll()
     void UpdateCount();
 
-    // overload these functions just to change their visibility: users of
+    // override these functions just to change their visibility: users of
     // wxSimpleHtmlListBox shouldn't be allowed to call them directly!
     virtual void SetItemCount(size_t count)
         { wxHtmlListBox::SetItemCount(count); }
-    virtual void SetLineCount(size_t count)
-        { wxHtmlListBox::SetLineCount(count); }
+    virtual void SetRowCount(size_t count)
+        { wxHtmlListBox::SetRowCount(count); }
 
     virtual wxString OnGetItem(size_t n) const
         { return m_items[n]; }
+
+    virtual void InitEvent(wxCommandEvent& event, int n)
+        {
+            // we're not a virtual control and we can include the string
+            // of the item which was clicked:
+            event.SetString(m_items[n]);
+            wxVListBox::InitEvent(event, n);
+        }
 
     wxArrayString   m_items;
     wxArrayPtrVoid  m_HTMLclientData;
@@ -318,7 +314,7 @@ protected:
     // not be named m_clientdata as that clashes with the name of an
     // anonymous struct member in wxEvtHandler, which we derive from.
 
-    DECLARE_NO_COPY_CLASS(wxSimpleHtmlListBox)
+    wxDECLARE_NO_COPY_CLASS(wxSimpleHtmlListBox);
 };
 
 #endif // _WX_HTMLLBOX_H_

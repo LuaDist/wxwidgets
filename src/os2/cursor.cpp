@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/13/99
-// RCS-ID:      $Id: cursor.cpp 39957 2006-07-03 19:02:54Z ABX $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -21,6 +20,7 @@
     #include "wx/app.h"
     #include "wx/icon.h"
     #include "wx/image.h"
+    #include "wx/log.h"
 #endif
 
 #include "wx/os2/private.h"
@@ -50,15 +50,6 @@ void wxCursorRefData::Free()
 
 // Cursors
 wxCursor::wxCursor(void)
-{
-}
-
-wxCursor::wxCursor(const char WXUNUSED(bits)[],
-                   int WXUNUSED(width),
-                   int WXUNUSED(height),
-                   int WXUNUSED(hotSpotX),
-                   int WXUNUSED(hotSpotY),
-                   const char WXUNUSED(maskBits)[])
 {
 }
 
@@ -94,7 +85,7 @@ wxCursor::wxCursor(const wxImage& rImage)
 } // end of wxCursor::wxCursor
 
 wxCursor::wxCursor( const wxString& WXUNUSED(rsCursorFile),
-                    long lFlags,
+                    wxBitmapType type,
                     int WXUNUSED(nHotSpotX),
                     int WXUNUSED(nHotSpotY) )
 {
@@ -103,17 +94,19 @@ wxCursor::wxCursor( const wxString& WXUNUSED(rsCursorFile),
     pRefData = new wxCursorRefData;
     m_refData = pRefData;
     pRefData->m_bDestroyCursor = false;
-    if (lFlags == wxBITMAP_TYPE_CUR_RESOURCE)
+    if (type == wxBITMAP_TYPE_CUR_RESOURCE)
     {
         pRefData->m_hCursor = (WXHCURSOR) ::WinLoadPointer( HWND_DESKTOP
                                                            ,0
-                                                           ,(ULONG)lFlags // if OS/2 this should be the resource Id
+                                                           ,(ULONG)type // if OS/2 this should be the resource Id
                                                           );
     }
+    else
+        wxLogError("Invalid cursor bitmap type '%d'", type);
 } // end of wxCursor::wxCursor
 
 // Cursors by stock number
-wxCursor::wxCursor(int nCursorType)
+void wxCursor::InitFromStock(wxStockCursor nCursorType)
 {
     wxCursorRefData*                pRefData = new wxCursorRefData;
 
@@ -308,7 +301,7 @@ void wxSetCursor(const wxCursor& cursor)
 {
     extern wxCursor *g_globalCursor;
 
-    if ( cursor.Ok() && cursor.GetHCURSOR() )
+    if ( cursor.IsOk() && cursor.GetHCURSOR() )
     {
 //        ::SetCursor((HCURSOR) cursor.GetHCURSOR());
 

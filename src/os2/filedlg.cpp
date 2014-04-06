@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/05/99
-// RCS-ID:      $Id: filedlg.cpp 39651 2006-06-09 17:50:46Z ABX $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -23,6 +22,7 @@
 #ifndef WX_PRECOMP
     #include "wx/utils.h"
     #include "wx/msgdlg.h"
+    #include "wx/filename.h"
     #include "wx/intl.h"
     #include "wx/log.h"
     #include "wx/app.h"
@@ -38,6 +38,7 @@
 #include <string.h>
 
 #include "wx/tokenzr.h"
+#include "wx/modalhook.h"
 
 #define wxMAXPATH                    1024
 #define wxMAXFILE                    1024
@@ -92,8 +93,8 @@ void wxFileDialog::GetPaths (
     size_t                          nCount = m_fileNames.GetCount();
 
     rasPaths.Empty();
-    if (m_dir.Last() != _T('\\'))
-        sDir += _T('\\');
+    if (m_dir.Last() != wxT('\\'))
+        sDir += wxT('\\');
 
     for ( size_t n = 0; n < nCount; n++ )
     {
@@ -103,6 +104,8 @@ void wxFileDialog::GetPaths (
 
 int wxFileDialog::ShowModal()
 {
+    WX_HOOK_MODAL_DIALOG();
+
     wxString                        sTheFilter;
     wxString                        sFilterBuffer;
     wxChar*                         pzFilterBuffer;
@@ -131,11 +134,6 @@ int wxFileDialog::ShowModal()
     else
         lFlags = FDS_OPEN_DIALOG;
 
-#if WXWIN_COMPATIBILITY_2_4
-    if (m_windowStyle & wxHIDE_READONLY)
-        lFlags |= FDS_SAVEAS_DIALOG;
-#endif
-
     if (m_windowStyle & wxFD_SAVE)
         lFlags |= FDS_SAVEAS_DIALOG;
     if (m_windowStyle & wxFD_MULTIPLE)
@@ -157,21 +155,21 @@ int wxFileDialog::ShowModal()
 
         switch (ch)
         {
-            case _T('/'):
+            case wxT('/'):
                 //
                 // Convert to backslash
                 //
-                ch = _T('\\');
+                ch = wxT('\\');
 
                 //
                 // Fall through
                 //
-            case _T('\\'):
+            case wxT('\\'):
                 while (i < nLen - 1)
                 {
                     wxChar          chNext = m_dir[i + 1];
 
-                    if (chNext != _T('\\') && chNext != _T('/'))
+                    if (chNext != wxT('\\') && chNext != wxT('/'))
                         break;
 
                     //
@@ -198,7 +196,7 @@ int wxFileDialog::ShowModal()
     else
         sTheFilter = m_wildCard;
 
-    wxStrtok((wxChar*)sTheFilter.c_str(), wxT("|"), &pzFilterBuffer);
+    wxStrtok(sTheFilter.wchar_str(), wxT("|"), &pzFilterBuffer);
     while(pzFilterBuffer != NULL)
     {
         if (nCount > 0 && !(nCount % 2))
@@ -253,11 +251,11 @@ int wxFileDialog::ShowModal()
             int                     nIdx = wxStrlen(zFileNameBuffer) - 1;
             wxString                sExt;
 
-            wxSplitPath( zFileNameBuffer
-                        ,&m_path
-                        ,&m_fileName
-                        ,&sExt
-                       );
+            wxFileName::SplitPath( zFileNameBuffer
+                                    ,&m_path
+                                    ,&m_fileName
+                                    ,&sExt
+                                  );
             if (zFileNameBuffer[nIdx] == wxT('.') || sExt.empty())
             {
                 zFileNameBuffer[nIdx] = wxT('\0');

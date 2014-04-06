@@ -35,13 +35,16 @@ CPP = $(CC) -p
 #   1 - DLL
 SHARED = 0
 
+# GTK+ toolkit version [,2]
+TOOLKIT_VERSION = 
+
 # Build wxUniversal instead of native port? [0,1]
 #   1 - Universal
 WXUNIV = 0
 
 # Compile Unicode build of wxWidgets? [0,1]
 #   1 - Unicode
-UNICODE = 0
+UNICODE = 1
 
 # Type of compiled binaries [debug,release]
 BUILD = debug
@@ -51,9 +54,10 @@ BUILD = debug
 # and not included if BUILD=release. [0,1,default]
 DEBUG_INFO = default
 
-# Should __WXDEBUG__ be defined? The default value "default" means that it will
-# be defined if BUILD=debug and not defined if BUILD=release. [0,1,default]
-DEBUG_FLAG = default
+# Value of wxDEBUG_LEVEL. The default value is the same as 1 and means that all
+# but expensive assert checks are enabled, use 0 to completely remove debugging
+# code. [0,1,default]
+DEBUG_FLAG = 1
 
 # Multiple libraries or single huge monolithic one? [0,1]
 #   0 - Multilib
@@ -68,6 +72,9 @@ USE_GUI = 1
 # Build wxHTML library (USE_GUI must be 1)? [0,1]
 USE_HTML = 1
 
+# Build wxWebView library (USE_GUI must be 1)? [0,1]
+USE_WEBVIEW = 1
+
 # Build multimedia library (USE_GUI must be 1)? [0,1]
 USE_MEDIA = 1
 
@@ -77,14 +84,20 @@ USE_XRC = 1
 # Build wxAUI library (USE_GUI must be 1)? [0,1]
 USE_AUI = 1
 
+# Build wxRibbon library (USE_GUI must be 1)? [0,1]
+USE_RIBBON = 1
+
+# Build wxPropertyGrid library (USE_GUI must be 1)? [0,1]
+USE_PROPGRID = 1
+
 # Build wxRichTextCtrl library (USE_GUI must be 1)? [0,1]
 USE_RICHTEXT = 1
 
-# Build OpenGL canvas library (USE_GUI must be 1)? [0,1]
-USE_OPENGL = 0
+# Build wxStyledTextCtrl library (USE_GUI must be 1)? [0,1]
+USE_STC = 1
 
-# Build ODBC database classes (USE_GUI must be 1)? [0,1]
-USE_ODBC = 0
+# Build OpenGL canvas library (USE_GUI must be 1)? [0,1]
+USE_OPENGL = 1
 
 # Build quality assurance classes library (USE_GUI must be 1)? [0,1]
 USE_QA = 0
@@ -100,9 +113,6 @@ USE_THREADS = 1
 
 # Enable wxCairoContext for platforms other than Linux/GTK. [0,1]
 USE_CAIRO = 0
-
-# Link with gdiplus.lib? (Needed for wxGraphicsContext, will also set wxUSE_GRAPHICS_CONTEXT) [0,1]
-USE_GDIPLUS = 0
 
 # Is this official build by wxWidgets developers? [0,1]
 OFFICIAL_BUILD = 0

@@ -1,8 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        dirdlg.h
+// Name:        wx/gtk/dirdlg.h
 // Purpose:     wxDirDialog
 // Author:      Francesco Montorsi
-// Id:          $Id: dirdlg.h 39402 2006-05-28 23:32:12Z VZ $
 // Copyright:   (c) 2006 Francesco Montorsi
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -10,13 +9,11 @@
 #ifndef __GTKDIRDLGH__
 #define __GTKDIRDLGH__
 
-#include "wx/generic/dirdlgg.h"
-
 //-------------------------------------------------------------------------
 // wxDirDialog
 //-------------------------------------------------------------------------
 
-class WXDLLIMPEXP_CORE wxDirDialog : public wxGenericDirDialog
+class WXDLLIMPEXP_CORE wxDirDialog : public wxDirDialogBase
 {
 public:
     wxDirDialog() { }
@@ -28,7 +25,13 @@ public:
                 const wxPoint& pos = wxDefaultPosition,
                 const wxSize& size = wxDefaultSize,
                 const wxString& name = wxDirDialogNameStr);
-
+    bool Create(wxWindow *parent,
+                const wxString& message = wxDirSelectorPromptStr,
+                const wxString& defaultPath = wxEmptyString,
+                long style = wxDD_DEFAULT_STYLE,
+                const wxPoint& pos = wxDefaultPosition,
+                const wxSize& size = wxDefaultSize,
+                const wxString& name = wxDirDialogNameStr);
     virtual ~wxDirDialog() { }
 
 
@@ -37,9 +40,11 @@ public:     // overrides from wxGenericDirDialog
     wxString GetPath() const;
     void SetPath(const wxString& path);
 
-    virtual int ShowModal();
-    virtual bool Show( bool show = true );
 
+    // Implementation only.
+
+    void GTKOnAccept();
+    void GTKOnCancel();
 
 protected:
     // override this from wxTLW since the native
@@ -50,9 +55,9 @@ protected:
 
 
 private:
+    wxString m_selectedDirectory;
+
     DECLARE_DYNAMIC_CLASS(wxDirDialog)
-    DECLARE_EVENT_TABLE()
-    void OnFakeOk( wxCommandEvent &event );
 };
 
 #endif // __GTKDIRDLGH__

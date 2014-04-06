@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/15/99
-// RCS-ID:      $Id: slider.cpp 39615 2006-06-07 13:26:00Z ABX $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -27,8 +26,6 @@
 
 #include "wx/slider.h"
 #include "wx/os2/private.h"
-
-IMPLEMENT_DYNAMIC_CLASS(wxSlider, wxControl)
 
 wxSlider::wxSlider()
 {
@@ -370,7 +367,7 @@ bool wxSlider::Create(
                                                  ,NULL                     // no control data
                                                  ,NULL                     // no Presentation parameters
                                                 );
-        if (GetFont().Ok())
+        if (GetFont().IsOk())
         {
             if (GetFont().GetResourceHandle())
             {
@@ -883,7 +880,6 @@ int wxSlider::GetValue() const
                                                                            )
                                                               );
     double                          dPixelToRange = (double)(nPixelRange - m_nThumbLength)/(double)(m_nRangeMax - m_nRangeMin);
-    int                             nNewPos = 0;
     int                             nPixelPos = SHORT1FROMMR(::WinSendMsg( GetHwnd()
                                                                           ,SLM_QUERYSLIDERINFO
                                                                           ,MPFROM2SHORT( SMA_SLIDERARMPOSITION
@@ -892,7 +888,7 @@ int wxSlider::GetValue() const
                                                                           ,(MPARAM)0
                                                                          )
                                                             );
-    nNewPos = (int)(nPixelPos/dPixelToRange);
+    int nNewPos = (int)(nPixelPos/dPixelToRange);
     if (nNewPos > (m_nRangeMax - m_nRangeMin)/2)
         nNewPos++;
     return nNewPos;
@@ -972,13 +968,13 @@ bool wxSlider::OS2OnScroll( int    WXUNUSED(nOrientation),
 
     vEvent.SetPosition(nNewPos);
     vEvent.SetEventObject(this);
-    GetEventHandler()->ProcessEvent(vEvent);
+    HandleWindowEvent(vEvent);
 
-    wxCommandEvent vCevent( wxEVT_COMMAND_SLIDER_UPDATED, GetId() );
+    wxCommandEvent vCevent( wxEVT_SLIDER, GetId() );
 
     vCevent.SetInt(nNewPos);
     vCevent.SetEventObject(this);
-    return (GetEventHandler()->ProcessEvent(vCevent));
+    return (HandleWindowEvent(vCevent));
 } // end of wxSlider::OS2OnScroll
 
 void wxSlider::SetLineSize( int nLineSize )
@@ -1076,7 +1072,7 @@ void wxSlider::SetTick(
 } // end of wxSlider::SetTick
 
 // For trackbars only
-void wxSlider::SetTickFreq( int n, int WXUNUSED(nPos) )
+void wxSlider::DoSetTickFreq( int n )
 {
     SLDCDATA  vSlData;
     WNDPARAMS vWndParams;

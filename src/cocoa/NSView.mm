@@ -1,12 +1,11 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        cocoa/NSView.mm
+// Name:        src/cocoa/NSView.mm
 // Purpose:     wxCocoaNSView
 // Author:      David Elliott
 // Modified by:
 // Created:     2003/02/15
-// RCS-ID:      $Id: NSView.mm 51576 2008-02-06 20:10:07Z DE $
 // Copyright:   (c) 2003 David Elliott
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -169,19 +168,15 @@ void wxCocoaNSView::DisassociateNSView(WX_NSView cocoaNSView)
 
 - (void)viewDidMoveToWindow
 {
-#if wxUSE_ABI_INCOMPATIBLE_FEATURES
     wxCocoaNSView *win = wxCocoaNSView::GetFromCocoa(self);
     if( !win || !win->Cocoa_viewDidMoveToWindow() )
-#endif
         [super viewDidMoveToWindow];
 }
 
 - (void)viewWillMoveToWindow:(NSWindow *)newWindow
 {
-#if wxUSE_ABI_INCOMPATIBLE_FEATURES
     wxCocoaNSView *win = wxCocoaNSView::GetFromCocoa(self);
     if( !win || !win->Cocoa_viewWillMoveToWindow(newWindow) )
-#endif
         [super viewWillMoveToWindow:newWindow];
 }
 
@@ -212,11 +207,9 @@ WX_DECLARE_GET_OBJC_CLASS(wxNSViewNotificationObserver,NSObject)
 
 - (void)synthesizeMouseMovedForView: (NSView *)theView
 {
-#if wxUSE_ABI_INCOMPATIBLE_FEATURES
     wxCocoaNSView *win = wxCocoaNSView::GetFromCocoa(theView);
     wxCHECK_RET(win,wxT("synthesizeMouseMovedForView received but no wxWindow exists"));
     win->Cocoa_synthesizeMouseMoved();
-#endif
 }
 
 @end // implementation wxNSViewNotificationObserver

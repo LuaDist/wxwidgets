@@ -2,7 +2,6 @@
 // Name:        wx/generic/accel.h
 // Purpose:     wxAcceleratorTable class
 // Author:      Robert Roebling
-// RCS-ID:      $Id: accel.h 42752 2006-10-30 19:26:48Z VZ $
 // Copyright:   (c) Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -10,13 +9,13 @@
 #ifndef _WX_GENERIC_ACCEL_H_
 #define _WX_GENERIC_ACCEL_H_
 
-class WXDLLEXPORT wxKeyEvent;
+class WXDLLIMPEXP_FWD_CORE wxKeyEvent;
 
 // ----------------------------------------------------------------------------
 // wxAcceleratorTable
 // ----------------------------------------------------------------------------
 
-class WXDLLEXPORT wxAcceleratorTable : public wxObject
+class WXDLLIMPEXP_CORE wxAcceleratorTable : public wxObject
 {
 public:
     wxAcceleratorTable();

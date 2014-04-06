@@ -4,7 +4,6 @@
 // Author:      Mattia Barbon
 // Modified by:
 // Created:     05/04/03
-// RCS-ID:      $Id: utilsx.cpp 50982 2008-01-01 20:38:33Z VZ $
 // Copyright:   (c) Mattia Barbon
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -35,6 +34,8 @@
     #include "wx/dcmemory.h"
 #endif
 
+#include "wx/x11/private/wrapxkb.h"
+
 // ----------------------------------------------------------------------------
 // XShape code
 // ----------------------------------------------------------------------------
@@ -58,14 +59,14 @@ bool wxDoSetShape( Display* xdisplay,
     else
     {
         // wxRegion::ConvertToBitmap gives us the wrong Pixmap:
-        // polichrome and with black and whire reversed
+        // polychrome and with black and white reversed
         wxRect box = region.GetBox();
         wxBitmap bmp(box.GetRight(), box.GetBottom(), 1);
         wxMemoryDC dc;
         dc.SelectObject(bmp);
         dc.SetBackground(*wxBLACK_BRUSH);
         dc.Clear();
-        dc.SetClippingRegion(region);
+        dc.SetDeviceClippingRegion(region);
         dc.SetBackground(*wxWHITE_BRUSH);
         dc.Clear();
         dc.SelectObject(wxNullBitmap);
@@ -236,3 +237,18 @@ void wxXVisualInfo::Init( Display* dpy, XVisualInfo* vi )
 }
 
 #endif // !wxUSE_NANOX
+
+/* Don't synthesize KeyUp events holding down a key and producing
+   KeyDown events with autorepeat. */
+bool wxSetDetectableAutoRepeat( bool flag )
+{
+#ifdef HAVE_X11_XKBLIB_H
+    Bool result;
+    XkbSetDetectableAutoRepeat( (Display *)wxGetDisplay(), flag, &result );
+    return result;       /* true if keyboard hardware supports this mode */
+#else
+    wxUnusedVar(flag);
+    return false;
+#endif
+}
+

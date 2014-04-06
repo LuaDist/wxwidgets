@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin, Robert Roebling
 // Modified by:
 // Created:     06.08.00
-// RCS-ID:      $Id: metal.cpp 42455 2006-10-26 15:33:10Z VS $
 // Copyright:   (c) 2000 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -146,7 +145,7 @@ private:
 class wxMetalTheme : public wxDelegateTheme
 {
 public:
-    wxMetalTheme() : wxDelegateTheme(_T("win32")), m_renderer(NULL) {}
+    wxMetalTheme() : wxDelegateTheme(wxT("win32")), m_renderer(NULL) {}
     ~wxMetalTheme() { delete m_renderer; }
 
 protected:
@@ -426,7 +425,7 @@ void wxMetalRenderer::DrawArrow(wxDC& dc,
         case wxDOWN:    arrowDir = Arrow_Down; break;
 
         default:
-            wxFAIL_MSG(_T("unknown arrow direction"));
+            wxFAIL_MSG(wxT("unknown arrow direction"));
             return;
     }
 

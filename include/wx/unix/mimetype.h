@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     23.09.98
-// RCS-ID:      $Id: mimetype.h 43723 2006-11-30 13:24:32Z RR $
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence (part of wxExtra library)
 /////////////////////////////////////////////////////////////////////////////
@@ -21,7 +20,7 @@ class wxMimeTypeCommands;
 WX_DEFINE_ARRAY_PTR(wxMimeTypeCommands *, wxMimeCommandsArray);
 
 // this is the real wxMimeTypesManager for Unix
-class WXDLLEXPORT wxMimeTypesManagerImpl
+class WXDLLIMPEXP_BASE wxMimeTypesManagerImpl
 {
 public:
     // ctor and dtor
@@ -40,9 +39,6 @@ public:
     wxFileType *GetFileTypeFromMimeType(const wxString& mimeType);
 
     size_t EnumAllFileTypes(wxArrayString& mimetypes);
-
-    bool ReadMailcap(const wxString& filename, bool fallback = FALSE);
-    bool ReadMimeTypes(const wxString& filename);
 
     void AddFallback(const wxFileTypeInfo& filetype);
 
@@ -80,72 +76,34 @@ protected:
     // are we initialized?
     bool m_initialized;
 
-    // keep track of the files we had already loaded (this is a bitwise OR of
-    // wxMailcapStyle values)
-    int m_mailcapStylesInited;
-
     wxString GetCommand(const wxString &verb, size_t nIndex) const;
 
-    // read Gnome files
-    void LoadGnomeDataFromKeyFile(const wxString& filename,
-                                  const wxArrayString& dirs);
-    void LoadGnomeMimeTypesFromMimeFile(const wxString& filename);
-    void LoadGnomeMimeFilesFromDir(const wxString& dirbase,
-                                   const wxArrayString& dirs);
-    void GetGnomeMimeInfo(const wxString& sExtraDir);
+    // Read XDG *.desktop file
+    void LoadXDGApp(const wxString& filename);
+    // Scan XDG directory
+    void LoadXDGAppsFilesFromDir(const wxString& dirname);
 
-    // read KDE
-    void LoadKDELinksForMimeSubtype(const wxString& dirbase,
-                                    const wxString& subdir,
-                                    const wxString& filename,
-                                    const wxArrayString& icondirs);
-    void LoadKDELinksForMimeType(const wxString& dirbase,
-                                 const wxString& subdir,
-                                 const wxArrayString& icondirs);
-    void LoadKDELinkFilesFromDir(const wxString& dirbase,
-                                 const wxArrayString& icondirs);
-    void LoadKDEApp(const wxString& filename);
-    void LoadKDEAppsFilesFromDir(const wxString& dirname);
-    void GetKDEMimeInfo(const wxString& sExtraDir);
-
-    // write KDE
-    bool WriteKDEMimeFile(int index, bool delete_index);
-    bool CheckKDEDirsExist(const wxString & sOK, const wxString& sTest);
-
-    //read write Netscape and MetaMail formats
-    void GetMimeInfo (const wxString& sExtraDir);
-    bool WriteToMailCap (int index, bool delete_index);
-    bool WriteToMimeTypes (int index, bool delete_index);
-    bool WriteToNSMimeTypes (int index, bool delete_index);
-
-    // ReadMailcap() helper
-    bool ProcessOtherMailcapField(struct MailcapLineData& data,
-                                  const wxString& curField);
+    // Load XDG globs files
+    void LoadXDGGlobs(const wxString& filename);
 
     // functions used to do associations
-
     virtual int AddToMimeData(const wxString& strType,
                       const wxString& strIcon,
                       wxMimeTypeCommands *entry,
                       const wxArrayString& strExtensions,
                       const wxString& strDesc,
-                      bool replaceExisting = TRUE);
-
+                      bool replaceExisting = true);
     virtual bool DoAssociation(const wxString& strType,
                        const wxString& strIcon,
                        wxMimeTypeCommands *entry,
                        const wxArrayString& strExtensions,
                        const wxString& strDesc);
 
-    virtual bool WriteMimeInfo(int nIndex, bool delete_mime );
-
     // give it access to m_aXXX variables
-    friend class WXDLLEXPORT wxFileTypeImpl;
+    friend class WXDLLIMPEXP_FWD_BASE wxFileTypeImpl;
 };
 
-
-
-class WXDLLEXPORT wxFileTypeImpl
+class WXDLLIMPEXP_BASE wxFileTypeImpl
 {
 public:
     // initialization functions
@@ -161,12 +119,12 @@ public:
     // accessors
     bool GetExtensions(wxArrayString& extensions);
     bool GetMimeType(wxString *mimeType) const
-        { *mimeType = m_manager->m_aTypes[m_index[0]]; return TRUE; }
+        { *mimeType = m_manager->m_aTypes[m_index[0]]; return true; }
     bool GetMimeTypes(wxArrayString& mimeTypes) const;
     bool GetIcon(wxIconLocation *iconLoc) const;
 
     bool GetDescription(wxString *desc) const
-        { *desc = m_manager->m_aDescriptions[m_index[0]]; return TRUE; }
+        { *desc = m_manager->m_aDescriptions[m_index[0]]; return true; }
 
     bool GetOpenCommand(wxString *openCmd,
                         const wxFileType::MessageParameters& params) const
@@ -196,7 +154,7 @@ public:
 
     // set an arbitrary command, ask confirmation if it already exists and
     // overwriteprompt is TRUE
-    bool SetCommand(const wxString& cmd, const wxString& verb, bool overwriteprompt = TRUE);
+    bool SetCommand(const wxString& cmd, const wxString& verb, bool overwriteprompt = true);
     bool SetDefaultIcon(const wxString& strIcon = wxEmptyString, int index = 0);
 
 private:

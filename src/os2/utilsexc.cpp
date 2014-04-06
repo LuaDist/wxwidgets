@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/17/99
-// RCS-ID:      $Id: utilsexc.cpp 38920 2006-04-26 08:21:31Z ABX $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -128,7 +127,8 @@ MRESULT APIENTRY wxExecuteWindowCbk( HWND   hWnd,
 
 long wxExecute( const wxString& rCommand,
                 int flags,
-                wxProcess* pHandler)
+                wxProcess* pHandler,
+                const wxExecuteEnv *env)
 {
     if (rCommand.empty())
     {
@@ -156,7 +156,7 @@ long wxExecute( const wxString& rCommand,
                       ,zArgs
                       ,zEnvs
                       ,&vResultCodes
-                      ,(PSZ)rCommand.c_str()
+                      ,rCommand.c_str()
                      );
     if (rc != NO_ERROR)
     {
@@ -219,6 +219,7 @@ long wxExecute(
   char**                            ppArgv
 , int                               flags
 , wxProcess*                        pHandler
+, const wxExecuteEnv *env
 )
 {
     wxString                        sCommand;
@@ -234,6 +235,7 @@ long wxExecute(
     return wxExecute( sCommand
                      ,flags
                      ,pHandler
+                     , env
                     );
 }
 

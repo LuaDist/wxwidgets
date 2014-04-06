@@ -4,7 +4,6 @@
 // Author:      Francesco Montorsi
 // Modified By:
 // Created:     24/09/2006
-// Id:          $Id: animatecmn.cpp 43494 2006-11-18 17:46:29Z RR $
 // Copyright:   (c) Francesco Montorsi
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -17,6 +16,10 @@
 // For compilers that support precompilation, includes "wx.h".
 #include "wx/wxprec.h"
 
+#ifdef __BORLANDC__
+    #pragma hdrstop
+#endif
+
 #if wxUSE_ANIMATIONCTRL
 
 #include "wx/animate.h"
@@ -26,7 +29,7 @@
 #include "wx/image.h"
 #include "wx/dcmemory.h"
 
-const wxChar wxAnimationCtrlNameStr[] = wxT("animationctrl");
+const char wxAnimationCtrlNameStr[] = "animationctrl";
 
 // global object
 wxAnimation wxNullAnimation;

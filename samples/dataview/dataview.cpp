@@ -1,13 +1,16 @@
 /////////////////////////////////////////////////////////////////////////////
 // Name:        dataview.cpp
-// Purpose:     DataVewCtrl  wxWidgets sample
+// Purpose:     wxDataViewCtrl wxWidgets sample
 // Author:      Robert Roebling
-// Modified by:
+// Modified by: Francesco Montorsi, Bo Yang
 // Created:     06/01/06
-// RCS-ID:      $Id: dataview.cpp 41659 2006-10-06 09:50:45Z RR $
 // Copyright:   (c) Robert Roebling
-// Licence:     wxWindows license
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
+
+// ============================================================================
+// declarations
+// ============================================================================
 
 // For compilers that support precompilation, includes "wx/wx.h".
 #include "wx/wxprec.h"
@@ -20,693 +23,1162 @@
     #include "wx/wx.h"
 #endif
 
+#include "wx/dataview.h"
 #include "wx/datetime.h"
+#include "wx/splitter.h"
+#include "wx/aboutdlg.h"
+#include "wx/colordlg.h"
+#include "wx/choicdlg.h"
+#include "wx/numdlg.h"
+#include "wx/spinctrl.h"
+#include "wx/imaglist.h"
+#include "wx/notebook.h"
 
-#ifndef __WXMSW__
+#include "mymodels.h"
+
+// ----------------------------------------------------------------------------
+// resources
+// ----------------------------------------------------------------------------
+
+#ifndef wxHAS_IMAGES_IN_RESOURCES
     #include "../sample.xpm"
 #endif
 
-#include "null.xpm"
+#include "wx_small.xpm"
 
-#include "wx/dataview.h"
-
-// -------------------------------------
-// MyTextModel
-// -------------------------------------
-
-WX_DECLARE_LIST(wxDateTime,wxArrayDate);
-#include <wx/listimpl.cpp>
-WX_DEFINE_LIST(wxArrayDate)
-
-class MyTextModel: public wxDataViewListModel
-{
-public:
-    MyTextModel()
-    {
-        unsigned int i;
-        for (i = 0; i < 1000; i++)
-            m_list.Add( wxT("Test") );
-        for (i = 0; i < 500; i++)
-            { m_bools.Add( 0 ); m_bools.Add( 1 ); }
-        for (i = 0; i < 500; i++)
-            { m_colours.Add( wxT("red") ); m_colours.Add( wxT("green") ); }
-        for (i = 0; i < 1000; i++)
-            { m_progress.Add( i/10 ); }
-        for (i = 0; i < 1000; i++)
-            {
-                wxDateTime *date = new wxDateTime( wxDateTime::Now() );
-                m_dates.Append( date );
-            }
-    }
-
-    virtual unsigned int GetNumberOfRows()
-        { return 1000; }
-    virtual unsigned int GetNumberOfCols()
-        { return 7; }
-
-    // as reported by wxVariant
-    virtual wxString GetColType( unsigned int col )
-        {
-            if (col == 6)
-                return wxT("datetime");
-
-            if (col == 5)
-                return wxT("long");
-
-            if (col == 3)
-                return wxT("bool");
-
-            return wxT("string");
-        }
-
-    virtual void GetValue( wxVariant &variant, unsigned int col, unsigned int row )
-        {
-            if (col == 6)
-            {
-                variant = (wxDateTime) *m_dates[row];
-            } else
-            if (col == 5)
-            {
-                variant = (long) m_progress[row];
-            } else
-            if (col == 4)
-            {
-                variant = m_colours[row];
-            } else
-            if (col == 3)
-            {
-                variant = (bool) m_bools[row];
-            } else
-            if (col == 2)
-            {
-                variant = m_list[row];
-            }
-            else
-            {
-                wxString tmp;
-                tmp.Printf( wxT("item(%d;%d)"), (int)row, (int)col );
-                variant = tmp;
-            }
-        }
-    virtual bool SetValue( wxVariant &value, unsigned int col, unsigned int row )
-        {
-            if (col == 6)
-            {
-                *m_dates[row] = value.GetDateTime();
-            } else
-            if (col == 3)
-            {
-                m_bools[row] = (int) value.GetBool();
-            } else
-            if (col == 2)
-            {
-                m_list[row] = value.GetString();
-            }
-            return true;
-        }
-
-    wxArrayString m_list;
-    wxArrayInt    m_bools;
-    wxArrayString m_colours;
-    wxArrayInt    m_progress;
-    wxArrayDate   m_dates;
-};
-
-// -------------------------------------
-// MyCustomRenderer
-// -------------------------------------
-
-class MyCustomRenderer: public wxDataViewCustomRenderer
-{
-public:
-    MyCustomRenderer() :
-        wxDataViewCustomRenderer( wxT("string"), wxDATAVIEW_CELL_ACTIVATABLE )
-    {
-        m_colour = wxT("black");
-    }
-    bool SetValue( const wxVariant &value )
-    {
-        m_colour = value.GetString();
-        return true;
-    }
-    bool Render( wxRect rect, wxDC *dc, int WXUNUSED(state) )
-    {
-        dc->SetPen( *wxBLACK_PEN );
-        if (m_colour == wxT("red"))
-            dc->SetBrush( *wxRED_BRUSH );
-        else if (m_colour == wxT("green"))
-            dc->SetBrush( *wxGREEN_BRUSH );
-        else
-            dc->SetBrush( *wxBLACK_BRUSH );
-        dc->DrawRectangle( rect );
-        return true;
-    }
-    wxSize GetSize()
-    {
-        return wxSize(20,8);
-    }
-    bool Activate( wxRect WXUNUSED(rect),
-                   wxDataViewListModel *WXUNUSED(model),
-                   unsigned int WXUNUSED(col),
-                   unsigned int WXUNUSED(row) )
-    {
-        return false;
-    }
-
-private:
-    wxString m_colour;
-};
-
-// -------------------------------------
-// MyUnsortedTextModel
-// -------------------------------------
-
-class MyUnsortedTextModel: public wxDataViewListModel
-{
-public:
-    MyUnsortedTextModel()
-    {
-        m_list.Add( wxT("This") );
-        m_list.Add( wxT("is") );
-        m_list.Add( wxT("an") );
-        m_list.Add( wxT("unsorted") );
-        m_list.Add( wxT("list") );
-        m_list.Add( wxT("of") );
-        m_list.Add( wxT("words.") );
-        
-        m_bitmap = wxBitmap( null_xpm );
-    }
-
-    virtual unsigned int GetNumberOfRows() { return m_list.GetCount(); }
-    virtual unsigned int GetNumberOfCols() { return 2; }
-    virtual wxString GetColType( unsigned int WXUNUSED(col) ) { return wxT("string"); }
-    virtual void GetValue( wxVariant &variant, unsigned int col, unsigned int row )
-    {
-        if (col == 0)
-        {
-            variant = m_list[row];
-            return;
-        }
-        if ((col == 2) || (col == 3))
-        {
-            variant << m_bitmap;
-            return;
-        }
-        wxString tmp;
-        tmp.Printf( wxT("item(%d;%d)"), (int)row, (int)col );
-        variant = tmp;
-    }
-    virtual bool SetValue( wxVariant &variant, unsigned int col, unsigned int row )
-    {
-        if (col == 0)
-        {
-            m_list[row] = variant.GetString();
-            return true;
-        }
-        return false;
-
-    }
-
-    void AppendRow( const wxString &text )
-    {
-        m_list.Add( text );
-        RowAppended();
-    }
-
-    void PrependRow( const wxString &text )
-    {
-        m_list.Insert( text, 0 );
-        RowPrepended();
-    }
-
-    void InsertRowAt1( const wxString &text )
-    {
-        m_list.Insert( text, 1 );
-        RowInserted( 1 );
-    }
-
-    void DeleteRow( unsigned int index )
-    {
-        m_list.RemoveAt( index );
-        RowDeleted( index );
-    }
-
-    wxArrayString m_list;
-    wxBitmap m_bitmap;
-};
-
-// -------------------------------------
+// ----------------------------------------------------------------------------
 // MyApp
-// -------------------------------------
+// ----------------------------------------------------------------------------
 
 class MyApp: public wxApp
 {
 public:
-    bool OnInit(void);
+    virtual bool OnInit();
 };
 
-// -------------------------------------
+// ----------------------------------------------------------------------------
 // MyFrame
-// -------------------------------------
+// ----------------------------------------------------------------------------
 
-class MyFrame: public wxFrame
+class MyFrame : public wxFrame
 {
 public:
-    MyFrame(wxFrame *frame, wxChar *title, int x, int y, int w, int h);
+    MyFrame(wxFrame *frame, const wxString &title, int x, int y, int w, int h);
+    ~MyFrame();
 
-public:
+    void BuildDataViewCtrl(wxPanel* parent,
+                           unsigned int nPanel,
+                           unsigned long style = 0);
+
+private:
+    // event handlers
+    void OnStyleChange(wxCommandEvent& event);
+    void OnSetBackgroundColour(wxCommandEvent& event);
+    void OnSetForegroundColour(wxCommandEvent& event);
     void OnQuit(wxCommandEvent& event);
     void OnAbout(wxCommandEvent& event);
 
+    void OnClearLog(wxCommandEvent& event);
+    void OnPageChanged(wxBookCtrlEvent& event);
+
+    void OnAddMozart(wxCommandEvent& event);
+    void OnDeleteSelected(wxCommandEvent& event);
+    void OnDeleteYear(wxCommandEvent& event);
+    void OnSelectNinth(wxCommandEvent& event);
+    void OnCollapse(wxCommandEvent& event);
+    void OnExpand(wxCommandEvent& event);
+    void OnShowCurrent(wxCommandEvent& event);
+    void OnSetNinthCurrent(wxCommandEvent& event);
+
+    void OnPrependList(wxCommandEvent& event);
+    void OnDeleteList(wxCommandEvent& event);
+    // Fourth page.
+    void OnDeleteTreeItem(wxCommandEvent& event);
+    void OnDeleteAllTreeItems(wxCommandEvent& event);
+    void OnAddTreeItem(wxCommandEvent& event);
+    void OnAddTreeContainerItem(wxCommandEvent& event);
+
+    void OnValueChanged( wxDataViewEvent &event );
+
+    void OnActivated( wxDataViewEvent &event );
+    void OnExpanding( wxDataViewEvent &event );
+    void OnExpanded( wxDataViewEvent &event );
+    void OnCollapsing( wxDataViewEvent &event );
+    void OnCollapsed( wxDataViewEvent &event );
+    void OnSelectionChanged( wxDataViewEvent &event );
+
+    void OnStartEditing( wxDataViewEvent &event );
+    void OnEditingStarted( wxDataViewEvent &event );
+    void OnEditingDone( wxDataViewEvent &event );
+
+    void OnHeaderClick( wxDataViewEvent &event );
+    void OnAttrHeaderClick( wxDataViewEvent &event );
+    void OnHeaderRightClick( wxDataViewEvent &event );
+    void OnSorted( wxDataViewEvent &event );
+
+    void OnContextMenu( wxDataViewEvent &event );
+
+    void OnGoto( wxCommandEvent &event);
+    void OnAddMany( wxCommandEvent &event);
+    void OnHideAttributes( wxCommandEvent &event);
+    void OnShowAttributes( wxCommandEvent &event);
+
+#if wxUSE_DRAG_AND_DROP
+    void OnBeginDrag( wxDataViewEvent &event );
+    void OnDropPossible( wxDataViewEvent &event );
+    void OnDrop( wxDataViewEvent &event );
+#endif // wxUSE_DRAG_AND_DROP
+
+    void OnDataViewChar(wxKeyEvent& event);
+
+    // helper used by both OnDeleteSelected() and OnDataViewChar()
+    void DeleteSelectedItems();
+
+
+    wxNotebook* m_notebook;
+
+    // the controls stored in the various tabs of the main notebook:
+
+    wxDataViewCtrl* m_ctrl[4];
+
+    // the models associated with the first two DVC:
+
+    wxObjectDataPtr<MyMusicTreeModel> m_music_model;
+    wxObjectDataPtr<MyListModel> m_list_model;
+
+    // other data:
+
+    wxDataViewColumn* m_col;
+    wxDataViewColumn* m_attributes;
+
+    wxTextCtrl* m_log;
+    wxLog *m_logOld;
+
 private:
-    wxDataViewCtrl* dataview_left;
-    wxDataViewCtrl* dataview_right;
-};
-
-// -------------------------------------
-// MySortingFrame
-// -------------------------------------
-
-enum my_events
-{
-    ID_APPEND_ROW_LEFT = 1000,
-    ID_PREPEND_ROW_LEFT,
-    ID_INSERT_ROW_LEFT,
-    ID_DELETE_ROW_LEFT,
-    ID_EDIT_ROW_LEFT,
-    
-    ID_SELECT,
-    ID_UNSELECT_ALL,
-
-    ID_APPEND_ROW_RIGHT,
-    ID_PREPEND_ROW_RIGHT,
-    ID_INSERT_ROW_RIGHT,
-    ID_DELETE_ROW_RIGHT,
-    ID_EDIT_ROW_RIGHT,
-    
-    ID_SORTED,
-    ID_UNSORTED,
-    ID_ACTIVATED
-};
-
-class MySortingFrame: public wxFrame
-{
-public:
-    MySortingFrame(wxFrame *frame, wxChar *title, int x, int y, int w, int h);
-    ~MySortingFrame();
-
-public:
-    void OnQuit(wxCommandEvent& event);
-    void OnAbout(wxCommandEvent& event);
-
-    void OnAppendRowLeft(wxCommandEvent& event);
-    void OnPrependRowLeft(wxCommandEvent& event);
-    void OnInsertRowLeft(wxCommandEvent& event);
-    void OnDeleteRowLeft(wxCommandEvent& event);
-    void OnEditRowLeft(wxCommandEvent& event);
-
-    void OnAppendRowRight(wxCommandEvent& event);
-    void OnPrependRowRight(wxCommandEvent& event);
-    void OnInsertRowRight(wxCommandEvent& event);
-    void OnDeleteRowRight(wxCommandEvent& event);
-    void OnEditRowRight(wxCommandEvent& event);
-
-    void OnSelect(wxCommandEvent& event);
-    void OnUnselectAll(wxCommandEvent& event);
-    
-    void OnSelectedUnsorted(wxDataViewEvent &event);
-    void OnSelectedSorted(wxDataViewEvent &event);
-    void OnActivatedUnsorted(wxDataViewEvent &event);
-
-    void OnHeaderClickSorted(wxDataViewEvent &event);
-    void OnHeaderClickUnsorted(wxDataViewEvent &event);
-
-private:
-    wxDataViewCtrl* dataview_left;
-    wxDataViewCtrl* dataview_right;
-    
-    wxLog          *m_logOld;
-    wxTextCtrl     *m_logWindow;
-
-    MyUnsortedTextModel        *m_unsorted_model;
-    wxDataViewSortedListModel  *m_sorted_model;
-
     DECLARE_EVENT_TABLE()
 };
 
-// -------------------------------------
-// MyApp
-// -------------------------------------
 
-#define DYNAMIC_QUIT   wxID_EXIT
-#define DYNAMIC_ABOUT  wxID_ABOUT
+// ----------------------------------------------------------------------------
+// MyCustomRenderer
+// ----------------------------------------------------------------------------
 
-IMPLEMENT_APP  (MyApp)
-
-bool MyApp::OnInit(void)
+class MyCustomRenderer: public wxDataViewCustomRenderer
 {
-    MyFrame *frame = new MyFrame(NULL, wxT("wxDataViewCtrl feature test"), 10, 10, 800, 340);
+public:
+    MyCustomRenderer()
+        : wxDataViewCustomRenderer("string",
+                                   wxDATAVIEW_CELL_ACTIVATABLE,
+                                   wxALIGN_CENTER)
+       { }
+
+    virtual bool Render( wxRect rect, wxDC *dc, int state )
+    {
+        dc->SetBrush( *wxLIGHT_GREY_BRUSH );
+        dc->SetPen( *wxTRANSPARENT_PEN );
+
+        rect.Deflate(2);
+        dc->DrawRoundedRectangle( rect, 5 );
+
+        RenderText(m_value,
+                   0, // no offset
+                   wxRect(dc->GetTextExtent(m_value)).CentreIn(rect),
+                   dc,
+                   state);
+        return true;
+    }
+
+    virtual bool ActivateCell(const wxRect& WXUNUSED(cell),
+                              wxDataViewModel *WXUNUSED(model),
+                              const wxDataViewItem &WXUNUSED(item),
+                              unsigned int WXUNUSED(col),
+                              const wxMouseEvent *mouseEvent)
+    {
+        wxString position;
+        if ( mouseEvent )
+            position = wxString::Format("via mouse at %d, %d", mouseEvent->m_x, mouseEvent->m_y);
+        else
+            position = "from keyboard";
+        wxLogMessage("MyCustomRenderer ActivateCell() %s", position);
+        return false;
+    }
+
+    virtual wxSize GetSize() const
+    {
+        return wxSize(60,20);
+    }
+
+    virtual bool SetValue( const wxVariant &value )
+    {
+        m_value = value.GetString();
+        return true;
+    }
+
+    virtual bool GetValue( wxVariant &WXUNUSED(value) ) const { return true; }
+
+private:
+    wxString m_value;
+};
+
+
+// ============================================================================
+// implementation
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// MyApp
+// ----------------------------------------------------------------------------
+
+IMPLEMENT_APP(MyApp)
+
+bool MyApp::OnInit()
+{
+    if ( !wxApp::OnInit() )
+        return false;
+
+    MyFrame *frame =
+        new MyFrame(NULL, "wxDataViewCtrl sample", 40, 40, 1000, 540);
+
     frame->Show(true);
-
-    MySortingFrame *frame2 = new MySortingFrame(NULL, wxT("wxDataViewCtrl sorting test"), 10, 150, 600, 500);
-    frame2->Show(true);
-
-    SetTopWindow(frame);
-    
     return true;
 }
 
-// -------------------------------------
+
+// ----------------------------------------------------------------------------
 // MyFrame
-// -------------------------------------
+// ----------------------------------------------------------------------------
 
-MyFrame::MyFrame(wxFrame *frame, wxChar *title, int x, int y, int w, int h):
-  wxFrame(frame, wxID_ANY, title, wxPoint(x, y), wxSize(w, h))
+enum
 {
-    SetIcon(wxICON(sample));
+    ID_CLEARLOG = wxID_HIGHEST+1,
+    ID_BACKGROUND_COLOUR,
+    ID_FOREGROUND_COLOUR,
+    ID_STYLE_MENU,
 
-    wxMenu *file_menu = new wxMenu;
+    // file menu
+    //ID_SINGLE,        wxDV_SINGLE==0 so it's always present
+    ID_MULTIPLE,
+    ID_ROW_LINES,
+    ID_HORIZ_RULES,
+    ID_VERT_RULES,
 
-    file_menu->Append(DYNAMIC_ABOUT, _T("&About"));
-    file_menu->Append(DYNAMIC_QUIT, _T("E&xit"));
-    wxMenuBar *menu_bar = new wxMenuBar;
-    menu_bar->Append(file_menu, _T("&File"));
-    SetMenuBar(menu_bar);
+    ID_EXIT = wxID_EXIT,
 
-    // You used to have to do some casting for param 4, but now there are type-safe handlers
-    Connect( DYNAMIC_QUIT,  wxID_ANY,
-                    wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MyFrame::OnQuit) );
-    Connect( DYNAMIC_ABOUT, wxID_ANY,
-                    wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MyFrame::OnAbout) );
-
-    CreateStatusBar();
-
-    wxPanel *panel = new wxPanel( this, wxID_ANY );
+    // about menu
+    ID_ABOUT = wxID_ABOUT,
 
 
-    // Left wxDataViewCtrl
-    dataview_left = new wxDataViewCtrl( panel, wxID_ANY );
+    // control IDs
 
-    MyTextModel *model = new MyTextModel;
-    dataview_left->AssociateModel( model );
+    ID_MUSIC_CTRL       = 50,
+    ID_ATTR_CTRL        = 51,
 
-    dataview_left->AppendTextColumn( wxT("first"), 0 );
-    dataview_left->AppendTextColumn( wxT("second"), 1 );
+    ID_ADD_MOZART       = 100,
+    ID_DELETE_SEL       = 101,
+    ID_DELETE_YEAR      = 102,
+    ID_SELECT_NINTH     = 103,
+    ID_COLLAPSE         = 104,
+    ID_EXPAND           = 105,
+    ID_SHOW_CURRENT,
+    ID_SET_NINTH_CURRENT,
 
-    wxDataViewTextRenderer *text_renderer = new wxDataViewTextRenderer( wxT("string"), wxDATAVIEW_CELL_EDITABLE );
-    wxDataViewColumn *column = new wxDataViewColumn( wxT("editable"), text_renderer, 2 );
-    dataview_left->AppendColumn( column );
+    ID_PREPEND_LIST     = 200,
+    ID_DELETE_LIST      = 201,
+    ID_GOTO             = 202,
+    ID_ADD_MANY         = 203,
+    ID_HIDE_ATTRIBUTES  = 204,
+    ID_SHOW_ATTRIBUTES  = 205,
 
-    dataview_left->AppendToggleColumn( wxT("fourth"), 3 );
+    // Fourth page.
+    ID_DELETE_TREE_ITEM = 400,
+    ID_DELETE_ALL_TREE_ITEMS = 401,
+    ID_ADD_TREE_ITEM = 402,
+    ID_ADD_TREE_CONTAINER_ITEM = 403
+};
 
-    MyCustomRenderer *custom_renderer = new MyCustomRenderer;
-    column = new wxDataViewColumn( wxT("custom"), custom_renderer, 4 );
-    dataview_left->AppendColumn( column );
+BEGIN_EVENT_TABLE(MyFrame, wxFrame)
+    EVT_MENU_RANGE( ID_MULTIPLE, ID_VERT_RULES, MyFrame::OnStyleChange )
+    EVT_MENU( ID_EXIT, MyFrame::OnQuit )
+    EVT_MENU( ID_ABOUT, MyFrame::OnAbout )
+    EVT_MENU( ID_CLEARLOG, MyFrame::OnClearLog )
 
-    dataview_left->AppendProgressColumn( wxT("progress"), 5 );
+    EVT_MENU( ID_FOREGROUND_COLOUR, MyFrame::OnSetForegroundColour )
+    EVT_MENU( ID_BACKGROUND_COLOUR, MyFrame::OnSetBackgroundColour )
 
-    dataview_left->AppendDateColumn( wxT("date"), 6 );
+    EVT_NOTEBOOK_PAGE_CHANGED( wxID_ANY, MyFrame::OnPageChanged )
 
-    // Right wxDataViewCtrl using the same model
-    dataview_right = new wxDataViewCtrl( panel, wxID_ANY );
-    dataview_right->AssociateModel( model );
+    EVT_BUTTON( ID_ADD_MOZART, MyFrame::OnAddMozart )
+    EVT_BUTTON( ID_DELETE_SEL, MyFrame::OnDeleteSelected )
+    EVT_BUTTON( ID_DELETE_YEAR, MyFrame::OnDeleteYear )
+    EVT_BUTTON( ID_SELECT_NINTH, MyFrame::OnSelectNinth )
+    EVT_BUTTON( ID_COLLAPSE, MyFrame::OnCollapse )
+    EVT_BUTTON( ID_EXPAND, MyFrame::OnExpand )
+    EVT_BUTTON( ID_SHOW_CURRENT, MyFrame::OnShowCurrent )
+    EVT_BUTTON( ID_SET_NINTH_CURRENT, MyFrame::OnSetNinthCurrent )
 
-    text_renderer = new wxDataViewTextRenderer( wxT("string"), wxDATAVIEW_CELL_EDITABLE );
-    column = new wxDataViewColumn( wxT("editable"), text_renderer, 2 );
-    dataview_right->AppendColumn( column );
-    dataview_right->AppendTextColumn( wxT("first"), 0 );
-    dataview_right->AppendTextColumn( wxT("second"), 1 );
-    wxDataViewToggleRenderer *toggle_renderer = new wxDataViewToggleRenderer( wxT("bool"), wxDATAVIEW_CELL_ACTIVATABLE );
-    column = new wxDataViewColumn( wxT("bool"), toggle_renderer, 3, 30 );
-    dataview_right->AppendColumn( column );
+    EVT_BUTTON( ID_PREPEND_LIST, MyFrame::OnPrependList )
+    EVT_BUTTON( ID_DELETE_LIST, MyFrame::OnDeleteList )
+    EVT_BUTTON( ID_GOTO, MyFrame::OnGoto)
+    EVT_BUTTON( ID_ADD_MANY, MyFrame::OnAddMany)
+    EVT_BUTTON( ID_HIDE_ATTRIBUTES, MyFrame::OnHideAttributes)
+    EVT_BUTTON( ID_SHOW_ATTRIBUTES, MyFrame::OnShowAttributes)
+    // Fourth page.
+    EVT_BUTTON( ID_DELETE_TREE_ITEM, MyFrame::OnDeleteTreeItem )
+    EVT_BUTTON( ID_DELETE_ALL_TREE_ITEMS, MyFrame::OnDeleteAllTreeItems )
+    EVT_BUTTON( ID_ADD_TREE_ITEM, MyFrame::OnAddTreeItem )
+    EVT_BUTTON( ID_ADD_TREE_CONTAINER_ITEM, MyFrame::OnAddTreeContainerItem )
 
-    dataview_right->AppendDateColumn( wxT("date"), 6 );
+    EVT_DATAVIEW_ITEM_VALUE_CHANGED( ID_MUSIC_CTRL, MyFrame::OnValueChanged )
 
-    // layout dataview controls.
+    EVT_DATAVIEW_ITEM_ACTIVATED(ID_MUSIC_CTRL, MyFrame::OnActivated )
+    EVT_DATAVIEW_ITEM_EXPANDING(ID_MUSIC_CTRL, MyFrame::OnExpanding)
+    EVT_DATAVIEW_ITEM_EXPANDED(ID_MUSIC_CTRL, MyFrame::OnExpanded)
+    EVT_DATAVIEW_ITEM_COLLAPSING(ID_MUSIC_CTRL, MyFrame::OnCollapsing)
+    EVT_DATAVIEW_ITEM_COLLAPSED(ID_MUSIC_CTRL, MyFrame::OnCollapsed)
+    EVT_DATAVIEW_SELECTION_CHANGED(ID_MUSIC_CTRL, MyFrame::OnSelectionChanged)
 
-    wxBoxSizer *sizer = new wxBoxSizer( wxHORIZONTAL );
-    sizer->Add( dataview_left, 3, wxGROW );
-    sizer->Add(10,10);
-    sizer->Add( dataview_right, 2, wxGROW );
-    panel->SetSizer( sizer );
-}
+    EVT_DATAVIEW_ITEM_START_EDITING(ID_MUSIC_CTRL, MyFrame::OnStartEditing)
+    EVT_DATAVIEW_ITEM_EDITING_STARTED(ID_MUSIC_CTRL, MyFrame::OnEditingStarted)
+    EVT_DATAVIEW_ITEM_EDITING_DONE(ID_MUSIC_CTRL, MyFrame::OnEditingDone)
 
-void MyFrame::OnQuit(wxCommandEvent& WXUNUSED(event) )
-{
-    Close(true);
-}
+    EVT_DATAVIEW_COLUMN_HEADER_CLICK(ID_MUSIC_CTRL, MyFrame::OnHeaderClick)
+    EVT_DATAVIEW_COLUMN_HEADER_RIGHT_CLICK(ID_MUSIC_CTRL, MyFrame::OnHeaderRightClick)
+    EVT_DATAVIEW_COLUMN_SORTED(ID_MUSIC_CTRL, MyFrame::OnSorted)
 
-void MyFrame::OnAbout(wxCommandEvent& WXUNUSED(event) )
-{
-    wxMessageDialog dialog(this, _T("This demonstrates the dataview control handling"),
-        _T("About DataView"), wxOK);
+    EVT_DATAVIEW_ITEM_CONTEXT_MENU(ID_MUSIC_CTRL, MyFrame::OnContextMenu)
 
-    dialog.ShowModal();
-}
+#if wxUSE_DRAG_AND_DROP
+    EVT_DATAVIEW_ITEM_BEGIN_DRAG( ID_MUSIC_CTRL, MyFrame::OnBeginDrag )
+    EVT_DATAVIEW_ITEM_DROP_POSSIBLE( ID_MUSIC_CTRL, MyFrame::OnDropPossible )
+    EVT_DATAVIEW_ITEM_DROP( ID_MUSIC_CTRL, MyFrame::OnDrop )
+#endif // wxUSE_DRAG_AND_DROP
 
-// -------------------------------------
-// MySortingFrame
-// -------------------------------------
+    EVT_DATAVIEW_COLUMN_HEADER_CLICK(ID_ATTR_CTRL, MyFrame::OnAttrHeaderClick)
 
-BEGIN_EVENT_TABLE(MySortingFrame,wxFrame)
-    EVT_BUTTON( ID_APPEND_ROW_LEFT, MySortingFrame::OnAppendRowLeft )
-    EVT_BUTTON( ID_PREPEND_ROW_LEFT, MySortingFrame::OnPrependRowLeft )
-    EVT_BUTTON( ID_INSERT_ROW_LEFT, MySortingFrame::OnInsertRowLeft )
-    EVT_BUTTON( ID_DELETE_ROW_LEFT, MySortingFrame::OnDeleteRowLeft )
-    EVT_BUTTON( ID_SELECT, MySortingFrame::OnSelect )
-    EVT_BUTTON( ID_UNSELECT_ALL, MySortingFrame::OnUnselectAll )
-    EVT_DATAVIEW_ROW_SELECTED( ID_SORTED, MySortingFrame::OnSelectedSorted )
-    EVT_DATAVIEW_ROW_SELECTED( ID_UNSORTED, MySortingFrame::OnSelectedUnsorted )
-    EVT_DATAVIEW_ROW_ACTIVATED( ID_UNSORTED, MySortingFrame::OnActivatedUnsorted )
-    EVT_DATAVIEW_COLUMN_HEADER_CLICK( ID_SORTED, MySortingFrame::OnHeaderClickSorted )
-    EVT_DATAVIEW_COLUMN_HEADER_CLICK( ID_UNSORTED, MySortingFrame::OnHeaderClickUnsorted )
 END_EVENT_TABLE()
 
-MySortingFrame::MySortingFrame(wxFrame *frame, wxChar *title, int x, int y, int w, int h):
+MyFrame::MyFrame(wxFrame *frame, const wxString &title, int x, int y, int w, int h):
   wxFrame(frame, wxID_ANY, title, wxPoint(x, y), wxSize(w, h))
 {
-    m_logOld = NULL;
-    
+    m_log = NULL;
+    m_col = NULL;
+
+    m_ctrl[0] = NULL;
+    m_ctrl[1] = NULL;
+    m_ctrl[2] = NULL;
+    m_ctrl[3] = NULL;
+
     SetIcon(wxICON(sample));
 
+
+    // build the menus
+    // ----------------
+
+    wxMenu *style_menu = new wxMenu;
+    //style_menu->AppendCheckItem(ID_SINGLE, "Single selection"));
+    style_menu->AppendCheckItem(ID_MULTIPLE, "Multiple selection");
+    style_menu->AppendCheckItem(ID_ROW_LINES, "Alternating colours");
+    style_menu->AppendCheckItem(ID_HORIZ_RULES, "Display horizontal rules");
+    style_menu->AppendCheckItem(ID_VERT_RULES, "Display vertical rules");
+
     wxMenu *file_menu = new wxMenu;
+    file_menu->Append(ID_CLEARLOG, "&Clear log\tCtrl-L");
+    file_menu->Append(ID_FOREGROUND_COLOUR, "Set &foreground colour...\tCtrl-S");
+    file_menu->Append(ID_BACKGROUND_COLOUR, "Set &background colour...\tCtrl-B");
+    file_menu->Append(ID_STYLE_MENU, "&Style", style_menu);
+    file_menu->AppendSeparator();
+    file_menu->Append(ID_EXIT, "E&xit");
 
-    file_menu->Append(DYNAMIC_ABOUT, _T("&About"));
-    file_menu->Append(DYNAMIC_QUIT, _T("E&xit"));
+    wxMenu *about_menu = new wxMenu;
+    about_menu->Append(ID_ABOUT, "&About");
+
     wxMenuBar *menu_bar = new wxMenuBar;
-    menu_bar->Append(file_menu, _T("&File"));
+    menu_bar->Append(file_menu, "&File");
+    menu_bar->Append(about_menu, "&About");
+
     SetMenuBar(menu_bar);
-
-    // You used to have to do some casting for param 4, but now there are type-safe handlers
-    Connect( DYNAMIC_QUIT,  wxID_ANY,
-                    wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MySortingFrame::OnQuit) );
-    Connect( DYNAMIC_ABOUT, wxID_ANY,
-                    wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MySortingFrame::OnAbout) );
-
     CreateStatusBar();
 
 
-    // Left wxDataViewCtrl
-    dataview_left = new wxDataViewCtrl( this, ID_UNSORTED, wxDefaultPosition, wxDefaultSize, wxDV_MULTIPLE );
+    // redirect logs from our event handlers to text control
+    m_log = new wxTextCtrl( this, wxID_ANY, wxString(), wxDefaultPosition,
+                            wxDefaultSize, wxTE_MULTILINE );
+    m_log->SetMinSize(wxSize(-1, 100));
+    m_logOld = wxLog::SetActiveTarget(new wxLogTextCtrl(m_log));
+    wxLogMessage( "This is the log window" );
 
-    m_unsorted_model = new MyUnsortedTextModel;
-    dataview_left->AssociateModel( m_unsorted_model );
-    wxDataViewTextRenderer *text_renderer = new wxDataViewTextRenderer( wxT("string"), wxDATAVIEW_CELL_EDITABLE );
-    wxDataViewColumn *column = new wxDataViewColumn( wxT("editable"), text_renderer, 0 );
-    dataview_left->AppendColumn( column );
-    dataview_left->AppendTextColumn( wxT("second"), 1 );
-    dataview_left->AppendColumn( new wxDataViewColumn( wxBitmap(null_xpm), new wxDataViewBitmapRenderer, 2, 25 ) );
-    dataview_left->AppendColumn( new wxDataViewColumn( wxT("icon"), new wxDataViewBitmapRenderer, 3, 25 ) );
 
-    // Right wxDataViewCtrl using the sorting model
-    dataview_right = new wxDataViewCtrl( this, ID_SORTED );
-    
-    m_sorted_model = new wxDataViewSortedListModel( m_unsorted_model );
-    dataview_right->AssociateModel( m_sorted_model );
-    text_renderer = new wxDataViewTextRenderer( wxT("string"), wxDATAVIEW_CELL_EDITABLE );
-    column = new wxDataViewColumn( wxT("editable"), text_renderer, 0, -1, wxDATAVIEW_COL_SORTABLE|wxDATAVIEW_COL_RESIZABLE );
-    dataview_right->AppendColumn( column );
-    
-    dataview_right->AppendTextColumn( wxT("second"), 1 );
+    // first page of the notebook
+    // --------------------------
 
-    // layout dataview controls.
+    m_notebook = new wxNotebook( this, wxID_ANY );
 
-    wxBoxSizer *top_sizer = new wxBoxSizer( wxHORIZONTAL );
-    top_sizer->Add( dataview_left, 1, wxGROW );
-    top_sizer->Add(10,10);
-    top_sizer->Add( dataview_right, 1, wxGROW );
+    wxPanel *firstPanel = new wxPanel( m_notebook, wxID_ANY );
+
+    BuildDataViewCtrl(firstPanel, 0);    // sets m_ctrl[0]
+
+    const wxSizerFlags border = wxSizerFlags().DoubleBorder();
 
     wxBoxSizer *button_sizer = new wxBoxSizer( wxHORIZONTAL );
-    button_sizer->Add( 10, 10, 1 );
-    wxFlexGridSizer *left_sizer = new wxFlexGridSizer( 2 );
-    left_sizer->Add( new wxButton( this, ID_APPEND_ROW_LEFT, wxT("Append") ), 0, wxALL, 5 );
-    left_sizer->Add( new wxButton( this, ID_PREPEND_ROW_LEFT, wxT("Prepend") ), 0, wxALL, 5 );
-    left_sizer->Add( new wxButton( this, ID_INSERT_ROW_LEFT, wxT("Insert") ), 0, wxALL, 5 );
-    left_sizer->Add( new wxButton( this, ID_DELETE_ROW_LEFT, wxT("Delete second") ), 0, wxALL, 5 );
-    left_sizer->Add( new wxButton( this, ID_EDIT_ROW_LEFT, wxT("Edit") ), 0, wxALL, 5 );
-    left_sizer->Add( 5,5 );
-    left_sizer->Add( new wxButton( this, ID_SELECT, wxT("Select third") ), 0, wxALL, 5 );
-    left_sizer->Add( new wxButton( this, ID_UNSELECT_ALL, wxT("Unselect all") ), 0, wxALL, 5 );
-    button_sizer->Add( left_sizer );
-    button_sizer->Add( 10, 10, 2 );
-    wxFlexGridSizer *right_sizer = new wxFlexGridSizer( 2 );
-    right_sizer->Add( new wxButton( this, ID_APPEND_ROW_RIGHT, wxT("Append") ), 0, wxALL, 5 );
-    right_sizer->Add( new wxButton( this, ID_PREPEND_ROW_RIGHT, wxT("Prepend") ), 0, wxALL, 5 );
-    right_sizer->Add( new wxButton( this, ID_INSERT_ROW_RIGHT, wxT("Insert") ), 0, wxALL, 5 );
-    right_sizer->Add( new wxButton( this, ID_DELETE_ROW_RIGHT, wxT("Delete second") ), 0, wxALL, 5 );
-    right_sizer->Add( new wxButton( this, ID_EDIT_ROW_RIGHT, wxT("Edit") ), 0, wxALL, 5 );
-    button_sizer->Add( right_sizer );
-    button_sizer->Add( 10, 10, 1 );
+    button_sizer->Add( new wxButton( firstPanel, ID_ADD_MOZART,  "Add Mozart"),             border );
+    button_sizer->Add( new wxButton( firstPanel, ID_DELETE_SEL,  "Delete selected"),        border );
+    button_sizer->Add( new wxButton( firstPanel, ID_DELETE_YEAR, "Delete \"Year\" column"), border );
+    button_sizer->Add( new wxButton( firstPanel, ID_SELECT_NINTH,"Select ninth symphony"),  border );
+    button_sizer->Add( new wxButton( firstPanel, ID_COLLAPSE,    "Collapse"),               border );
+    button_sizer->Add( new wxButton( firstPanel, ID_EXPAND,      "Expand"),                 border );
 
-    wxBoxSizer *main_sizer = new wxBoxSizer( wxVERTICAL );
-    main_sizer->Add( top_sizer, 1, wxGROW );
-    main_sizer->Add( button_sizer, 0, wxGROW );
-    
-    m_logWindow = new wxTextCtrl(this, wxID_ANY, wxEmptyString,
-                                 wxDefaultPosition, wxDefaultSize,
-                                 wxTE_MULTILINE | wxSUNKEN_BORDER);
-    main_sizer->Add( 20,20 );
-    main_sizer->Add( m_logWindow, 1, wxGROW );
+    wxBoxSizer *sizerCurrent = new wxBoxSizer(wxHORIZONTAL);
+    sizerCurrent->Add(new wxButton(firstPanel, ID_SHOW_CURRENT,
+                                   "&Show current"), border);
+    sizerCurrent->Add(new wxButton(firstPanel, ID_SET_NINTH_CURRENT,
+                                   "Make &ninth symphony current"), border);
 
-    m_logOld = wxLog::SetActiveTarget(new wxLogTextCtrl(m_logWindow));
+    wxSizer *firstPanelSz = new wxBoxSizer( wxVERTICAL );
+    m_ctrl[0]->SetMinSize(wxSize(-1, 200));
+    firstPanelSz->Add(m_ctrl[0], 1, wxGROW|wxALL, 5);
+    firstPanelSz->Add(
+        new wxStaticText(firstPanel, wxID_ANY, "Most of the cells above are editable!"),
+        0, wxGROW|wxALL, 5);
+    firstPanelSz->Add(button_sizer);
+    firstPanelSz->Add(sizerCurrent);
+    firstPanel->SetSizerAndFit(firstPanelSz);
 
-    SetSizer( main_sizer );
+
+    // second page of the notebook
+    // ---------------------------
+
+    wxPanel *secondPanel = new wxPanel( m_notebook, wxID_ANY );
+
+    BuildDataViewCtrl(secondPanel, 1);    // sets m_ctrl[1]
+
+    wxBoxSizer *button_sizer2 = new wxBoxSizer( wxHORIZONTAL );
+    button_sizer2->Add( new wxButton( secondPanel, ID_PREPEND_LIST,"Prepend"),                0, wxALL, 10 );
+    button_sizer2->Add( new wxButton( secondPanel, ID_DELETE_LIST, "Delete selected"),        0, wxALL, 10 );
+    button_sizer2->Add( new wxButton( secondPanel, ID_GOTO,        "Goto 50"),                0, wxALL, 10 );
+    button_sizer2->Add( new wxButton( secondPanel, ID_ADD_MANY,    "Add 1000"),               0, wxALL, 10 );
+    button_sizer2->Add( new wxButton( secondPanel, ID_HIDE_ATTRIBUTES,    "Hide attributes"), 0, wxALL, 10 );
+    button_sizer2->Add( new wxButton( secondPanel, ID_SHOW_ATTRIBUTES,    "Show attributes"), 0, wxALL, 10 );
+
+    wxSizer *secondPanelSz = new wxBoxSizer( wxVERTICAL );
+    secondPanelSz->Add(m_ctrl[1], 1, wxGROW|wxALL, 5);
+    secondPanelSz->Add(button_sizer2);
+    secondPanel->SetSizerAndFit(secondPanelSz);
+
+
+    // third page of the notebook
+    // ---------------------------
+
+    wxPanel *thirdPanel = new wxPanel( m_notebook, wxID_ANY );
+
+    BuildDataViewCtrl(thirdPanel, 2);    // sets m_ctrl[2]
+
+    wxSizer *thirdPanelSz = new wxBoxSizer( wxVERTICAL );
+    thirdPanelSz->Add(m_ctrl[2], 1, wxGROW|wxALL, 5);
+    thirdPanel->SetSizerAndFit(thirdPanelSz);
+
+
+    // fourth page of the notebook
+    // ---------------------------
+
+    wxPanel *fourthPanel = new wxPanel( m_notebook, wxID_ANY );
+
+    BuildDataViewCtrl(fourthPanel, 3);    // sets m_ctrl[3]
+    // Buttons
+    wxBoxSizer *button_sizer4 = new wxBoxSizer( wxHORIZONTAL );
+    button_sizer4->Add( new wxButton( fourthPanel, ID_DELETE_TREE_ITEM, "Delete Selected"), 0, wxALL, 10 );
+    button_sizer4->Add( new wxButton( fourthPanel, ID_DELETE_ALL_TREE_ITEMS, "Delete All"), 0, wxALL, 10 );
+    button_sizer4->Add( new wxButton( fourthPanel, ID_ADD_TREE_ITEM, "Add Item"), 0, wxALL, 10 );
+    button_sizer4->Add( new wxButton( fourthPanel, ID_ADD_TREE_CONTAINER_ITEM, "Add Container"), 0, wxALL, 10 );
+
+    wxSizer *fourthPanelSz = new wxBoxSizer( wxVERTICAL );
+    fourthPanelSz->Add(m_ctrl[3], 1, wxGROW|wxALL, 5);
+    fourthPanelSz->Add(button_sizer4);
+    fourthPanel->SetSizerAndFit(fourthPanelSz);
+
+
+
+    // complete GUI
+    // ------------
+
+    m_notebook->AddPage(firstPanel, "MyMusicTreeModel");
+    m_notebook->AddPage(secondPanel, "MyListModel");
+    m_notebook->AddPage(thirdPanel, "wxDataViewListCtrl");
+    m_notebook->AddPage(fourthPanel, "wxDataViewTreeCtrl");
+
+    wxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
+
+    mainSizer->Add( m_notebook, 1, wxGROW );
+    mainSizer->Add( m_log, 0, wxGROW );
+
+    SetSizerAndFit(mainSizer);
 }
 
-MySortingFrame::~MySortingFrame()
+MyFrame::~MyFrame()
 {
     delete wxLog::SetActiveTarget(m_logOld);
 }
 
-void MySortingFrame::OnSelectedUnsorted(wxDataViewEvent &event)
+void MyFrame::BuildDataViewCtrl(wxPanel* parent, unsigned int nPanel, unsigned long style)
 {
-    int row = event.GetRow();
-    wxLogMessage( wxT("OnSelected from unsorted list, selected %d"), row );
-    if (row >= 0)
-        wxLogMessage( wxT("wxDataViewCtrl::IsSelected( %d ): %d (as int)"), 
-                    row, (int) dataview_right->IsSelected( row ) );
-}
-
-void MySortingFrame::OnSelectedSorted(wxDataViewEvent &event)
-{
-    wxLogMessage( wxT("OnSelected from sorted list, selected %d"), (int) event.GetRow() );
-}
-
-void MySortingFrame::OnActivatedUnsorted(wxDataViewEvent &event)
-{
-    wxLogMessage( wxT("OnActivated from unsorted list, activated %d"), (int) event.GetRow() );
-}
-
-void MySortingFrame::OnHeaderClickSorted(wxDataViewEvent &event)
-{
-    wxDataViewColumn *col = event.GetDataViewColumn();
-    wxLogMessage( wxT("OnHeaderClick from sorted list, column %s"), col->GetTitle().c_str() );
-    
-    if (col->GetTitle() == wxT("editable"))
+    switch (nPanel)
     {
-        // this is the sorting column
-        if (col->IsSortOrderAscending())
+    case 0:
         {
-            col->SetSortOrder( false );
-            m_sorted_model->SetAscending( false );
-            m_sorted_model->Resort();
+            wxASSERT(!m_ctrl[0] && !m_music_model);
+            m_ctrl[0] =
+                new wxDataViewCtrl( parent, ID_MUSIC_CTRL, wxDefaultPosition,
+                                    wxDefaultSize, style );
+            m_ctrl[0]->Connect(wxEVT_CHAR,
+                               wxKeyEventHandler(MyFrame::OnDataViewChar),
+                               NULL, this);
+
+            m_music_model = new MyMusicTreeModel;
+            m_ctrl[0]->AssociateModel( m_music_model.get() );
+
+#if wxUSE_DRAG_AND_DROP && wxUSE_UNICODE
+            m_ctrl[0]->EnableDragSource( wxDF_UNICODETEXT );
+            m_ctrl[0]->EnableDropTarget( wxDF_UNICODETEXT );
+#endif // wxUSE_DRAG_AND_DROP && wxUSE_UNICODE
+
+            // column 0 of the view control:
+
+            wxDataViewTextRenderer *tr =
+                new wxDataViewTextRenderer( "string", wxDATAVIEW_CELL_INERT );
+            wxDataViewColumn *column0 =
+                new wxDataViewColumn( "title", tr, 0, 200, wxALIGN_LEFT,
+                                      wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_RESIZABLE );
+            m_ctrl[0]->AppendColumn( column0 );
+#if 0
+            // Call this and sorting is enabled
+            // immediatly upon start up.
+            column0->SetAsSortKey();
+#endif
+
+            // column 1 of the view control:
+
+            tr = new wxDataViewTextRenderer( "string", wxDATAVIEW_CELL_EDITABLE );
+            wxDataViewColumn *column1 =
+                new wxDataViewColumn( "artist", tr, 1, 150, wxALIGN_LEFT,
+                                      wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE |
+                                      wxDATAVIEW_COL_RESIZABLE );
+            column1->SetMinWidth(150); // this column can't be resized to be smaller
+            m_ctrl[0]->AppendColumn( column1 );
+
+            // column 2 of the view control:
+
+            wxDataViewSpinRenderer *sr =
+                new wxDataViewSpinRenderer( 0, 2010, wxDATAVIEW_CELL_EDITABLE, wxALIGN_RIGHT );
+            wxDataViewColumn *column2 =
+                new wxDataViewColumn( "year", sr, 2, 60, wxALIGN_LEFT,
+                                      wxDATAVIEW_COL_SORTABLE | wxDATAVIEW_COL_REORDERABLE );
+            m_ctrl[0]->AppendColumn( column2 );
+
+            // column 3 of the view control:
+
+            wxArrayString choices;
+            choices.Add( "good" );
+            choices.Add( "bad" );
+            choices.Add( "lousy" );
+            wxDataViewChoiceRenderer *c =
+                new wxDataViewChoiceRenderer( choices, wxDATAVIEW_CELL_EDITABLE, wxALIGN_RIGHT );
+            wxDataViewColumn *column3 =
+                new wxDataViewColumn( "rating", c, 3, 100, wxALIGN_LEFT,
+                                      wxDATAVIEW_COL_REORDERABLE | wxDATAVIEW_COL_RESIZABLE );
+            m_ctrl[0]->AppendColumn( column3 );
+
+            // column 4 of the view control:
+
+            m_ctrl[0]->AppendProgressColumn( "popularity", 4, wxDATAVIEW_CELL_INERT, 80 );
+
+            // column 5 of the view control:
+
+            MyCustomRenderer *cr = new MyCustomRenderer;
+            wxDataViewColumn *column5 =
+                new wxDataViewColumn( "custom", cr, 5, -1, wxALIGN_LEFT,
+                                      wxDATAVIEW_COL_RESIZABLE );
+            m_ctrl[0]->AppendColumn( column5 );
+
+
+            // select initially the ninth symphony:
+            m_ctrl[0]->Select(m_music_model->GetNinthItem());
         }
-        else
+        break;
+
+    case 1:
         {
-            col->SetSortOrder( true );
-            m_sorted_model->SetAscending( true );
-            m_sorted_model->Resort();
+            wxASSERT(!m_ctrl[1] && !m_list_model);
+            m_ctrl[1] = new wxDataViewCtrl( parent, ID_ATTR_CTRL, wxDefaultPosition,
+                                            wxDefaultSize, style );
+
+            m_list_model = new MyListModel;
+            m_ctrl[1]->AssociateModel( m_list_model.get() );
+
+            // the various columns
+            m_ctrl[1]->AppendTextColumn("editable string",
+                                        MyListModel::Col_EditableText,
+                                        wxDATAVIEW_CELL_EDITABLE,
+                                        wxCOL_WIDTH_AUTOSIZE);
+            m_ctrl[1]->AppendIconTextColumn("icon",
+                                            MyListModel::Col_IconText,
+                                            wxDATAVIEW_CELL_EDITABLE,
+                                            wxCOL_WIDTH_AUTOSIZE);
+
+            m_attributes =
+                new wxDataViewColumn("attributes",
+                                     new wxDataViewTextRenderer,
+                                     MyListModel::Col_TextWithAttr,
+                                     wxCOL_WIDTH_AUTOSIZE,
+                                     wxALIGN_RIGHT,
+                                     wxDATAVIEW_COL_REORDERABLE | wxDATAVIEW_COL_RESIZABLE );
+            m_ctrl[1]->AppendColumn( m_attributes );
+
+            m_ctrl[1]->AppendColumn(
+                new wxDataViewColumn("custom renderer",
+                                     new MyCustomRenderer,
+                                     MyListModel::Col_Custom)
+            );
         }
+        break;
+
+    case 2:
+        {
+            wxASSERT(!m_ctrl[2]);
+            wxDataViewListCtrl* lc =
+                new wxDataViewListCtrl( parent, wxID_ANY, wxDefaultPosition,
+                                        wxDefaultSize, style );
+            m_ctrl[2] = lc;
+
+            MyListStoreDerivedModel* page2_model = new MyListStoreDerivedModel();
+            lc->AssociateModel(page2_model);
+            page2_model->DecRef();
+
+            lc->AppendToggleColumn( "Toggle" );
+            lc->AppendTextColumn( "Text" );
+            lc->AppendProgressColumn( "Progress" );
+
+            wxVector<wxVariant> data;
+            for (unsigned int i=0; i<10; i++)
+            {
+                data.clear();
+                data.push_back( (i%3) == 0 );
+                data.push_back( wxString::Format("row %d", i) );
+                data.push_back( long(5*i) );
+
+                lc->AppendItem( data );
+            }
+        }
+        break;
+
+    case 3:
+        {
+            wxASSERT(!m_ctrl[3]);
+            wxDataViewTreeCtrl* tc =
+                new wxDataViewTreeCtrl( parent, wxID_ANY, wxDefaultPosition,
+                                        wxDefaultSize, style | wxDV_NO_HEADER );
+            m_ctrl[3] = tc;
+
+            wxImageList *ilist = new wxImageList( 16, 16 );
+            ilist->Add( wxIcon(wx_small_xpm) );
+            tc->AssignImageList( ilist );
+
+            wxDataViewItem parent =
+                tc->AppendContainer( wxDataViewItem(0), "The Root", 0 );
+            tc->AppendItem( parent, "Child 1", 0 );
+            tc->AppendItem( parent, "Child 2", 0 );
+            tc->AppendItem( parent, "Child 3, very long, long, long, long", 0 );
+
+            wxDataViewItem cont =
+                tc->AppendContainer( parent, "Container child", 0 );
+            tc->AppendItem( cont, "Child 4", 0 );
+            tc->AppendItem( cont, "Child 5", 0 );
+
+            tc->Expand(cont);
+        }
+        break;
     }
 }
 
-void MySortingFrame::OnHeaderClickUnsorted(wxDataViewEvent &event)
+
+// ----------------------------------------------------------------------------
+// MyFrame - generic event handlers
+// ----------------------------------------------------------------------------
+
+void MyFrame::OnClearLog( wxCommandEvent& WXUNUSED(event) )
 {
-    wxLogMessage( wxT("OnHeaderClick from unsorted list, column %s"), event.GetDataViewColumn()->GetTitle().c_str() );
+    m_log->Clear();
 }
 
-void MySortingFrame::OnQuit(wxCommandEvent& WXUNUSED(event) )
+void MyFrame::OnSetForegroundColour(wxCommandEvent& WXUNUSED(event))
+{
+    wxDataViewCtrl * const dvc = m_ctrl[m_notebook->GetSelection()];
+    wxColour col = wxGetColourFromUser(this, dvc->GetForegroundColour());
+    if ( col.IsOk() )
+    {
+        dvc->SetForegroundColour(col);
+        Refresh();
+    }
+}
+
+void MyFrame::OnSetBackgroundColour(wxCommandEvent& WXUNUSED(event))
+{
+    wxDataViewCtrl * const dvc = m_ctrl[m_notebook->GetSelection()];
+    wxColour col = wxGetColourFromUser(this, dvc->GetBackgroundColour());
+    if ( col.IsOk() )
+    {
+        dvc->SetBackgroundColour(col);
+        Refresh();
+    }
+}
+
+void MyFrame::OnPageChanged( wxBookCtrlEvent& WXUNUSED(event) )
+{
+    unsigned int nPanel = m_notebook->GetSelection();
+
+    GetMenuBar()->FindItem(ID_STYLE_MENU)->SetItemLabel(
+                wxString::Format("Style of panel #%d", nPanel+1));
+
+    for (unsigned int id = ID_MULTIPLE; id <= ID_VERT_RULES; id++)
+    {
+        unsigned long style = 0;
+        switch (id)
+        {
+        /*case ID_SINGLE:
+            style = wxDV_SINGLE;
+            break;*/
+        case ID_MULTIPLE:
+            style = wxDV_MULTIPLE;
+            break;
+        case ID_ROW_LINES:
+            style = wxDV_ROW_LINES;
+            break;
+        case ID_HORIZ_RULES:
+            style = wxDV_HORIZ_RULES;
+            break;
+        case ID_VERT_RULES:
+            style = wxDV_VERT_RULES;
+            break;
+        default:
+            wxFAIL;
+        }
+
+        GetMenuBar()->FindItem(id)->Check( m_ctrl[nPanel]->HasFlag(style) );
+    }
+}
+
+void MyFrame::OnStyleChange( wxCommandEvent& WXUNUSED(event) )
+{
+    unsigned int nPanel = m_notebook->GetSelection();
+
+    // build the style
+    unsigned long style = 0;
+    /*if (GetMenuBar()->FindItem(ID_SINGLE)->IsChecked())
+        style |= wxDV_SINGLE;*/
+    if (GetMenuBar()->FindItem(ID_MULTIPLE)->IsChecked())
+        style |= wxDV_MULTIPLE;
+    if (GetMenuBar()->FindItem(ID_ROW_LINES)->IsChecked())
+        style |= wxDV_ROW_LINES;
+    if (GetMenuBar()->FindItem(ID_HORIZ_RULES)->IsChecked())
+        style |= wxDV_HORIZ_RULES;
+    if (GetMenuBar()->FindItem(ID_VERT_RULES)->IsChecked())
+        style |= wxDV_VERT_RULES;
+
+    wxSizer* sz = m_ctrl[nPanel]->GetContainingSizer();
+    wxASSERT(sz);
+
+    sz->Detach(m_ctrl[nPanel]);
+    wxDELETE(m_ctrl[nPanel]);
+    m_ctrl[nPanel] = NULL;
+
+    if (nPanel == 0)
+        m_music_model.reset(NULL);
+    else if (nPanel == 1)
+        m_list_model.reset(NULL);
+
+    // rebuild the DVC for the selected panel:
+    BuildDataViewCtrl((wxPanel*)m_notebook->GetPage(nPanel), nPanel, style);
+
+    sz->Prepend(m_ctrl[nPanel], 1, wxGROW|wxALL, 5);
+    sz->Layout();
+}
+
+void MyFrame::OnQuit( wxCommandEvent& WXUNUSED(event) )
 {
     Close(true);
 }
 
-void MySortingFrame::OnAbout(wxCommandEvent& WXUNUSED(event) )
+void MyFrame::OnAbout( wxCommandEvent& WXUNUSED(event) )
 {
-    wxMessageDialog dialog(this, _T("This demonstrates the dataview control sorting"),
-        _T("About DataView"), wxOK);
+    wxAboutDialogInfo info;
+    info.SetName(_("DataView sample"));
+    info.SetDescription(_("This sample demonstrates wxDataViewCtrl"));
+    info.SetCopyright(wxT("(C) 2007-2009 Robert Roebling"));
+    info.AddDeveloper("Robert Roebling");
+    info.AddDeveloper("Francesco Montorsi");
 
-    dialog.ShowModal();
+    wxAboutBox(info);
 }
 
-void MySortingFrame::OnSelect(wxCommandEvent& WXUNUSED(event))
-{
-    dataview_left->SetSelection( 2 );
-}
 
-void MySortingFrame::OnUnselectAll(wxCommandEvent& WXUNUSED(event))
-{
-    dataview_left->ClearSelection();
-}
+// ----------------------------------------------------------------------------
+// MyFrame - event handlers for the first page
+// ----------------------------------------------------------------------------
 
-void MySortingFrame::OnAppendRowLeft(wxCommandEvent& WXUNUSED(event))
+#if wxUSE_DRAG_AND_DROP
+
+void MyFrame::OnBeginDrag( wxDataViewEvent &event )
 {
-    wxTextEntryDialog dialog( this, wxT("Enter text to append") );
-    if (dialog.ShowModal() == wxID_OK)
+    wxDataViewItem item( event.GetItem() );
+
+    // only allow drags for item, not containers
+    if (m_music_model->IsContainer( item ) )
     {
-        wxString value = dialog.GetValue();
-        if (!value.empty())
-            m_unsorted_model->AppendRow( value );
+        event.Veto();
+        return;
+    }
+
+    MyMusicTreeModelNode *node = (MyMusicTreeModelNode*) item.GetID();
+    wxTextDataObject *obj = new wxTextDataObject;
+    obj->SetText( node->m_title );
+    event.SetDataObject( obj );
+    event.SetDragFlags(wxDrag_AllowMove); // allows both copy and move
+}
+
+void MyFrame::OnDropPossible( wxDataViewEvent &event )
+{
+    wxDataViewItem item( event.GetItem() );
+
+    // only allow drags for item, not containers
+    if (m_music_model->IsContainer( item ) )
+        event.Veto();
+
+    if (event.GetDataFormat() != wxDF_UNICODETEXT)
+        event.Veto();
+}
+
+void MyFrame::OnDrop( wxDataViewEvent &event )
+{
+    wxDataViewItem item( event.GetItem() );
+
+    // only allow drops for item, not containers
+    if (m_music_model->IsContainer( item ) )
+    {
+        event.Veto();
+        return;
+    }
+
+    if (event.GetDataFormat() != wxDF_UNICODETEXT)
+    {
+        event.Veto();
+        return;
+    }
+
+    wxTextDataObject obj;
+    obj.SetData( wxDF_UNICODETEXT, event.GetDataSize(), event.GetDataBuffer() );
+
+    wxLogMessage( "Text dropped: %s", obj.GetText() );
+}
+
+#endif // wxUSE_DRAG_AND_DROP
+
+void MyFrame::OnAddMozart( wxCommandEvent& WXUNUSED(event) )
+{
+    m_music_model->AddToClassical( "Eine kleine Nachtmusik", "Wolfgang Mozart", 1787 );
+}
+
+void MyFrame::DeleteSelectedItems()
+{
+    wxDataViewItemArray items;
+    int len = m_ctrl[0]->GetSelections( items );
+    for( int i = 0; i < len; i ++ )
+        if (items[i].IsOk())
+            m_music_model->Delete( items[i] );
+}
+
+void MyFrame::OnDeleteSelected( wxCommandEvent& WXUNUSED(event) )
+{
+    DeleteSelectedItems();
+}
+
+void MyFrame::OnDeleteYear( wxCommandEvent& WXUNUSED(event) )
+{
+    m_ctrl[0]->DeleteColumn( m_ctrl[0]->GetColumn( 2 ) );
+    FindWindow( ID_DELETE_YEAR )->Disable();
+}
+
+void MyFrame::OnSelectNinth( wxCommandEvent& WXUNUSED(event) )
+{
+    if (!m_music_model->GetNinthItem().IsOk())
+    {
+        wxLogError( "Cannot select the ninth symphony: it was removed!" );
+        return;
+    }
+
+    m_ctrl[0]->Select( m_music_model->GetNinthItem() );
+}
+
+void MyFrame::OnCollapse( wxCommandEvent& WXUNUSED(event) )
+{
+    wxDataViewItem item = m_ctrl[0]->GetSelection();
+    if (item.IsOk())
+        m_ctrl[0]->Collapse( item );
+}
+
+void MyFrame::OnExpand( wxCommandEvent& WXUNUSED(event) )
+{
+    wxDataViewItem item = m_ctrl[0]->GetSelection();
+    if (item.IsOk())
+        m_ctrl[0]->Expand( item );
+}
+
+void MyFrame::OnShowCurrent(wxCommandEvent& WXUNUSED(event))
+{
+    wxDataViewItem item = m_ctrl[0]->GetCurrentItem();
+    if ( item.IsOk() )
+    {
+        wxLogMessage("Current item: \"%s\" by %s",
+                     m_music_model->GetTitle(item),
+                     m_music_model->GetArtist(item));
+    }
+    else
+    {
+        wxLogMessage("There is no current item.");
+    }
+
+    wxDataViewColumn *col = m_ctrl[0]->GetCurrentColumn();
+    if ( col )
+    {
+        wxLogMessage("Current column: %d",
+                     m_ctrl[0]->GetColumnPosition(col));
+    }
+    else
+    {
+        wxLogMessage("There is no current column.");
     }
 }
 
-void MySortingFrame::OnPrependRowLeft(wxCommandEvent& WXUNUSED(event))
+void MyFrame::OnSetNinthCurrent(wxCommandEvent& WXUNUSED(event))
 {
-    wxTextEntryDialog dialog( this, wxT("Enter text to prepend") );
-    if (dialog.ShowModal() == wxID_OK)
+    wxDataViewItem item(m_music_model->GetNinthItem());
+    if ( !item.IsOk() )
     {
-        wxString value = dialog.GetValue();
-        if (!value.empty())
-            m_unsorted_model->PrependRow( value );
+        wxLogError( "Cannot make the ninth symphony current: it was removed!" );
+        return;
+    }
+
+    m_ctrl[0]->SetCurrentItem(item);
+}
+
+void MyFrame::OnValueChanged( wxDataViewEvent &event )
+{
+    wxString title = m_music_model->GetTitle( event.GetItem() );
+    wxLogMessage( "wxEVT_DATAVIEW_ITEM_VALUE_CHANGED, Item Id: %s;  Column: %d",
+                  title, event.GetColumn() );
+}
+
+void MyFrame::OnActivated( wxDataViewEvent &event )
+{
+    wxString title = m_music_model->GetTitle( event.GetItem() );
+    wxLogMessage( "wxEVT_DATAVIEW_ITEM_ACTIVATED, Item: %s", title );
+
+    if (m_ctrl[0]->IsExpanded( event.GetItem() ))
+    {
+        wxLogMessage( "Item: %s is expanded", title );
     }
 }
 
-void MySortingFrame::OnInsertRowLeft(wxCommandEvent& WXUNUSED(event))
+void MyFrame::OnSelectionChanged( wxDataViewEvent &event )
 {
-    wxTextEntryDialog dialog( this, wxT("Enter text to insert before second") );
-    if (dialog.ShowModal() == wxID_OK)
+    wxString title = m_music_model->GetTitle( event.GetItem() );
+    if (title.empty())
+        title = "None";
+
+    wxLogMessage( "wxEVT_DATAVIEW_SELECTION_CHANGED, First selected Item: %s", title );
+}
+
+void MyFrame::OnExpanding( wxDataViewEvent &event )
+{
+    wxString title = m_music_model->GetTitle( event.GetItem() );
+    wxLogMessage( "wxEVT_DATAVIEW_ITEM_EXPANDING, Item: %s", title );
+}
+
+
+void MyFrame::OnStartEditing( wxDataViewEvent &event )
+{
+    wxString artist = m_music_model->GetArtist( event.GetItem() );
+    if (artist == "Ludwig van Beethoven")
     {
-        wxString value = dialog.GetValue();
-        if (!value.empty())
-            m_unsorted_model->InsertRowAt1( value );
+        event.Veto();
+
+        wxLogMessage( "wxEVT_DATAVIEW_ITEM_START_EDITING vetoed. Artist: %s", artist );
+    }
+    else
+        wxLogMessage( "wxEVT_DATAVIEW_ITEM_START_EDITING not vetoed. Artist: %s", artist );
+
+}
+
+void MyFrame::OnEditingStarted( wxDataViewEvent &event )
+{
+    wxString title = m_music_model->GetTitle( event.GetItem() );
+    wxLogMessage( "wxEVT_DATAVIEW_ITEM_EDITING_STARTED, Item: %s", title );
+}
+
+void MyFrame::OnEditingDone( wxDataViewEvent &event )
+{
+    wxString title = m_music_model->GetTitle( event.GetItem() );
+    wxLogMessage( "wxEVT_DATAVIEW_ITEM_EDITING_DONE, Item: %s", title );
+}
+
+void MyFrame::OnExpanded( wxDataViewEvent &event )
+{
+    wxString title = m_music_model->GetTitle( event.GetItem() );
+    wxLogMessage( "wxEVT_DATAVIEW_ITEM_EXPANDED, Item: %s", title );
+}
+
+void MyFrame::OnCollapsing( wxDataViewEvent &event )
+{
+    wxString title = m_music_model->GetTitle( event.GetItem() );
+    wxLogMessage( "wxEVT_DATAVIEW_ITEM_COLLAPSING, Item: %s", title );
+}
+
+void MyFrame::OnCollapsed( wxDataViewEvent &event )
+{
+    wxString title = m_music_model->GetTitle( event.GetItem() );
+    wxLogMessage( "wxEVT_DATAVIEW_ITEM_COLLAPSED, Item: %s", title );
+}
+
+void MyFrame::OnContextMenu( wxDataViewEvent &event )
+{
+    wxString title = m_music_model->GetTitle( event.GetItem() );
+    wxLogMessage( "wxEVT_DATAVIEW_ITEM_CONTEXT_MENU, Item: %s", title );
+
+    wxMenu menu;
+    menu.Append( 1, "menuitem 1" );
+    menu.Append( 2, "menuitem 2" );
+    menu.Append( 3, "menuitem 3" );
+
+    m_ctrl[0]->PopupMenu(&menu);
+}
+
+void MyFrame::OnAttrHeaderClick( wxDataViewEvent &event )
+{
+    // we need to skip the event to let the default behaviour of sorting by
+    // this column when it is clicked to take place
+    event.Skip();
+
+    int pos = m_ctrl[1]->GetColumnPosition( event.GetDataViewColumn() );
+
+    wxLogMessage( "wxEVT_DATAVIEW_COLUMN_HEADER_CLICK, Column position: %d", pos );
+    wxLogMessage( "Column title: %s  Column width: %d", event.GetDataViewColumn()->GetTitle(), event.GetDataViewColumn()->GetWidth() );
+}
+
+void MyFrame::OnHeaderClick( wxDataViewEvent &event )
+{
+    // we need to skip the event to let the default behaviour of sorting by
+    // this column when it is clicked to take place
+    event.Skip();
+
+    int pos = m_ctrl[0]->GetColumnPosition( event.GetDataViewColumn() );
+
+    wxLogMessage( "wxEVT_DATAVIEW_COLUMN_HEADER_CLICK, Column position: %d", pos );
+    wxLogMessage( "Column width: %d", event.GetDataViewColumn()->GetWidth() );
+}
+
+void MyFrame::OnHeaderRightClick( wxDataViewEvent &event )
+{
+    int pos = m_ctrl[0]->GetColumnPosition( event.GetDataViewColumn() );
+
+    wxLogMessage( "wxEVT_DATAVIEW_COLUMN_HEADER_RIGHT_CLICK, Column position: %d", pos );
+}
+
+void MyFrame::OnSorted( wxDataViewEvent &event )
+{
+    int pos = m_ctrl[0]->GetColumnPosition( event.GetDataViewColumn() );
+
+    wxLogMessage( "wxEVT_DATAVIEW_COLUMN_SORTED, Column position: %d", pos );
+}
+
+void MyFrame::OnDataViewChar(wxKeyEvent& event)
+{
+    if ( event.GetKeyCode() == WXK_DELETE )
+        DeleteSelectedItems();
+    else
+        event.Skip();
+}
+
+// ----------------------------------------------------------------------------
+// MyFrame - event handlers for the second page
+// ----------------------------------------------------------------------------
+
+void MyFrame::OnPrependList( wxCommandEvent& WXUNUSED(event) )
+{
+    m_list_model->Prepend("Test");
+}
+
+void MyFrame::OnDeleteList( wxCommandEvent& WXUNUSED(event) )
+{
+    wxDataViewItemArray items;
+    int len = m_ctrl[1]->GetSelections( items );
+    if (len > 0)
+        m_list_model->DeleteItems( items );
+}
+
+void MyFrame::OnGoto(wxCommandEvent& WXUNUSED(event))
+{
+    wxDataViewItem item = m_list_model->GetItem( 50 );
+    m_ctrl[1]->EnsureVisible(item,m_col);
+}
+
+void MyFrame::OnAddMany(wxCommandEvent& WXUNUSED(event))
+{
+    m_list_model->AddMany();
+}
+
+void MyFrame::OnHideAttributes(wxCommandEvent& WXUNUSED(event))
+{
+    m_attributes->SetHidden(true);
+}
+
+void MyFrame::OnShowAttributes(wxCommandEvent& WXUNUSED(event))
+{
+    m_attributes->SetHidden(false);
+}
+
+// ----------------------------------------------------------------------------
+// MyFrame - event handlers for the fourth page
+// ----------------------------------------------------------------------------
+
+void MyFrame::OnDeleteTreeItem(wxCommandEvent& WXUNUSED(event))
+{
+    wxDataViewTreeCtrl* ctrl = (wxDataViewTreeCtrl*) m_ctrl[3];
+    wxDataViewItem selected = ctrl->GetSelection();
+    if (!selected.IsOk())
+        return;
+
+    ctrl->DeleteItem(selected);
+}
+
+void MyFrame::OnDeleteAllTreeItems(wxCommandEvent& WXUNUSED(event))
+{
+    wxDataViewTreeCtrl* ctrl = (wxDataViewTreeCtrl*) m_ctrl[3];
+    ctrl->DeleteAllItems();
+}
+
+void MyFrame::OnAddTreeItem(wxCommandEvent& WXUNUSED(event))
+{
+    wxDataViewTreeCtrl* ctrl = (wxDataViewTreeCtrl*) m_ctrl[3];
+    wxDataViewItem selected = ctrl->GetSelection();
+    if (ctrl->IsContainer(selected)) {
+        wxDataViewItem newitem = ctrl->AppendItem( selected, "Item", 0 );
+        ctrl->Select(newitem);
+        ctrl->EditItem(newitem, ctrl->GetColumn(0));
     }
 }
 
-void MySortingFrame::OnDeleteRowLeft(wxCommandEvent& WXUNUSED(event))
+void MyFrame::OnAddTreeContainerItem(wxCommandEvent& WXUNUSED(event))
 {
-    m_unsorted_model->DeleteRow( 1 );
-}
-
-void MySortingFrame::OnEditRowLeft(wxCommandEvent& WXUNUSED(event))
-{
-}
-
-void MySortingFrame::OnAppendRowRight(wxCommandEvent& WXUNUSED(event))
-{
-}
-
-void MySortingFrame::OnPrependRowRight(wxCommandEvent& WXUNUSED(event))
-{
-}
-
-void MySortingFrame::OnInsertRowRight(wxCommandEvent& WXUNUSED(event))
-{
-}
-
-void MySortingFrame::OnDeleteRowRight(wxCommandEvent& WXUNUSED(event))
-{
-}
-
-void MySortingFrame::OnEditRowRight(wxCommandEvent& WXUNUSED(event))
-{
+    wxDataViewTreeCtrl* ctrl = (wxDataViewTreeCtrl*) m_ctrl[3];
+    wxDataViewItem selected = ctrl->GetSelection();
+    if (ctrl->IsContainer(selected))
+        ctrl->AppendContainer(selected, "Container", 0 );
 }
 

@@ -1,10 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
 // Name:        src/motif/dcscreen.cpp
-// Purpose:     wxScreenDC class
+// Purpose:     wxScreenDCImpl class
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: dcscreen.cpp 41640 2006-10-05 19:34:25Z MBN $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -12,12 +11,11 @@
 // For compilers that support precompilation, includes "wx.h".
 #include "wx/wxprec.h"
 
-#include "wx/dcscreen.h"
-
 #ifndef WX_PRECOMP
     #include "wx/utils.h"
     #include "wx/window.h"
     #include "wx/frame.h"
+    #include "wx/dcscreen.h"
 #endif
 
 #ifdef __VMS__
@@ -29,15 +27,17 @@
 #endif
 
 #include "wx/motif/private.h"
+#include "wx/motif/dcscreen.h"
 
-IMPLEMENT_DYNAMIC_CLASS(wxScreenDC, wxWindowDC)
+IMPLEMENT_ABSTRACT_CLASS(wxScreenDCImpl, wxWindowDCImpl)
 
-WXWindow wxScreenDC::sm_overlayWindow = 0;
-int wxScreenDC::sm_overlayWindowX = 0;
-int wxScreenDC::sm_overlayWindowY = 0;
+WXWindow wxScreenDCImpl::sm_overlayWindow = 0;
+int wxScreenDCImpl::sm_overlayWindowX = 0;
+int wxScreenDCImpl::sm_overlayWindowY = 0;
 
 // Create a DC representing the whole screen
-wxScreenDC::wxScreenDC()
+wxScreenDCImpl::wxScreenDCImpl(wxScreenDC *owner)
+              : wxWindowDCImpl(owner)
 {
     m_display = wxGetDisplay();
     Display* display = (Display*) m_display;
@@ -65,12 +65,12 @@ wxScreenDC::wxScreenDC()
     m_ok = true;
 }
 
-wxScreenDC::~wxScreenDC()
+wxScreenDCImpl::~wxScreenDCImpl()
 {
     EndDrawingOnTop();
 }
 
-bool wxScreenDC::StartDrawingOnTop(wxWindow* window)
+bool wxScreenDCImpl::StartDrawingOnTop(wxWindow* window)
 {
     wxRect rect;
     int x, y, width, height;
@@ -84,7 +84,7 @@ bool wxScreenDC::StartDrawingOnTop(wxWindow* window)
     return StartDrawingOnTop(& rect);
 }
 
-bool wxScreenDC::StartDrawingOnTop(wxRect* rect)
+bool wxScreenDCImpl::StartDrawingOnTop(wxRect* rect)
 {
     if (sm_overlayWindow)
         return false;
@@ -123,7 +123,7 @@ bool wxScreenDC::StartDrawingOnTop(wxRect* rect)
         return false;
 }
 
-bool wxScreenDC::EndDrawingOnTop()
+bool wxScreenDCImpl::EndDrawingOnTop()
 {
     if (sm_overlayWindow)
     {

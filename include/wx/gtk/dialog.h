@@ -1,29 +1,16 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        dialog.h
+// Name:        wx/gtk/dialog.h
 // Purpose:
 // Author:      Robert Roebling
 // Created:
-// Id:          $Id: dialog.h 41020 2006-09-05 20:47:48Z VZ $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:           wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
-#ifndef __GTKDIALOGH__
-#define __GTKDIALOGH__
+#ifndef _WX_GTKDIALOG_H_
+#define _WX_GTKDIALOG_H_
 
-#include "wx/defs.h"
-
-//-----------------------------------------------------------------------------
-// classes
-//-----------------------------------------------------------------------------
-
-class WXDLLIMPEXP_CORE wxDialog;
-
-//-----------------------------------------------------------------------------
-// global data
-//-----------------------------------------------------------------------------
-
-extern WXDLLIMPEXP_CORE const wxChar wxDialogNameStr[];
+class WXDLLIMPEXP_FWD_CORE wxGUIEventLoop;
 
 //-----------------------------------------------------------------------------
 // wxDialog
@@ -45,24 +32,21 @@ public:
             const wxSize &size = wxDefaultSize,
             long style = wxDEFAULT_DIALOG_STYLE,
             const wxString &name = wxDialogNameStr );
-    virtual ~wxDialog() {}
+    virtual ~wxDialog();
 
-    virtual bool Show( bool show = TRUE );
+    virtual bool Show( bool show = true );
     virtual int ShowModal();
     virtual void EndModal( int retCode );
     virtual bool IsModal() const;
-    void SetModal( bool modal );
-
-    // implementation
-    // --------------
-
-    bool       m_modalShowing;
 
 private:
     // common part of all ctors
     void Init();
 
+    bool m_modalShowing;
+    wxGUIEventLoop *m_modalLoop;
+
     DECLARE_DYNAMIC_CLASS(wxDialog)
 };
 
-#endif // __GTKDIALOGH__
+#endif // _WX_GTKDIALOG_H_

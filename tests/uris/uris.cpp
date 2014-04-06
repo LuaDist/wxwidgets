@@ -3,7 +3,6 @@
 // Purpose:     wxURI unit test
 // Author:      Ryan Norton
 // Created:     2004-08-14
-// RCS-ID:      $Id: uris.cpp 53910 2008-06-01 19:16:15Z VZ $
 // Copyright:   (c) 2004 Ryan Norton
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -27,9 +26,6 @@
 // Test wxURL & wxURI compat?
 #define TEST_URL wxUSE_URL
 
-// Set this to 1 to test stuff requiring real network access
-#define TEST_NET 0
-
 // ----------------------------------------------------------------------------
 // test class
 // ----------------------------------------------------------------------------
@@ -43,7 +39,9 @@ private:
     CPPUNIT_TEST_SUITE( URITestCase );
         CPPUNIT_TEST( IPv4 );
         CPPUNIT_TEST( IPv6 );
+        CPPUNIT_TEST( Server );
         CPPUNIT_TEST( Paths );
+        CPPUNIT_TEST( UserAndPass );
         CPPUNIT_TEST( NormalResolving );
         CPPUNIT_TEST( ComplexResolving );
         CPPUNIT_TEST( ReallyComplexResolving );
@@ -63,7 +61,9 @@ private:
 
     void IPv4();
     void IPv6();
+    void Server();
     void Paths();
+    void UserAndPass();
     void NormalResolving();
     void ComplexResolving();
     void ReallyComplexResolving();
@@ -87,48 +87,44 @@ private:
 // register in the unnamed registry so that these tests are run by default
 CPPUNIT_TEST_SUITE_REGISTRATION( URITestCase );
 
-// also include in it's own registry so that these tests can be run alone
+// also include in its own registry so that these tests can be run alone
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( URITestCase, "URITestCase" );
 
 URITestCase::URITestCase()
 {
 }
 
+// apply the given accessor to the URI, check that the result is as expected
+#define URI_ASSERT_PART_EQUAL(uri, expected, accessor) \
+    CPPUNIT_ASSERT_EQUAL(expected, wxURI(uri).accessor)
 
-#define URI_TEST(uristring, cond) \
-    uri = new wxURI(wxT(uristring));\
-    CPPUNIT_ASSERT(cond);\
-    delete uri;
+#define URI_ASSERT_HOSTTYPE_EQUAL(uri, expected) \
+    URI_ASSERT_PART_EQUAL((uri), (expected), GetHostType())
 
-#define URI_PRINT(uri)\
-    wxPrintf(wxT("SCHEME:%s\n"), uri.GetScheme());\
-    wxPrintf(wxT("USER:%s\n"), uri.GetUser());\
-    wxPrintf(wxT("SERVER:%s\n"), uri.GetServer());\
-    wxPrintf(wxT("PORT:%s\n"), uri.GetPort());\
-    wxPrintf(wxT("PATH:%s\n"), uri.GetPath());\
-    wxPrintf(wxT("QUERY:%s\n"), uri.GetQuery());\
-    wxPrintf(wxT("FRAGMENT:%s\n"), uri.GetFragment());
+#define URI_ASSERT_SERVER_EQUAL(uri, expected) \
+    URI_ASSERT_PART_EQUAL((uri), (expected), GetServer())
+
+#define URI_ASSERT_PATH_EQUAL(uri, expected) \
+    URI_ASSERT_PART_EQUAL((uri), (expected), GetPath())
+
+#define URI_ASSERT_USER_EQUAL(uri, expected) \
+    URI_ASSERT_PART_EQUAL((uri), (expected), GetUser())
 
 void URITestCase::IPv4()
 {
-    wxURI* uri;
+    URI_ASSERT_HOSTTYPE_EQUAL("http://user:password@192.168.1.100:5050/path",
+                            wxURI_IPV4ADDRESS);
 
+    URI_ASSERT_HOSTTYPE_EQUAL("http://user:password@192.255.1.100:5050/path",
+                            wxURI_IPV4ADDRESS);
 
-    URI_TEST("http://user:password@192.168.1.100:5050/path",
-            uri->GetHostType() == wxURI_IPV4ADDRESS);
-
-    URI_TEST("http://user:password@192.255.1.100:5050/path",
-            uri->GetHostType() == wxURI_IPV4ADDRESS);
-
-    //bogus ipv4
-    URI_TEST("http://user:password@192.256.1.100:5050/path",
-            uri->GetHostType() != wxURI_IPV4ADDRESS);
+    // bogus ipv4
+    CPPUNIT_ASSERT( wxURI("http://user:password@192.256.1.100:5050/path").
+                    GetHostType() != wxURI_IPV4ADDRESS);
 }
 
 void URITestCase::IPv6()
 {
-    wxURI* uri;
-
     // IPv6address   =                            6( h16 ":" ) ls32
     //               /                       "::" 5( h16 ":" ) ls32
     //               / [               h16 ] "::" 4( h16 ":" ) ls32
@@ -140,216 +136,243 @@ void URITestCase::IPv6()
     //               / [ *6( h16 ":" ) h16 ] "::"
     // ls32          = ( h16 ":" h16 ) / IPv4address
 
-    URI_TEST("http://user:password@[aa:aa:aa:aa:aa:aa:192.168.1.100]:5050/path",
-                uri->GetHostType() == wxURI_IPV6ADDRESS);
+    URI_ASSERT_HOSTTYPE_EQUAL
+    (
+        "http://user:password@[aa:aa:aa:aa:aa:aa:192.168.1.100]:5050/path",
+        wxURI_IPV6ADDRESS
+    );
 
-    URI_TEST("http://user:password@[aa:aa:aa:aa:aa:aa:aa:aa]:5050/path",
-                uri->GetHostType() == wxURI_IPV6ADDRESS);
+    URI_ASSERT_HOSTTYPE_EQUAL
+    (
+        "http://user:password@[aa:aa:aa:aa:aa:aa:aa:aa]:5050/path",
+        wxURI_IPV6ADDRESS
+    );
 
-    URI_TEST("http://user:password@[aa:aa:aa:aa::192.168.1.100]:5050/path",
-                uri->GetHostType() == wxURI_IPV6ADDRESS);
+    URI_ASSERT_HOSTTYPE_EQUAL
+    (
+        "http://user:password@[aa:aa:aa:aa::192.168.1.100]:5050/path",
+        wxURI_IPV6ADDRESS
+    );
 
-    URI_TEST("http://user:password@[aa:aa:aa:aa::aa:aa]:5050/path",
-                uri->GetHostType() == wxURI_IPV6ADDRESS);
+    URI_ASSERT_HOSTTYPE_EQUAL
+    (
+        "http://user:password@[aa:aa:aa:aa::aa:aa]:5050/path",
+        wxURI_IPV6ADDRESS
+    );
+}
+
+void URITestCase::Server()
+{
+    URI_ASSERT_SERVER_EQUAL("http://foo/", "foo");
+    URI_ASSERT_SERVER_EQUAL("http://foo-bar/", "foo-bar");
+    URI_ASSERT_SERVER_EQUAL("http://foo/bar/", "foo");
+    URI_ASSERT_SERVER_EQUAL("http://192.168.1.0/", "192.168.1.0");
+    URI_ASSERT_SERVER_EQUAL("http://192.168.1.17/", "192.168.1.17");
+    URI_ASSERT_SERVER_EQUAL("http://192.168.1.255/", "192.168.1.255");
+    URI_ASSERT_SERVER_EQUAL("http://192.168.1.1/index.html", "192.168.1.1");
+    URI_ASSERT_SERVER_EQUAL("http://[aa:aa:aa:aa::aa:aa]/foo", "aa:aa:aa:aa::aa:aa");
 }
 
 void URITestCase::Paths()
 {
-    wxURI* uri;
+    URI_ASSERT_PATH_EQUAL("http://user:password@192.256.1.100:5050/../path",
+                          "/path");
 
-    //path tests
-    URI_TEST("http://user:password@192.256.1.100:5050/../path",
-        uri->GetPath() == wxT("/path"));
+    URI_ASSERT_PATH_EQUAL("http://user:password@192.256.1.100:5050/path/../",
+                          "/");
 
-    URI_TEST("http://user:password@192.256.1.100:5050/path/../",
-        uri->GetPath() == wxT("/"));
+    URI_ASSERT_PATH_EQUAL("http://user:password@192.256.1.100:5050/path/.",
+                          "/path/");
 
-    URI_TEST("http://user:password@192.256.1.100:5050/path/.",
-        uri->GetPath() == wxT("/path/"));
+    URI_ASSERT_PATH_EQUAL("http://user:password@192.256.1.100:5050/path/./",
+                          "/path/");
 
-    URI_TEST("http://user:password@192.256.1.100:5050/path/./",
-        uri->GetPath() == wxT("/path/"));
-
-    URI_TEST("path/john/../../../joe",
-        uri->BuildURI() == wxT("../joe"));
+    URI_ASSERT_PART_EQUAL("path/john/../../../joe",
+                          "../joe", BuildURI());
 }
-#undef URI_TEST
 
-#define URI_TEST_RESOLVE(string, eq, strict) \
-        uri = new wxURI(wxT(string));\
-        uri->Resolve(masteruri, strict);\
-        CPPUNIT_ASSERT(uri->BuildURI() == wxT(eq));\
-        delete uri;
+void URITestCase::UserAndPass()
+{
+    URI_ASSERT_USER_EQUAL("http://user:pass@host/path/", "user");
+    URI_ASSERT_USER_EQUAL("http://user@host/path/", "user");
+    URI_ASSERT_USER_EQUAL("http://host/path/", "");
+}
 
-#define URI_TEST(string, eq) \
-        URI_TEST_RESOLVE(string, eq, true);
+#define URI_TEST_RESOLVE_IMPL(string, eq, strict) \
+    { \
+        wxURI uri(string); \
+        uri.Resolve(masteruri, strict); \
+        CPPUNIT_ASSERT_EQUAL(eq, uri.BuildURI()); \
+    }
+
+#define URI_TEST_RESOLVE(string, eq) \
+        URI_TEST_RESOLVE_IMPL(string, eq, true);
+
+#define URI_TEST_RESOLVE_LAX(string, eq) \
+        URI_TEST_RESOLVE_IMPL(string, eq, false);
 
 
 //examples taken from RFC 2396.bis
 
 void URITestCase::NormalResolving()
 {
-    wxURI masteruri(wxT("http://a/b/c/d;p?q"));
-    wxURI* uri;
+    wxURI masteruri("http://a/b/c/d;p?q");
 
-    URI_TEST("g:h"  ,"g:h")
-    URI_TEST("g"    ,"http://a/b/c/g")
-    URI_TEST("./g"  ,"http://a/b/c/g")
-    URI_TEST("g/"   ,"http://a/b/c/g/")
-    URI_TEST("/g"   ,"http://a/g")
-    URI_TEST("//g"  ,"http://g")
-    URI_TEST("?y"   ,"http://a/b/c/d;p?y")
-    URI_TEST("g?y"  ,"http://a/b/c/g?y")
-    URI_TEST("#s"   ,"http://a/b/c/d;p?q#s")
-    URI_TEST("g#s"  ,"http://a/b/c/g#s")
-    URI_TEST("g?y#s","http://a/b/c/g?y#s")
-    URI_TEST(";x"   ,"http://a/b/c/;x")
-    URI_TEST("g;x"  ,"http://a/b/c/g;x")
-    URI_TEST("g;x?y#s","http://a/b/c/g;x?y#s")
+    URI_TEST_RESOLVE("g:h"  ,"g:h")
+    URI_TEST_RESOLVE("g"    ,"http://a/b/c/g")
+    URI_TEST_RESOLVE("./g"  ,"http://a/b/c/g")
+    URI_TEST_RESOLVE("g/"   ,"http://a/b/c/g/")
+    URI_TEST_RESOLVE("/g"   ,"http://a/g")
+    URI_TEST_RESOLVE("//g"  ,"http://g")
+    URI_TEST_RESOLVE("?y"   ,"http://a/b/c/d;p?y")
+    URI_TEST_RESOLVE("g?y"  ,"http://a/b/c/g?y")
+    URI_TEST_RESOLVE("#s"   ,"http://a/b/c/d;p?q#s")
+    URI_TEST_RESOLVE("g#s"  ,"http://a/b/c/g#s")
+    URI_TEST_RESOLVE("g?y#s","http://a/b/c/g?y#s")
+    URI_TEST_RESOLVE(";x"   ,"http://a/b/c/;x")
+    URI_TEST_RESOLVE("g;x"  ,"http://a/b/c/g;x")
+    URI_TEST_RESOLVE("g;x?y#s","http://a/b/c/g;x?y#s")
 
-    URI_TEST(""     ,"http://a/b/c/d;p?q")
-    URI_TEST("."    ,"http://a/b/c/")
-    URI_TEST("./"   ,"http://a/b/c/")
-    URI_TEST(".."   ,"http://a/b/")
-    URI_TEST("../"  ,"http://a/b/")
-    URI_TEST("../g" ,"http://a/b/g")
-    URI_TEST("../..","http://a/")
-    URI_TEST("../../"        ,  "http://a/")
-    URI_TEST("../../g"       ,  "http://a/g")
+    URI_TEST_RESOLVE(""     ,"http://a/b/c/d;p?q")
+    URI_TEST_RESOLVE("."    ,"http://a/b/c/")
+    URI_TEST_RESOLVE("./"   ,"http://a/b/c/")
+    URI_TEST_RESOLVE(".."   ,"http://a/b/")
+    URI_TEST_RESOLVE("../"  ,"http://a/b/")
+    URI_TEST_RESOLVE("../g" ,"http://a/b/g")
+    URI_TEST_RESOLVE("../..","http://a/")
+    URI_TEST_RESOLVE("../../"        ,  "http://a/")
+    URI_TEST_RESOLVE("../../g"       ,  "http://a/g")
 }
 
 void URITestCase::ComplexResolving()
 {
-    wxURI masteruri(wxT("http://a/b/c/d;p?q"));
-    wxURI* uri;
+    wxURI masteruri("http://a/b/c/d;p?q");
 
     //odd path examples
-    URI_TEST("/./g"   ,"http://a/g")
-    URI_TEST("/../g"  ,"http://a/g")
-    URI_TEST("g."     ,"http://a/b/c/g.")
-    URI_TEST(".g"     ,"http://a/b/c/.g")
-    URI_TEST("g.."    ,"http://a/b/c/g..")
-    URI_TEST("..g"    ,"http://a/b/c/..g")
+    URI_TEST_RESOLVE("../../../g"   , "http://a/g")
+    URI_TEST_RESOLVE("../../../../g", "http://a/g")
+
+    URI_TEST_RESOLVE("/./g"   ,"http://a/g")
+    URI_TEST_RESOLVE("/../g"  ,"http://a/g")
+    URI_TEST_RESOLVE("g."     ,"http://a/b/c/g.")
+    URI_TEST_RESOLVE(".g"     ,"http://a/b/c/.g")
+    URI_TEST_RESOLVE("g.."    ,"http://a/b/c/g..")
+    URI_TEST_RESOLVE("..g"    ,"http://a/b/c/..g")
 }
-   //Should Fail
-   //"../../../g"    =  "http://a/g"
-   //"../../../../g" =  "http://a/g"
 
 void URITestCase::ReallyComplexResolving()
 {
-    wxURI masteruri(wxT("http://a/b/c/d;p?q"));
-    wxURI* uri;
+    wxURI masteruri("http://a/b/c/d;p?q");
 
     //even more odder path examples
-    URI_TEST("./../g" ,"http://a/b/g")
-    URI_TEST("./g/."  ,"http://a/b/c/g/")
-    URI_TEST("g/./h"  ,"http://a/b/c/g/h")
-    URI_TEST("g/../h" ,"http://a/b/c/h")
-    URI_TEST("g;x=1/./y"     ,  "http://a/b/c/g;x=1/y")
-    URI_TEST("g;x=1/../y"    ,  "http://a/b/c/y")
+    URI_TEST_RESOLVE("./../g" ,"http://a/b/g")
+    URI_TEST_RESOLVE("./g/."  ,"http://a/b/c/g/")
+    URI_TEST_RESOLVE("g/./h"  ,"http://a/b/c/g/h")
+    URI_TEST_RESOLVE("g/../h" ,"http://a/b/c/h")
+    URI_TEST_RESOLVE("g;x=1/./y"     ,  "http://a/b/c/g;x=1/y")
+    URI_TEST_RESOLVE("g;x=1/../y"    ,  "http://a/b/c/y")
 }
 
 void URITestCase::QueryFragmentResolving()
 {
-    wxURI masteruri(wxT("http://a/b/c/d;p?q"));
-    wxURI* uri;
+    wxURI masteruri("http://a/b/c/d;p?q");
 
     //query/fragment ambigiousness
-    URI_TEST("g?y/./x","http://a/b/c/g?y/./x")
-    URI_TEST("g?y/../x"      ,  "http://a/b/c/g?y/../x")
-    URI_TEST("g#s/./x","http://a/b/c/g#s/./x")
-    URI_TEST("g#s/../x"      ,  "http://a/b/c/g#s/../x")
+    URI_TEST_RESOLVE("g?y/./x","http://a/b/c/g?y/./x")
+    URI_TEST_RESOLVE("g?y/../x"      ,  "http://a/b/c/g?y/../x")
+    URI_TEST_RESOLVE("g#s/./x","http://a/b/c/g#s/./x")
+    URI_TEST_RESOLVE("g#s/../x"      ,  "http://a/b/c/g#s/../x")
 }
 
 void URITestCase::BackwardsResolving()
 {
-    wxURI masteruri(wxT("http://a/b/c/d;p?q"));
-    wxURI* uri;
+    wxURI masteruri("http://a/b/c/d;p?q");
 
     //"NEW"
-    URI_TEST("http:g" ,  "http:g")         //strict
+    URI_TEST_RESOLVE("http:g" ,  "http:g")         //strict
     //bw compat
-    URI_TEST_RESOLVE("http:g", "http://a/b/c/g", false);
+    URI_TEST_RESOLVE_LAX("http:g", "http://a/b/c/g");
 }
 
 void URITestCase::Assignment()
 {
-    wxURI uri1(wxT("http://mysite.com")),
-          uri2(wxT("http://mysite2.com"));
+    wxURI uri1("http://mysite.com"),
+          uri2("http://mysite2.com");
 
     uri2 = uri1;
 
-    CPPUNIT_ASSERT(uri1.BuildURI() == uri2.BuildURI());
+    CPPUNIT_ASSERT_EQUAL(uri1.BuildURI(), uri2.BuildURI());
 }
 
 void URITestCase::Comparison()
 {
-    CPPUNIT_ASSERT(wxURI(wxT("http://mysite.com")) == wxURI(wxT("http://mysite.com")));
+    CPPUNIT_ASSERT(wxURI("http://mysite.com") == wxURI("http://mysite.com"));
 }
 
 void URITestCase::Unescaping()
 {
-    wxString orig = wxT("http://test.com/of/file%3A%2F%2FC%3A%5Curi%5C")
-                    wxT("escaping%5Cthat%5Cseems%5Cbroken%5Csadly%5B1%5D.rss");
+    wxString escaped,
+             unescaped;
 
-    wxString works= wxURI(orig).BuildUnescapedURI();
+    escaped = "http://test.com/of/file%3A%2F%2FC%3A%5Curi%5C"
+              "escaping%5Cthat%5Cseems%5Cbroken%5Csadly%5B1%5D.rss";
 
-    CPPUNIT_ASSERT(orig.IsSameAs(works) == false);
+    unescaped = wxURI(escaped).BuildUnescapedURI();
 
-    wxString orig2 = wxT("http://test.com/of/file%3A%2F%")
-                     wxT("2FC%3A%5Curi%5Cescaping%5Cthat%5Cseems%")
-                     wxT("5Cbroken%5Csadly%5B1%5D.rss");
+    CPPUNIT_ASSERT_EQUAL( "http://test.com/of/file://C:\\uri\\"
+                          "escaping\\that\\seems\\broken\\sadly[1].rss",
+                          unescaped );
 
-    wxString works2 = wxURI::Unescape(orig2);
-    wxString broken2 = wxURI(orig2).BuildUnescapedURI();
+    CPPUNIT_ASSERT_EQUAL( unescaped, wxURI::Unescape(escaped) );
 
-    CPPUNIT_ASSERT(works2.IsSameAs(broken2));
 
+#if wxUSE_UNICODE
+    escaped = "http://ru.wikipedia.org/wiki/"
+              "%D0%A6%D0%B5%D0%BB%D0%BE%D0%B5_%D1%87%D0%B8%D1%81%D0%BB%D0%BE";
+
+    unescaped = wxURI::Unescape(escaped);
+
+    CPPUNIT_ASSERT_EQUAL( wxString::FromUTF8(
+                            "http://ru.wikipedia.org/wiki/"
+                            "\xD0\xA6\xD0\xB5\xD0\xBB\xD0\xBE\xD0\xB5_"
+                            "\xD1\x87\xD0\xB8\xD1\x81\xD0\xBB\xD0\xBE"
+                          ),
+                          unescaped );
+#endif // wxUSE_UNICODE
 }
 
 void URITestCase::FileScheme()
 {
-    //file:// variety (NOT CONFORMANT TO THE RFC)
-    CPPUNIT_ASSERT(wxURI(wxString(wxT("file://e:/wxcode/script1.xml"))).GetPath() 
-                    == wxT("e:/wxcode/script1.xml") );
+    //file:// variety (NOT CONFORMING TO THE RFC)
+    URI_ASSERT_PATH_EQUAL( "file://e:/wxcode/script1.xml",
+                    "e:/wxcode/script1.xml" );
 
     //file:/// variety
-    CPPUNIT_ASSERT(wxURI(wxString(wxT("file:///e:/wxcode/script1.xml"))).GetPath() 
-                    == wxT("/e:/wxcode/script1.xml") );
+    URI_ASSERT_PATH_EQUAL( "file:///e:/wxcode/script1.xml",
+                    "/e:/wxcode/script1.xml" );
 
     //file:/ variety
-    CPPUNIT_ASSERT(wxURI(wxString(wxT("file:/e:/wxcode/script1.xml"))).GetPath() 
-                    == wxT("/e:/wxcode/script1.xml") );
+    URI_ASSERT_PATH_EQUAL( "file:/e:/wxcode/script1.xml",
+                    "/e:/wxcode/script1.xml" );
 
     //file: variety
-    CPPUNIT_ASSERT(wxURI(wxString(wxT("file:e:/wxcode/script1.xml"))).GetPath() 
-                    == wxT("e:/wxcode/script1.xml") );
+    URI_ASSERT_PATH_EQUAL( "file:e:/wxcode/script1.xml",
+                    "e:/wxcode/script1.xml" );
 }
 
 #if TEST_URL
-
-const wxChar* pszProblemUrls[] = { wxT("http://www.csdn.net"),
-                                   wxT("http://www.163.com"),
-                                   wxT("http://www.sina.com.cn") };
 
 #include "wx/url.h"
 #include "wx/file.h"
 
 void URITestCase::URLCompat()
 {
-    wxURL url(wxT("http://user:password@wxwidgets.org"));
+    wxURL url("http://user:password@wxwidgets.org");
 
-    CPPUNIT_ASSERT(url.GetError() == wxURL_NOERR);
+    CPPUNIT_ASSERT( url.GetError() == wxURL_NOERR );
+    CPPUNIT_ASSERT( url == wxURL("http://user:password@wxwidgets.org") );
 
-#if TEST_NET
-    wxInputStream* pInput = url.GetInputStream();
-
-    CPPUNIT_ASSERT( pInput != NULL );
-#endif // TEST_NET
-
-    CPPUNIT_ASSERT( url == wxURL(wxT("http://user:password@wxwidgets.org")) );
-
-    wxURI uri(wxT("http://user:password@wxwidgets.org"));
+    wxURI uri("http://user:password@wxwidgets.org");
 
     CPPUNIT_ASSERT( url == uri );
 
@@ -363,21 +386,22 @@ void URITestCase::URLCompat()
     CPPUNIT_ASSERT( uricopy == url );
     CPPUNIT_ASSERT( uricopy == urlcopy );
     CPPUNIT_ASSERT( uricopy == uri );
-#if WXWIN_COMPATIBILITY_2_4
-    CPPUNIT_ASSERT( wxURL::ConvertFromURI(wxT("%20%41%20")) == wxT(" A ") );
-#endif
-    CPPUNIT_ASSERT( wxURI::Unescape(wxT("%20%41%20")) == wxT(" A ") );
+    CPPUNIT_ASSERT_EQUAL( " A ", wxURI::Unescape("%20%41%20") );
 
-    wxURI test(wxT("file:\"myf\"ile.txt"));
+    wxURI test("file:\"myf\"ile.txt");
 
-    CPPUNIT_ASSERT( test.BuildURI() == wxT("file:%22myf%22ile.txt") );
-    CPPUNIT_ASSERT( test.GetScheme() == wxT("file") );
-    CPPUNIT_ASSERT( test.GetPath() == wxT("%22myf%22ile.txt") );
+    CPPUNIT_ASSERT_EQUAL( "file:%22myf%22ile.txt" , test.BuildURI() );
+    CPPUNIT_ASSERT_EQUAL( "file", test.GetScheme() );
+    CPPUNIT_ASSERT_EQUAL( "%22myf%22ile.txt", test.GetPath() );
 
     // these could be put under a named registry since they take some
     // time to complete
 #if 0
     // Test problem urls (reported not to work some time ago by a user...)
+    const wxChar* pszProblemUrls[] = { "http://www.csdn.net",
+                                       "http://www.163.com",
+                                       "http://www.sina.com.cn" };
+
     for ( size_t i = 0; i < WXSIZEOF(pszProblemUrls); ++i )
     {
         wxURL urlProblem(pszProblemUrls[i]);
@@ -386,7 +410,7 @@ void URITestCase::URLCompat()
         wxInputStream* is = urlProblem.GetInputStream();
         CPPUNIT_ASSERT(is != NULL);
 
-        wxFile fOut(_T("test.html"), wxFile::write);
+        wxFile fOut(wxT("test.html"), wxFile::write);
         wxASSERT(fOut.IsOpened());
 
         char buf[1001];

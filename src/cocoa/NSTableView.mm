@@ -1,12 +1,11 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        cocoa/NSTableView.mm
+// Name:        src/cocoa/NSTableView.mm
 // Purpose:     wxCocoaNSTableView / wxCocoaNSTableDataSource
 // Author:      David Elliott
 // Modified by:
 // Created:     2003/08/05
-// RCS-ID:      $Id: NSTableView.mm 48107 2007-08-15 16:12:45Z DE $
 // Copyright:   (c) 2003 David Elliott
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================

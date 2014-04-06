@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     08/08/99
-// RCS-ID:      $Id: bitmap.cpp 43052 2006-11-04 18:52:56Z SN $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -27,6 +26,7 @@
     #include "wx/image.h"
 #endif
 
+#include "wx/os2/dc.h"
 #include "wx/os2/private.h"
 
 #include "wx/xpmdecod.h"
@@ -83,25 +83,16 @@ void wxBitmapRefData::Free()
             wxLogLastError(wxT("GpiDeleteBitmap(hbitmap)"));
         }
     }
-    if (m_pBitmapMask)
-    {
-        delete m_pBitmapMask;
-        m_pBitmapMask = NULL;
-    }
+    wxDELETE(m_pBitmapMask);
 } // end of wxBitmapRefData::Free
 
 // ----------------------------------------------------------------------------
 // wxBitmap creation
 // ----------------------------------------------------------------------------
 
-wxObjectRefData* wxBitmap::CreateRefData() const
+wxGDIRefData* wxBitmap::CloneGDIRefData(const wxGDIRefData* data) const
 {
-    return new wxBitmapRefData;
-}
-
-wxObjectRefData* wxBitmap::CloneRefData(const wxObjectRefData* data) const
-{
-    return new wxBitmapRefData(*wx_static_cast(const wxBitmapRefData *, data));
+    return new wxBitmapRefData(*static_cast<const wxBitmapRefData *>(data));
 }
 
 // this function should be called from all wxBitmap ctors
@@ -150,7 +141,7 @@ bool wxBitmap::CopyFromCursor(
 {
     UnRef();
 
-    if (!rCursor.Ok())
+    if (!rCursor.IsOk())
         return(false);
     return(CopyFromIconOrCursor(rCursor));
 } // end of wxBitmap::CopyFromCursor
@@ -161,7 +152,7 @@ bool wxBitmap::CopyFromIcon(
 {
     UnRef();
 
-    if (!rIcon.Ok())
+    if (!rIcon.IsOk())
         return(false);
 
     return CopyFromIconOrCursor(rIcon);
@@ -281,21 +272,8 @@ wxBitmap::wxBitmap(
 } // end of wxBitmap::wxBitmap
 
 wxBitmap::wxBitmap(
-  int                               nW
-, int                               nH
-, int                               nD
-)
-{
-    Init();
-    (void)Create( nW
-                 ,nH
-                 ,nD
-                );
-} // end of wxBitmap::wxBitmap
-
-wxBitmap::wxBitmap(
   const void*                       pData
-, long                              lType
+, wxBitmapType                      lType
 , int                               nWidth
 , int                               nHeight
 , int                               nDepth
@@ -313,12 +291,12 @@ wxBitmap::wxBitmap(
 
 wxBitmap::wxBitmap(
   int                               nId
-, long                              lType
+, wxBitmapType                      lType
 )
 {
     Init();
     LoadFile( nId
-             ,(int)lType
+             ,lType
             );
     SetId(nId);
 } // end of wxBitmap::wxBitmap
@@ -400,10 +378,10 @@ bool wxBitmap::Create(
     }
     SetHBITMAP((WXHBITMAP)hBmp);
 
-    return Ok();
+    return IsOk();
 } // end of wxBitmap::Create
 
-bool wxBitmap::LoadFile(const wxString& filename, long type)
+bool wxBitmap::LoadFile(const wxString& filename, wxBitmapType type)
 {
     UnRef();
 
@@ -419,7 +397,7 @@ bool wxBitmap::LoadFile(const wxString& filename, long type)
     else // no bitmap handler found
     {
         wxImage image;
-        if ( image.LoadFile( filename, type ) && image.Ok() )
+        if ( image.LoadFile( filename, type ) && image.IsOk() )
         {
             *this = wxBitmap(image);
 
@@ -433,7 +411,7 @@ bool wxBitmap::LoadFile(const wxString& filename, long type)
 
 bool wxBitmap::LoadFile(
   int                               nId
-, long                              lType
+, wxBitmapType                      lType
 )
 {
     UnRef();
@@ -461,7 +439,7 @@ bool wxBitmap::LoadFile(
 
 bool wxBitmap::Create(
   const void*                       pData
-, long                              lType
+, wxBitmapType                      lType
 , int                               nWidth
 , int                               nHeight
 , int                               nDepth
@@ -493,7 +471,7 @@ bool wxBitmap::Create(
 
 bool wxBitmap::SaveFile(
   const wxString&                   rFilename
-, int                               lType
+, wxBitmapType                      lType
 , const wxPalette*                  pPalette
 )
 {
@@ -514,7 +492,7 @@ bool wxBitmap::SaveFile(
         // FIXME what about palette? shouldn't we use it?
         wxImage                     vImage = ConvertToImage();
 
-        if (!vImage.Ok())
+        if (!vImage.IsOk())
             return false;
 
         return(vImage.SaveFile( rFilename
@@ -533,7 +511,7 @@ bool wxBitmap::CreateFromImage (
 , int                               nDepth
 )
 {
-    wxCHECK_MSG(rImage.Ok(), false, wxT("invalid image"));
+    wxCHECK_MSG(rImage.IsOk(), false, wxT("invalid image"));
     m_refData = new wxBitmapRefData();
 
     int                             nSizeLimit = 1024 * 768 * 3;
@@ -570,7 +548,7 @@ bool wxBitmap::CreateFromImage (
     //
     // Set bitmap parameters
     //
-    wxCHECK_MSG(rImage.Ok(), false, wxT("invalid image"));
+    wxCHECK_MSG(rImage.IsOk(), false, wxT("invalid image"));
     SetWidth(nWidth);
     SetHeight(nBmpHeight);
     if (nDepth == 1)
@@ -645,7 +623,7 @@ bool wxBitmap::CreateFromImage (
                             );
 #if wxUSE_PALETTE
     HPAL                            hOldPalette = NULLHANDLE;
-    if (rImage.GetPalette().Ok())
+    if (rImage.GetPalette().IsOk())
     {
         hOldPalette = ::GpiSelectPalette(hPS, (HPAL)rImage.GetPalette().GetHPALETTE());
     }
@@ -861,7 +839,7 @@ wxImage wxBitmap::ConvertToImage() const
     wxImage                         vImage;
     wxDC*                           pDC;
 
-    wxCHECK_MSG( Ok(), wxNullImage, wxT("invalid bitmap") );
+    wxCHECK_MSG( IsOk(), wxNullImage, wxT("invalid bitmap") );
 
     //
     // Create an wxImage object
@@ -933,9 +911,12 @@ wxImage wxBitmap::ConvertToImage() const
     //
     // May already be selected into a PS
     //
-    if ((pDC = GetSelectedInto()) != NULL)
+    pDC = GetSelectedInto();
+    const wxPMDCImpl *impl;
+    if (pDC != NULL &&
+        (impl = wxDynamicCast( pDC->GetImpl(), wxPMDCImpl )) != NULL)
     {
-        hPSMem = pDC->GetHPS();
+        hPSMem = impl->GetHPS();
     }
     else
     {
@@ -1090,7 +1071,7 @@ wxBitmap wxBitmap::GetSubBitmap(
   const wxRect&                     rRect
 ) const
 {
-    wxCHECK_MSG( Ok() &&
+    wxCHECK_MSG( IsOk() &&
                  (rRect.x >= 0) && (rRect.y >= 0) &&
                  (rRect.x + rRect.width <= GetWidth()) &&
                  (rRect.y + rRect.height <= GetHeight()),
@@ -1100,7 +1081,7 @@ wxBitmap wxBitmap::GetSubBitmap(
                                          ,rRect.height
                                          ,GetDepth()
                                         );
-    wxASSERT_MSG( vRet.Ok(), wxT("GetSubBitmap error") );
+    wxASSERT_MSG( vRet.IsOk(), wxT("GetSubBitmap error") );
 
 
     //
@@ -1286,7 +1267,7 @@ bool wxMask::Create(
         ::GpiDeleteBitmap((HBITMAP) m_hMaskBitmap);
         m_hMaskBitmap = 0;
     }
-    if (!rBitmap.Ok() || rBitmap.GetDepth() != 1)
+    if (!rBitmap.IsOk() || rBitmap.GetDepth() != 1)
     {
         return false;
     }
@@ -1334,7 +1315,7 @@ bool wxMask::Create(
         ::GpiDeleteBitmap((HBITMAP) m_hMaskBitmap);
         m_hMaskBitmap = 0;
     }
-    if (rBitmap.Ok() && rBitmap.GetPalette()->Ok())
+    if (rBitmap.IsOk() && rBitmap.GetPalette()->IsOk())
     {
         unsigned char               cRed;
         unsigned char               cGreen;
@@ -1384,7 +1365,7 @@ bool wxMask::Create(
         ::GpiDeleteBitmap((HBITMAP) m_hMaskBitmap);
         m_hMaskBitmap = 0;
     }
-    if (!rBitmap.Ok())
+    if (!rBitmap.IsOk())
     {
         return false;
     }
@@ -1458,7 +1439,7 @@ bool wxMask::Create(
 
 bool wxBitmapHandler::Create( wxGDIImage* pImage,
                               const void* pData,
-                              long        WXUNUSED(lFlags),
+                              wxBitmapType lType,
                               int         nWidth,
                               int         nHeight,
                               int         nDepth)
@@ -1469,6 +1450,7 @@ bool wxBitmapHandler::Create( wxGDIImage* pImage,
 
     return(pBitmap ? Create( pBitmap
                             ,pData
+                            ,lType
                             ,nWidth
                             ,nHeight
                             ,nDepth
@@ -1478,7 +1460,7 @@ bool wxBitmapHandler::Create( wxGDIImage* pImage,
 bool wxBitmapHandler::Load(
   wxGDIImage*                       pImage
 , int                               nId
-, long                              lFlags
+, wxBitmapType                      lFlags
 , int                               nWidth
 , int                               nHeight
 )
@@ -1496,10 +1478,10 @@ bool wxBitmapHandler::Load(
 }
 
 bool wxBitmapHandler::Save(
-  wxGDIImage*                       pImage
+  const wxGDIImage*                 pImage
 , const wxString&                   rName
-, int                               lType
-)
+, wxBitmapType                      lType
+) const
 {
     wxBitmap*                       pBitmap = wxDynamicCast( pImage
                                                             ,wxBitmap
@@ -1514,7 +1496,7 @@ bool wxBitmapHandler::Save(
 bool wxBitmapHandler::Create(
   wxBitmap*                         WXUNUSED(pBitmap)
 , const void*                       WXUNUSED(pData)
-, long                              WXUNUSED(lType)
+, wxBitmapType                      WXUNUSED(lType)
 , int                               WXUNUSED(nWidth)
 , int                               WXUNUSED(nHeight)
 , int                               WXUNUSED(nDepth)
@@ -1526,7 +1508,7 @@ bool wxBitmapHandler::Create(
 bool wxBitmapHandler::LoadFile(
   wxBitmap*                         WXUNUSED(pBitmap)
 , int                               WXUNUSED(nId)
-, long                              WXUNUSED(lType)
+, wxBitmapType                      WXUNUSED(lType)
 , int                               WXUNUSED(nDesiredWidth)
 , int                               WXUNUSED(nDesiredHeight)
 )
@@ -1537,7 +1519,7 @@ bool wxBitmapHandler::LoadFile(
 bool wxBitmapHandler::LoadFile(
   wxBitmap*                         WXUNUSED(pBitmap)
 , const wxString&                   WXUNUSED(rName)
-, long                              WXUNUSED(lType)
+, wxBitmapType                      WXUNUSED(lType)
 , int                               WXUNUSED(nDesiredWidth)
 , int                               WXUNUSED(nDesiredHeight)
 )
@@ -1548,9 +1530,9 @@ bool wxBitmapHandler::LoadFile(
 bool wxBitmapHandler::SaveFile(
   wxBitmap*                         WXUNUSED(pBitmap)
 , const wxString&                   WXUNUSED(rName)
-, int                               WXUNUSED(nType)
+, wxBitmapType                      WXUNUSED(nType)
 , const wxPalette*                  WXUNUSED(pPalette)
-)
+) const
 {
     return false;
 }
@@ -1566,7 +1548,7 @@ HBITMAP wxInvertMask(
 {
     HBITMAP                         hBmpInvMask = 0;
 
-    wxCHECK_MSG( hBmpMask, 0, _T("invalid bitmap in wxInvertMask") );
+    wxCHECK_MSG( hBmpMask, 0, wxT("invalid bitmap in wxInvertMask") );
 
     //
     // Get width/height from the bitmap if not given
@@ -1628,7 +1610,7 @@ HBITMAP wxInvertMask(
 
 HBITMAP wxCopyBmp( HBITMAP hBmp, bool flip, int nWidth, int nHeight )
 {
-    wxCHECK_MSG( hBmp, 0, _T("invalid bitmap in wxCopyBmp") );
+    wxCHECK_MSG( hBmp, 0, wxT("invalid bitmap in wxCopyBmp") );
 
     //
     // Get width/height from the bitmap if not given

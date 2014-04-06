@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: checklst.cpp 39694 2006-06-13 11:30:40Z ABX $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -28,8 +27,6 @@
 // implementation
 // ============================================================================
 
-IMPLEMENT_DYNAMIC_CLASS(wxCheckListBox, wxListBox)
-
 // ----------------------------------------------------------------------------
 // implementation of wxCheckListBox class
 // ----------------------------------------------------------------------------
@@ -50,15 +47,6 @@ static inline const wxString& Prefix(bool checked)
     { return checked ? prefixChecked : prefixUnchecked; }
 static inline bool IsChecked(const wxString& s)
     { wxASSERT(s.length() >=4); return s[1] == checkChar; }
-
-static void CopyStringsAddingPrefix(const wxArrayString& orig,
-                                    wxArrayString& copy)
-{
-    copy.Clear();
-
-    for(size_t i = 0; i < orig.GetCount(); ++i )
-        copy.Add( Prefix(false) + orig[i] );
-}
 
 // def ctor: use Create() to really create the control
 wxCheckListBox::wxCheckListBox() : wxCheckListBoxBase()
@@ -134,13 +122,13 @@ void wxCheckListBox::Check(unsigned int uiIndex, bool bCheck)
 
 void wxCheckListBox::DoToggleItem( int n, int x )
 {
-    if( x < 23 )
+    if( x > 0 && x < 23 )
     {
         wxString label = wxListBox::GetString(n);
         label[1u] = (!::IsChecked(label)) ? checkChar : uncheckChar;
         wxListBox::SetString(n, label);
 
-        wxCommandEvent event(wxEVT_COMMAND_CHECKLISTBOX_TOGGLED, GetId());
+        wxCommandEvent event(wxEVT_CHECKLISTBOX, GetId());
         if( HasClientObjectData() )
             event.SetClientObject( GetClientObject(n) );
         else if( HasClientUntypedData() )
@@ -150,13 +138,8 @@ void wxCheckListBox::DoToggleItem( int n, int x )
         event.SetEventObject(this);
         event.SetString(GetString(n));
 
-        GetEventHandler()->ProcessEvent(event);
+        HandleWindowEvent(event);
     }
-}
-
-int wxCheckListBox::DoAppend(const wxString& item)
-{
-    return wxListBox::DoAppend( Prefix(false) + item );
 }
 
 int wxCheckListBox::FindString(const wxString& s, bool bCase) const
@@ -183,18 +166,16 @@ wxString wxCheckListBox::GetString(unsigned int n) const
     return wxListBox::GetString(n).substr(4);
 }
 
-void wxCheckListBox::DoInsertItems(const wxArrayString& items, unsigned int pos)
+int wxCheckListBox::DoInsertItems(const wxArrayStringsAdapter& items,
+                                  unsigned int pos,
+                                  void **clientData, wxClientDataType type)
 {
     wxArrayString copy;
-    CopyStringsAddingPrefix(items, copy);
-    wxListBox::DoInsertItems(copy, pos);
-}
+    copy.reserve(pos);
+    for ( size_t i = 0; i < items.GetCount(); ++i )
+        copy.push_back( Prefix(false) + items[i] );
 
-void wxCheckListBox::DoSetItems(const wxArrayString& items, void **clientData)
-{
-    wxArrayString copy;
-    CopyStringsAddingPrefix(items, copy);
-    wxListBox::DoSetItems(copy, clientData);
+    return wxListBox::DoInsertItems(copy, pos, clientData, type);
 }
 
 #endif // wxUSE_CHECKLISTBOX

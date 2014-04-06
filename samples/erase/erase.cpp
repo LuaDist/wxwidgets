@@ -1,11 +1,10 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        erase.cpp
+// Name:        samples/erase/erase.cpp
 // Purpose:     Erase wxWidgets sample
-// Author:      Robert Roebling
-// Modified by:
+// Author:      Robert Roebling, Vadim Zeitlin
 // Created:     04/01/98
-// RCS-ID:      $Id: erase.cpp 35650 2005-09-23 12:56:45Z MR $
-// Copyright:   (c) Robert Roebling
+// Copyright:   (c) 1998 Robert Roebling
+//              (c) 2009 Vadim Zeitlin
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
@@ -30,12 +29,17 @@
     #include "wx/wx.h"
 #endif
 
+#include "wx/custombgwin.h"
+#include "wx/dcbuffer.h"
+#include "wx/artprov.h"
+
 // ----------------------------------------------------------------------------
 // resources
 // ----------------------------------------------------------------------------
+
 // the application icon
-#if defined(__WXGTK__) || defined(__WXMOTIF__) || defined(__WXMAC__) || defined(__WXMGL__) || defined(__WXX11__)
-    #include "mondrian.xpm"
+#ifndef wxHAS_IMAGES_IN_RESOURCES
+    #include "../sample.xpm"
 #endif
 
 // ----------------------------------------------------------------------------
@@ -49,30 +53,59 @@ public:
 };
 
 
-class MyCanvas : public wxScrolledWindow
+class MyCanvas : public wxCustomBackgroundWindow<wxScrolledWindow>
 {
 public:
-    MyCanvas( wxFrame *parent );
+    MyCanvas(wxFrame *parent);
 
     void UseBuffer(bool useBuffer) { m_useBuffer = useBuffer; Refresh(); }
-    void EraseBg(bool eraseBg) { m_eraseBg = eraseBg; Refresh(); }
+    bool UsesBuffer() const { return m_useBuffer; }
+
+    void UseBgBitmap(bool useBgBmp)
+    {
+        m_useBgBmp = useBgBmp;
+        SetBackgroundBitmap(m_useBgBmp ? GetBgBitmap() : wxBitmap());
+
+        Refresh();
+    }
+
+    void EraseBgInPaint(bool erase) { m_eraseBgInPaint = erase; Refresh(); }
 
 private:
     void OnPaint( wxPaintEvent &event );
-    void OnChar( wxKeyEvent &event );
     void OnEraseBackground( wxEraseEvent &event );
 
     void DoPaint(wxDC& dc);
 
+    // Create an easily recognizable background bitmap.
+    static wxBitmap GetBgBitmap()
+    {
+        static const int BMP_SIZE = 40;
+
+        wxBitmap bmp(BMP_SIZE, BMP_SIZE);
+        wxMemoryDC dc(bmp);
+        dc.SetBackground(*wxCYAN);
+        dc.Clear();
+
+        dc.SetPen(*wxBLUE_PEN);
+        dc.DrawLine(0, BMP_SIZE/2, BMP_SIZE/2, 0);
+        dc.DrawLine(BMP_SIZE/2, 0, BMP_SIZE, BMP_SIZE/2);
+        dc.DrawLine(BMP_SIZE, BMP_SIZE/2, BMP_SIZE/2, BMP_SIZE);
+        dc.DrawLine(BMP_SIZE/2, BMP_SIZE, 0, BMP_SIZE/2);
+
+        return bmp;
+    }
 
     wxBitmap    m_bitmap;
-    wxString    m_text;
 
     // use wxMemoryDC in OnPaint()?
     bool m_useBuffer;
 
-    // paint custom background in OnEraseBackground()?
-    bool m_eraseBg;
+    // use background bitmap?
+    bool m_useBgBmp;
+
+    // erase background in OnPaint()?
+    bool m_eraseBgInPaint;
 
 
     DECLARE_EVENT_TABLE()
@@ -83,17 +116,82 @@ class MyFrame : public wxFrame
 public:
     MyFrame();
 
+private:
     void OnUseBuffer(wxCommandEvent& event);
-    void OnEraseBg(wxCommandEvent& event);
+    void OnUseBgBitmap(wxCommandEvent& event);
+    void OnEraseBgInPaint(wxCommandEvent& event);
+    void OnChangeBgStyle(wxCommandEvent& event);
     void OnQuit(wxCommandEvent& event);
     void OnAbout(wxCommandEvent& event);
 
-private:
+    // we can only use double-buffering with wxBG_STYLE_PAINT
+    void OnUpdateUIUseBuffer(wxUpdateUIEvent& event)
+    {
+        event.Enable( m_canvas->GetBackgroundStyle() == wxBG_STYLE_PAINT );
+    }
+
+    void OnUpdateUIChangeBgStyle(wxUpdateUIEvent& event)
+    {
+        event.Enable( !m_canvas->UsesBuffer() );
+    }
+
     MyCanvas *m_canvas;
 
     DECLARE_EVENT_TABLE()
 };
 
+class ControlWithTransparency : public wxWindow
+{
+public:
+    ControlWithTransparency(wxWindow *parent,
+                            const wxPoint& pos,
+                            const wxSize& size)
+    {
+        wxString reason;
+        if ( parent->IsTransparentBackgroundSupported(&reason) )
+        {
+            SetBackgroundStyle (wxBG_STYLE_TRANSPARENT);
+            m_message = "This is custom control with transparency";
+        }
+        else
+        {
+            m_message = "Transparency not supported, check tooltip.";
+        }
+
+        Create (parent, wxID_ANY, pos, size, wxBORDER_NONE);
+        Connect(wxEVT_PAINT,
+                wxPaintEventHandler(ControlWithTransparency::OnPaint));
+
+        if ( !reason.empty() )
+        {
+            // This can be only done now, after creating the window.
+            SetToolTip(reason);
+        }
+    }
+
+private:
+    void OnPaint( wxPaintEvent& WXUNUSED(event) )
+    {
+        wxPaintDC dc(this);
+
+        dc.SetPen(*wxRED_PEN);
+        dc.SetBrush(*wxTRANSPARENT_BRUSH);
+        dc.DrawRectangle(GetClientSize());
+
+        dc.SetTextForeground(*wxBLUE);
+        dc.SetBackgroundMode(wxTRANSPARENT);
+        dc.DrawText(m_message, 0, 2);
+
+        // Draw some bitmap/icon to ensure transparent bitmaps are indeed
+        //  transparent on transparent windows
+        wxBitmap bmp(wxArtProvider::GetBitmap(wxART_WARNING, wxART_MENU));
+        wxIcon icon(wxArtProvider::GetIcon(wxART_GOTO_LAST, wxART_MENU));
+        dc.DrawBitmap (bmp, GetSize().x - 1 - bmp.GetWidth(), 2);
+        dc.DrawIcon(icon, GetSize().x - 1 - bmp.GetWidth()-icon.GetWidth(), 2);
+    }
+
+    wxString m_message;
+};
 
 // ----------------------------------------------------------------------------
 // constants
@@ -103,7 +201,11 @@ enum
 {
     // menu items
     Erase_Menu_UseBuffer = 100,
-    Erase_Menu_EraseBg,
+    Erase_Menu_UseBgBitmap,
+    Erase_Menu_EraseBgInPaint,
+    Erase_Menu_BgStyleErase,
+    Erase_Menu_BgStyleSystem,
+    Erase_Menu_BgStylePaint,
     Erase_Menu_Exit = wxID_EXIT,
     Erase_Menu_About = wxID_ABOUT
 };
@@ -117,6 +219,9 @@ IMPLEMENT_APP(MyApp)
 
 bool MyApp::OnInit()
 {
+    if ( !wxApp::OnInit() )
+        return false;
+
     MyFrame *frame = new MyFrame;
 
     frame->Show(true);
@@ -129,40 +234,52 @@ bool MyApp::OnInit()
 // ----------------------------------------------------------------------------
 
 BEGIN_EVENT_TABLE(MyFrame, wxFrame)
-    EVT_MENU(Erase_Menu_UseBuffer,  MyFrame::OnUseBuffer)
-    EVT_MENU(Erase_Menu_EraseBg,  MyFrame::OnEraseBg)
+    EVT_MENU(Erase_Menu_UseBuffer, MyFrame::OnUseBuffer)
+    EVT_MENU(Erase_Menu_UseBgBitmap, MyFrame::OnUseBgBitmap)
+    EVT_MENU(Erase_Menu_EraseBgInPaint, MyFrame::OnEraseBgInPaint)
+    EVT_MENU_RANGE(Erase_Menu_BgStyleErase, Erase_Menu_BgStylePaint,
+                   MyFrame::OnChangeBgStyle)
+
     EVT_MENU(Erase_Menu_Exit,  MyFrame::OnQuit)
     EVT_MENU(Erase_Menu_About, MyFrame::OnAbout)
+
+    EVT_UPDATE_UI(Erase_Menu_UseBuffer, MyFrame::OnUpdateUIUseBuffer)
+    EVT_UPDATE_UI_RANGE(Erase_Menu_BgStyleErase, Erase_Menu_BgStylePaint,
+                        MyFrame::OnUpdateUIChangeBgStyle)
 END_EVENT_TABLE()
 
 // frame constructor
 MyFrame::MyFrame()
-       : wxFrame(NULL, wxID_ANY, _T("Erase sample"),
+       : wxFrame(NULL, wxID_ANY, "Erase sample",
                  wxPoint(50, 50), wxSize(450, 340))
 {
-    SetIcon(wxICON(mondrian));
+    SetIcon(wxICON(sample));
 
-    wxMenu *menuFile = new wxMenu(_T(""), wxMENU_TEAROFF);
-    menuFile->AppendCheckItem(Erase_Menu_UseBuffer, _T("&Use memory DC\tCtrl-M"));
-    menuFile->AppendCheckItem(Erase_Menu_EraseBg, _T("Custom &background\tCtrl-B"));
+    wxMenu *menuFile = new wxMenu("", wxMENU_TEAROFF);
+    menuFile->AppendCheckItem(Erase_Menu_UseBuffer, "&Use memory DC\tCtrl-M");
+    menuFile->AppendCheckItem(Erase_Menu_UseBgBitmap,
+                              "Use background &bitmap\tCtrl-B");
+    menuFile->AppendCheckItem(Erase_Menu_EraseBgInPaint,
+                              "&Erase background in EVT_PAINT\tCtrl-R");
     menuFile->AppendSeparator();
-    menuFile->Append(Erase_Menu_Exit, _T("E&xit\tAlt-X"), _T("Quit this program"));
+    menuFile->AppendRadioItem(Erase_Menu_BgStyleErase,
+                              "Use wxBG_STYLE_&ERASE\tCtrl-E");
+    menuFile->AppendRadioItem(Erase_Menu_BgStyleSystem,
+                              "Use wxBG_STYLE_&SYSTEM\tCtrl-S");
+    menuFile->AppendRadioItem(Erase_Menu_BgStylePaint,
+                              "Use wxBG_STYLE_&PAINT\tCtrl-P");
+    menuFile->AppendSeparator();
+    menuFile->Append(Erase_Menu_Exit, "E&xit\tAlt-X", "Quit this program");
 
 
     wxMenu *helpMenu = new wxMenu;
-    helpMenu->Append(Erase_Menu_About, _T("&About...\tCtrl-A"), _T("Show about dialog"));
+    helpMenu->Append(Erase_Menu_About, "&About\tCtrl-A", "Show about dialog");
 
     wxMenuBar *menuBar = new wxMenuBar();
-    menuBar->Append(menuFile, _T("&File"));
-    menuBar->Append(helpMenu, _T("&Help"));
+    menuBar->Append(menuFile, "&File");
+    menuBar->Append(helpMenu, "&Help");
 
     SetMenuBar(menuBar);
-
-#if wxUSE_STATUSBAR
-    // create a status bar just for fun (by default with 1 pane only)
-    CreateStatusBar(2);
-    SetStatusText(_T("Welcome to wxWidgets erase sample!"));
-#endif // wxUSE_STATUSBAR
 
     m_canvas = new MyCanvas( this );
 }
@@ -173,9 +290,22 @@ void MyFrame::OnUseBuffer(wxCommandEvent& event)
     m_canvas->UseBuffer(event.IsChecked());
 }
 
-void MyFrame::OnEraseBg(wxCommandEvent& event)
+void MyFrame::OnUseBgBitmap(wxCommandEvent& event)
 {
-    m_canvas->EraseBg(event.IsChecked());
+    m_canvas->UseBgBitmap(event.IsChecked());
+}
+
+void MyFrame::OnEraseBgInPaint(wxCommandEvent& event)
+{
+    m_canvas->EraseBgInPaint(event.IsChecked());
+}
+
+void MyFrame::OnChangeBgStyle(wxCommandEvent& event)
+{
+    int style = wxBG_STYLE_ERASE + event.GetId() - Erase_Menu_BgStyleErase;
+    m_canvas->SetBackgroundStyle(static_cast<wxBackgroundStyle>(style));
+
+    m_canvas->Refresh();
 }
 
 void MyFrame::OnQuit(wxCommandEvent& WXUNUSED(event))
@@ -185,162 +315,117 @@ void MyFrame::OnQuit(wxCommandEvent& WXUNUSED(event))
 
 void MyFrame::OnAbout(wxCommandEvent& WXUNUSED(event))
 {
-    wxMessageBox(_T("This sample shows how you can draw custom background."),
-                 _T("About Erase Sample"), wxOK | wxICON_INFORMATION, this);
+    wxMessageBox
+    (
+        "This sample shows differences between different background styles "
+        "and how you may draw custom background.\n"
+        "\n"
+        "(c) 1998 Robert Roebling\n"
+        "(c) 2009 Vadim Zeitlin\n",
+        "About Erase Sample",
+        wxOK | wxICON_INFORMATION,
+        this
+    );
 }
 
 
 BEGIN_EVENT_TABLE(MyCanvas, wxScrolledWindow)
-    EVT_PAINT(  MyCanvas::OnPaint)
-    EVT_CHAR(  MyCanvas::OnChar)
-    EVT_ERASE_BACKGROUND(  MyCanvas::OnEraseBackground)
+    EVT_PAINT(MyCanvas::OnPaint)
+    EVT_ERASE_BACKGROUND(MyCanvas::OnEraseBackground)
 END_EVENT_TABLE()
 
-MyCanvas::MyCanvas( wxFrame *parent )
-        : wxScrolledWindow( parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
-                            wxScrolledWindowStyle | wxSUNKEN_BORDER )
+MyCanvas::MyCanvas(wxFrame *parent)
 {
-    m_eraseBg =
+    Create(parent, wxID_ANY);
+
     m_useBuffer = false;
+    m_useBgBmp = false;
+    m_eraseBgInPaint = false;
 
     SetScrollbars( 10, 10, 40, 100, 0, 0 );
 
-    m_bitmap = wxBitmap( wxICON(mondrian) );
+    m_bitmap = wxBitmap( wxICON(sample) );
 
     new wxStaticBitmap( this, wxID_ANY, m_bitmap, wxPoint(80,20) );
 
+    new wxStaticText(this, wxID_ANY,
+                     "Left bitmap is a wxStaticBitmap,\n"
+                     "right one drawn directly",
+                     wxPoint(150, 20));
+
+    new ControlWithTransparency(this, wxPoint(65, 125), wxSize(350, 22));
+
     SetFocusIgnoringChildren();
-}
-
-void MyCanvas::OnChar( wxKeyEvent &event )
-{
-#if wxUSE_UNICODE
-    if (event.m_uniChar)
-    {
-        m_text += event.m_uniChar;
-        Refresh();
-        return;
-    }
-#endif
-
-    // some test cases
-    switch (event.m_keyCode)
-    {
-        case WXK_UP: m_text += wxT( "<UP>" ); break;
-        case WXK_LEFT: m_text += wxT( "<LEFT>" ); break;
-        case WXK_RIGHT: m_text += wxT( "<RIGHT>" ); break;
-        case WXK_DOWN: m_text += wxT( "<DOWN>" ); break;
-        case WXK_RETURN: m_text += wxT( "<ENTER>" ); break;
-        default: m_text += (wxChar)event.m_keyCode; break;
-    }
+    SetBackgroundColour(*wxCYAN);
 }
 
 void MyCanvas::DoPaint(wxDC& dc)
 {
-    dc.SetBrush( *wxBLACK_BRUSH );
-    dc.DrawRectangle( 10,10,200,50 );
+    PrepareDC(dc);
 
-    dc.DrawBitmap( m_bitmap, 10, 20, true );
-
-    dc.SetTextForeground(*wxBLUE);
-    dc.DrawText(_T("This text is drawn from OnPaint"), 65, 65);
-
-    wxString tmp;
-    tmp.Printf( _T("Hit any key to display more text: %s"), m_text.c_str() );
-    int w,h;
-    dc.GetTextExtent( tmp, &w, &h );
-    dc.SetBrush( *wxWHITE_BRUSH );
-    dc.DrawRectangle( 65, 85, w, h );
-    dc.DrawText( tmp, 65, 85 );
-
-#if 0
-    wxRegionIterator upd( GetUpdateRegion() );
-    while (upd)
+    if ( m_eraseBgInPaint )
     {
-        wxLogDebug( _T("Paint: %d %d %d %d"), upd.GetX(), upd.GetY(), upd.GetWidth(), upd.GetHeight() );
-        upd ++;
+        dc.SetBackground(*wxLIGHT_GREY);
+
+        // Erase the entire virtual area, not just the client area.
+        dc.SetPen(*wxTRANSPARENT_PEN);
+        dc.SetBrush(GetBackgroundColour());
+        dc.DrawRectangle(GetVirtualSize());
+
+        dc.DrawText("Background erased in OnPaint", 65, 110);
     }
-#endif
-
-#if 0
-    wxSize size = GetSize();
-    wxSize client_size = GetClientSize();
-    wxLogDebug( _T("size %d %d client_size %d %d"), size.x, size.y, client_size.x, client_size.y );
-#endif
-
-#if 0
-    int i;
-    dc.SetPen( *wxWHITE_PEN );
-    for (i = 0; i < 20; i += 2)
-       dc.DrawLine( i,i, i+100,i );
-
-    dc.SetPen( *wxWHITE_PEN );
-    for (i = 200; i < 220; i += 2)
-       dc.DrawLine( i-200,i, i-100,i );
-
-    wxRegion region( 110, 110, 80, 80 );
-    wxRegion hole( 130, 130, 40, 1 );
-    region.Intersect( hole );
-    dc.SetClippingRegion( region );
-
-    dc.SetBrush( *wxRED_BRUSH );
-    dc.DrawRectangle( 100, 100, 200, 200 );
-
-    dc.DestroyClippingRegion();
-
-    dc.SetPen( *wxTRANSPARENT_PEN );
-
-    wxRegion strip( 110, 200, 30, 1 );
-    wxRegionIterator it( strip );
-    while (it)
+    else if ( GetBackgroundStyle() == wxBG_STYLE_PAINT )
     {
-        dc.DrawRectangle( it.GetX(), it.GetY(), it.GetWidth(), it.GetHeight() );
-        it ++;
+        dc.SetTextForeground(*wxRED);
+        dc.DrawText("You must enable erasing background in OnPaint to avoid "
+                    "display corruption", 65, 110);
     }
-#endif // 0
+
+    dc.DrawBitmap( m_bitmap, 20, 20, true );
+
+    dc.SetTextForeground(*wxRED);
+    dc.DrawText("This text is drawn from OnPaint", 65, 65);
 }
 
 void MyCanvas::OnPaint( wxPaintEvent &WXUNUSED(event) )
 {
-    wxPaintDC dcWin(this);
-    PrepareDC( dcWin );
-
     if ( m_useBuffer )
     {
-        const wxSize size = GetClientSize();
-        wxMemoryDC dc;
-        wxBitmap bmp(size.x, size.y);
-        dc.SelectObject(bmp);
-        dc.Blit(0, 0, size.x, size.y, &dcWin, 0, 0);
-        dc.DrawText(_T("(copy of background)"), 5, 120 );
-
+        wxAutoBufferedPaintDC dc(this);
         DoPaint(dc);
-
-        dcWin.Blit(0, 0, size.x, size.y, &dc, 0, 0);
     }
     else
     {
-        DoPaint(dcWin);
+        wxPaintDC dc(this);
+        DoPaint(dc);
     }
 }
 
 void MyCanvas::OnEraseBackground( wxEraseEvent& event )
 {
-    if ( !m_eraseBg )
+    // We must not erase the background ourselves if we asked wxPanel to erase
+    // it using a background bitmap.
+    if ( m_useBgBmp )
     {
         event.Skip();
         return;
     }
 
+    wxASSERT_MSG
+    (
+        GetBackgroundStyle() == wxBG_STYLE_ERASE,
+        "shouldn't be called unless background style is \"erase\""
+    );
+
     wxDC& dc = *event.GetDC();
     dc.SetPen(*wxGREEN_PEN);
-
-    PrepareDC( dc );
 
     // clear any junk currently displayed
     dc.Clear();
 
-    const wxSize size = GetClientSize();
+    PrepareDC( dc );
+
+    const wxSize size = GetVirtualSize();
     for ( int x = 0; x < size.x; x += 15 )
     {
         dc.DrawLine(x, 0, x, size.y);
@@ -352,6 +437,7 @@ void MyCanvas::OnEraseBackground( wxEraseEvent& event )
     }
 
     dc.SetTextForeground(*wxRED);
-    dc.DrawText(_T("This text is drawn from OnEraseBackground"), 60, 160);
+    dc.SetBackgroundMode(wxSOLID);
+    dc.DrawText("This text is drawn from OnEraseBackground", 60, 160);
 }
 

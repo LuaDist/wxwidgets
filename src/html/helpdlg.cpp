@@ -4,9 +4,8 @@
 // Notes:       Based on htmlhelp.cpp, implementing a monolithic
 //              HTML Help controller class,  by Vaclav Slavik
 // Author:      Harm van der Heijden, Vaclav Slavik and Julian Smart
-// RCS-ID:      $Id: helpdlg.cpp 50074 2007-11-19 09:12:08Z JS $
 // Copyright:   (c) Harm van der Heijden, Vaclav Slavik and Julian Smart
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 // For compilers that support precompilation, includes "wx.h"
@@ -18,7 +17,7 @@
 
 #if wxUSE_WXHTML_HELP
 
-#ifndef WXPRECOMP
+#ifndef WX_PRECOMP
     #include "wx/object.h"
     #include "wx/intl.h"
     #include "wx/log.h"
@@ -30,7 +29,7 @@
     #include "wx/radiobox.h"
     #include "wx/menu.h"
     #include "wx/msgdlg.h"
-#endif // WXPRECOMP
+#endif // WX_PRECOMP
 
 #include "wx/html/htmlwin.h"
 #include "wx/html/helpdlg.h"

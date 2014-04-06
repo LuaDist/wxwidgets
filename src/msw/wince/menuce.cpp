@@ -4,9 +4,8 @@
 // Author:      Wlodzimierz ABX Skiba
 // Modified by:
 // Created:     28.05.2004
-// RCS-ID:      $Id: menuce.cpp 40978 2006-09-03 12:23:04Z RR $
 // Copyright:   (c) Wlodzimierz Skiba
-// License:     wxWindows licence
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -54,11 +53,7 @@ wxTopLevelWindowMSW::ButtonMenu::ButtonMenu()
 
 wxTopLevelWindowMSW::ButtonMenu::~ButtonMenu()
 {
-    if(m_menu)
-    {
-        delete m_menu;
-        m_menu = NULL;
-    };
+    wxDELETE(m_menu);
 }
 
 void wxTopLevelWindowMSW::SetLeftMenu(int id, const wxString& label, wxMenu *subMenu)
@@ -225,7 +220,7 @@ void wxTopLevelWindowMSW::ReloadAllButtons()
 
     if (!SHCreateMenuBar(&menu_bar))
     {
-        wxFAIL_MSG( _T("SHCreateMenuBar failed") );
+        wxFAIL_MSG( wxT("SHCreateMenuBar failed") );
         return;
     }
 
@@ -252,7 +247,7 @@ bool wxTopLevelWindowMSW::HandleCommand(WXWORD id, WXWORD WXUNUSED(cmd), WXHWND 
     if ( id == IDM_LEFT || id == IDM_RIGHT )
     {
         int menuId = id == IDM_LEFT ? m_LeftButton.GetId() : m_RightButton.GetId() ;
-        wxCommandEvent commandEvent(wxEVT_COMMAND_MENU_SELECTED, menuId);
+        wxCommandEvent commandEvent(wxEVT_MENU, menuId);
         commandEvent.SetEventObject(this);
         GetEventHandler()->ProcessEvent(commandEvent);
         return true;

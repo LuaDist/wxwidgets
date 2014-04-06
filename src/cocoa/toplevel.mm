@@ -4,9 +4,8 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2002/11/27
-// RCS-ID:      $Id: toplevel.mm 51585 2008-02-08 00:35:39Z DE $
 // Copyright:   (c) 2002 David Elliott
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -150,7 +149,7 @@ bool wxTopLevelWindowCocoa::Create(wxWindow *parent,
         [m_cocoaNSWindow setExcludedFromWindowsMenu: YES];
     if(style & wxSTAY_ON_TOP)
         [m_cocoaNSWindow setLevel:NSFloatingWindowLevel];
-    SetTitle(title);
+    [m_cocoaNSWindow setTitle:wxNSStringWithWxString(title)];
     return true;
 }
 
@@ -223,7 +222,7 @@ void wxTopLevelWindowCocoa::CocoaDelegate_windowDidBecomeKey(void)
     wxLogTrace(wxTRACE_COCOA,wxT("wxTopLevelWindowCocoa=%p::CocoaDelegate_windowDidBecomeKey"),this);
     wxActivateEvent event(wxEVT_ACTIVATE, true, GetId());
     event.SetEventObject(this);
-    GetEventHandler()->ProcessEvent(event);
+    HandleWindowEvent(event);
 }
 
 void wxTopLevelWindowCocoa::CocoaDelegate_windowDidResignKey(void)
@@ -231,7 +230,7 @@ void wxTopLevelWindowCocoa::CocoaDelegate_windowDidResignKey(void)
     wxLogTrace(wxTRACE_COCOA,wxT("wxTopLevelWindowCocoa=%p::CocoaDelegate_windowDidResignKey"),this);
     wxActivateEvent event(wxEVT_ACTIVATE, false, GetId());
     event.SetEventObject(this);
-    GetEventHandler()->ProcessEvent(event);
+    HandleWindowEvent(event);
 }
 
 void wxTopLevelWindowCocoa::CocoaDelegate_windowDidBecomeMain(void)
@@ -302,7 +301,7 @@ bool wxTopLevelWindowCocoa::Show(bool show)
         // is shown.  I doubt this will cause any problems though.
         wxSizeEvent event(GetSize(), GetId());
         event.SetEventObject(this);
-        GetEventHandler()->ProcessEvent(event);
+        HandleWindowEvent(event);
 
         [m_cocoaNSWindow makeKeyAndOrderFront:m_cocoaNSWindow];
     }

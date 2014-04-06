@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     01/21/03
-// RCS-ID:      $Id: listctrl.cpp 62191 2009-09-28 23:42:13Z BP $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -106,7 +105,7 @@ typedef struct _MYRECORD
 // Problem:
 //  The MSW version had problems with SetTextColour() et al as the
 //  CListItemAttr's were stored keyed on the item index. If a item was
-//  inserted anywhere but the end of the list the the text attributes
+//  inserted anywhere but the end of the list the text attributes
 //  (colour etc) for the following items were out of sync.
 //
 // Solution:
@@ -140,8 +139,7 @@ public:
 
     ~CListItemInternalData()
     {
-        delete m_pAttr;
-        m_pAttr = NULL;
+        wxDELETE(m_pAttr);
     }
 
     wxListItemAttr*                 m_pAttr;
@@ -702,7 +700,7 @@ void ConvertToOS2ListItem (
                     break;
 
                 default:
-                    wxFAIL_MSG( _T("wxOS2 does not support more than 10 columns in REPORT view") );
+                    wxFAIL_MSG( wxT("wxOS2 does not support more than 10 columns in REPORT view") );
                     break;
             }
         }
@@ -773,13 +771,6 @@ void ConvertToOS2ListCol (
     //
     pField->offStruct = 0;
 } // end of ConvertToOS2ListCol
-
-
-IMPLEMENT_DYNAMIC_CLASS(wxListCtrl, wxControl)
-IMPLEMENT_DYNAMIC_CLASS(wxListView, wxListCtrl)
-IMPLEMENT_DYNAMIC_CLASS(wxListItem, wxObject)
-
-IMPLEMENT_DYNAMIC_CLASS(wxListEvent, wxNotifyEvent)
 
 BEGIN_EVENT_TABLE(wxListCtrl, wxControl)
     EVT_PAINT(wxListCtrl::OnPaint)
@@ -965,8 +956,7 @@ wxListCtrl::~wxListCtrl ()
     {
         m_pTextCtrl->SetHWND(0);
         m_pTextCtrl->UnsubclassWin();
-        delete m_pTextCtrl;
-        m_pTextCtrl = NULL;
+        wxDELETE(m_pTextCtrl);
     }
 
     if (m_bOwnsImageListNormal)
@@ -1519,9 +1509,9 @@ long wxListCtrl::GetItemData (
 } // end of wxListCtrl::GetItemData
 
 // Sets the item data
-bool wxListCtrl::SetItemData (
+bool wxListCtrl::SetItemPtrData (
   long                              lItem
-, long                              lData
+, wxUIntPtr                         lData
 )
 {
     wxListItem                      vInfo;
@@ -1530,7 +1520,7 @@ bool wxListCtrl::SetItemData (
     vInfo.m_itemId = lItem;
     vInfo.m_data   = lData;
     return SetItem(vInfo);
-} // end of wxListCtrl::SetItemData
+} // end of wxListCtrl::SetItemPtrData
 
 // Gets the item rectangle
 bool wxListCtrl::GetItemRect ( long lItem,
@@ -2220,7 +2210,7 @@ long wxListCtrl::InsertItem (
   wxListItem&                       rInfo
 )
 {
-    wxASSERT_MSG( !IsVirtual(), _T("can't be used with virtual controls") );
+    wxASSERT_MSG( !IsVirtual(), wxT("can't be used with virtual controls") );
 
     PFIELDINFO                      pFieldInfo = FindOS2ListFieldByColNum ( GetHWND()
                                                                            ,rInfo.GetColumn()
@@ -2256,7 +2246,7 @@ long wxListCtrl::InsertItem (
     vInsert.fInvalidateRecord = TRUE;
 
     //
-    // Check wether we need to allocate our internal data
+    // Check whether we need to allocate our internal data
     //
     bool                            bNeedInternalData = ((rInfo.GetMask() & wxLIST_MASK_DATA) ||
                                                           rInfo.HasAttributes()
@@ -2440,7 +2430,7 @@ bool wxListCtrl::SortItems ( wxListCtrlCompare fn, long lData )
                       ,(PVOID)&vInternalData
                      ))
     {
-        wxLogDebug(_T("CM_SORTRECORD failed"));
+        wxLogDebug(wxT("CM_SORTRECORD failed"));
         return false;
     }
     return true;
@@ -2454,7 +2444,7 @@ bool wxListCtrl::OS2Command ( WXUINT uCmd, WXWORD wId )
 {
     if (uCmd == CN_ENDEDIT)
     {
-        wxCommandEvent vEvent( wxEVT_COMMAND_TEXT_UPDATED, wId );
+        wxCommandEvent vEvent( wxEVT_TEXT, wId );
 
         vEvent.SetEventObject( this );
         ProcessCommand(vEvent);
@@ -2573,7 +2563,7 @@ wxString wxListCtrl::OnGetItemText (
 {
     // this is a pure virtual function, in fact - which is not really pure
     // because the controls which are not virtual don't need to implement it
-    wxFAIL_MSG( _T("not supposed to be called") );
+    wxFAIL_MSG( wxT("not supposed to be called") );
     return wxEmptyString;
 } // end of wxListCtrl::OnGetItemText
 
@@ -2582,7 +2572,7 @@ int wxListCtrl::OnGetItemImage (
 ) const
 {
     // same as above
-    wxFAIL_MSG( _T("not supposed to be called") );
+    wxFAIL_MSG( wxT("not supposed to be called") );
     return -1;
 } // end of wxListCtrl::OnGetItemImage
 
@@ -2597,24 +2587,11 @@ int wxListCtrl::OnGetItemColumnImage (
     return -1;
 } // end of wxListCtrl::OnGetItemColumnImage
 
-wxListItemAttr* wxListCtrl::OnGetItemAttr (
-  long                              WXUNUSED_UNLESS_DEBUG(lItem)
-) const
-{
-    wxASSERT_MSG( lItem >= 0 && lItem < GetItemCount(),
-                  _T("invalid item index in OnGetItemAttr()") );
-
-    //
-    // No attributes by default
-    //
-    return NULL;
-} // end of wxListCtrl::OnGetItemAttr
-
 void wxListCtrl::SetItemCount (
   long                              lCount
 )
 {
-    wxASSERT_MSG( IsVirtual(), _T("this is for virtual controls only") );
+    wxASSERT_MSG( IsVirtual(), wxT("this is for virtual controls only") );
 
     //
     // Cannot explicitly set the record count in OS/2
@@ -2696,7 +2673,7 @@ MRESULT wxListCtrl::OS2WindowProc( WXUINT uMsg,
                     {
                         PMYRECORD       pRecord = (PMYRECORD)pDragInit->pRecord;
 
-                        vEventType = wxEVT_COMMAND_LIST_BEGIN_RDRAG;
+                        vEventType = wxEVT_LIST_BEGIN_RDRAG;
                         vEvent.m_itemIndex   = pRecord->m_ulItemId;
                         vEvent.m_pointDrag.x = pDragInit->x;
                         vEvent.m_pointDrag.y = pDragInit->y;
@@ -2707,7 +2684,7 @@ MRESULT wxListCtrl::OS2WindowProc( WXUINT uMsg,
                     pEditData = (PCNREDITDATA)lParam;
                     if (pEditData)
                     {
-                        vEventType = wxEVT_COMMAND_LIST_BEGIN_LABEL_EDIT;
+                        vEventType = wxEVT_LIST_BEGIN_LABEL_EDIT;
                         ConvertFromOS2ListItem( GetHWND()
                                                ,(wxListItem &)vEvent.GetItem()
                                                ,(PMYRECORD)pEditData->pRecord
@@ -2720,7 +2697,7 @@ MRESULT wxListCtrl::OS2WindowProc( WXUINT uMsg,
                     pEditData = (PCNREDITDATA)lParam;
                     if (pEditData)
                     {
-                        vEventType = wxEVT_COMMAND_LIST_END_LABEL_EDIT;
+                        vEventType = wxEVT_LIST_END_LABEL_EDIT;
                         ConvertFromOS2ListItem( GetHWND()
                                                ,(wxListItem &)vEvent.GetItem()
                                                ,(PMYRECORD)pEditData->pRecord
@@ -2738,7 +2715,7 @@ MRESULT wxListCtrl::OS2WindowProc( WXUINT uMsg,
                         wxListItem*     pItem = (wxListItem*)&vEvent.GetItem();
                         PMYRECORD       pMyRecord = (PMYRECORD)pNotifyEnter->pRecord;
 
-                        vEventType             = wxEVT_COMMAND_LIST_ITEM_ACTIVATED;
+                        vEventType             = wxEVT_LIST_ITEM_ACTIVATED;
                         vEvent.m_itemIndex = pMyRecord->m_ulItemId;
                         pItem->SetText(GetItemText(pMyRecord->m_ulItemId));
                         pItem->SetData(GetItemData(pMyRecord->m_ulItemId));
@@ -2750,7 +2727,7 @@ MRESULT wxListCtrl::OS2WindowProc( WXUINT uMsg,
                     //
             }
             vEvent.SetEventType(vEventType);
-            bProcessed = GetEventHandler()->ProcessEvent(vEvent);
+            bProcessed = HandleWindowEvent(vEvent);
             break;
     }
     if (!bProcessed)

@@ -1,6 +1,11 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        test.cpp
-// Purpose:     wxHtml testing example
+// Name:        zip.cpp
+// Purpose:     wxHtml sample
+// Author:      ?
+// Modified by:
+// Created:     ?
+// Copyright:   (c) wxWidgets team
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 // For compilers that support precompilation, includes "wx/wx.h".
@@ -19,6 +24,10 @@
 #include "wx/image.h"
 #include "wx/html/htmlwin.h"
 #include "wx/fs_zip.h"
+
+#ifndef wxHAS_IMAGES_IN_RESOURCES
+    #include "../../sample.xpm"
+#endif
 
 // ----------------------------------------------------------------------------
 // private classes
@@ -97,6 +106,9 @@ IMPLEMENT_APP(MyApp)
 // `Main program' equivalent: the program execution "starts" here
 bool MyApp::OnInit()
 {
+    if ( !wxApp::OnInit() )
+        return false;
+
 #if wxUSE_LIBPNG
     wxImage::AddHandler(new wxPNGHandler);
 #endif
@@ -110,10 +122,8 @@ bool MyApp::OnInit()
     MyFrame *frame = new MyFrame(_("wxHtmlWindow testing application"),
         wxDefaultPosition, wxSize(640, 480) );
 
-    // Show it and tell the application that it's our main window
-    // @@@ what does it do exactly, in fact? is it necessary here?
+    // Show it
     frame->Show(true);
-    SetTopWindow(frame);
 
     // success: wxApp::OnRun() will be called which will enter the main message
     // loop and the application will run. If we returned false here, the
@@ -130,8 +140,10 @@ wxHtmlWindow *html;
 
 // frame constructor
 MyFrame::MyFrame(const wxString& title, const wxPoint& pos, const wxSize& size)
-: wxFrame((wxFrame *)NULL, wxID_ANY, title, pos, size)
+    : wxFrame((wxFrame *)NULL, wxID_ANY, title, pos, size)
 {
+    SetIcon(wxICON(sample));
+
     // create a menu bar
     wxMenu *menuFile = new wxMenu;
     wxMenu *menuNav = new wxMenu;

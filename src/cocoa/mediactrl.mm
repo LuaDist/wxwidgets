@@ -1,10 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        src/cocoa/mediactrl.cpp
+// Name:        src/cocoa/mediactrl.mm
 // Purpose:     Built-in Media Backends for Cocoa
 // Author:      Ryan Norton <wxprojects@comcast.net>
 // Modified by:
 // Created:     02/03/05
-// RCS-ID:      $Id: mediactrl.mm 39285 2006-05-23 11:04:37Z ABX $
 // Copyright:   (c) 2004-2005 Ryan Norton, (c) 2005 David Elliot
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

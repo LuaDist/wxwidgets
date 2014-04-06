@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by: David Webster to add support for font encodings
 // Created:     01/03/00
-// RCS-ID:      $Id: fontenum.cpp 39734 2006-06-14 19:51:14Z ABX $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -120,7 +119,7 @@ void wxFontEnumeratorHelper::DoEnumerate()
 #ifdef __WIN32__
     LOGFONT lf;
     lf.lfCharSet = m_charset;
-    wxStrncpy(lf.lfFaceName, m_facename, WXSIZEOF(lf.lfFaceName));
+    wxStrlcpy(lf.lfFaceName, m_facename, WXSIZEOF(lf.lfFaceName));
     lf.lfPitchAndFamily = 0;
     ::EnumFontFamiliesEx(hDC, &lf, (wxFONTENUMPROC)wxFontEnumeratorProc,
                          (LPARAM)this, 0) ;

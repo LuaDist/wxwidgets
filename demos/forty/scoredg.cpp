@@ -4,7 +4,6 @@
 // Author:      Chris Breeze
 // Modified by:
 // Created:     21/07/97
-// RCS-ID:      $Id: scoredg.cpp 42816 2006-10-31 08:50:17Z RD $
 // Copyright:   (c) 1993-1998 Chris Breeze
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -156,18 +155,18 @@ ScoreDialog::ScoreDialog(wxWindow* parent, ScoreFile* file) :
             average = (2 * score + games) / (2 * games);
         }
         list->SetCellValue(i,0,players[i]);
-        string_value.Printf( _T("%u"), wins );
+        string_value.Printf( wxT("%u"), wins );
         list->SetCellValue(i,1,string_value);
-        string_value.Printf( _T("%u"), games );
+        string_value.Printf( wxT("%u"), games );
         list->SetCellValue(i,2,string_value);
-        string_value.Printf( _T("%u"), average );
+        string_value.Printf( wxT("%u"), average );
         list->SetCellValue(i,3,string_value);
     }
-    list->SetColLabelValue(0, _T("Players"));
-    list->SetColLabelValue(1, _T("Wins"));
-    list->SetColLabelValue(2, _T("Games"));
-    list->SetColLabelValue(3, _T("Score"));
-    list->SetEditable(false);
+    list->SetColLabelValue(0, wxT("Players"));
+    list->SetColLabelValue(1, wxT("Wins"));
+    list->SetColLabelValue(2, wxT("Games"));
+    list->SetColLabelValue(3, wxT("Score"));
+    list->EnableEditing(false);
     list->AutoSizeColumns();
     list->AutoSizeRows();
     list->SetRowLabelSize(0);

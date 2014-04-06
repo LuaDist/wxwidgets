@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: emulator.cpp 35650 2005-09-23 12:56:45Z MR $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -35,6 +34,7 @@
 #include "wx/cmdline.h"
 #include "wx/image.h"
 #include "wx/file.h"
+#include "wx/filename.h"
 
 #ifdef __WXX11__
 #include "wx/x11/reparent.h"
@@ -47,7 +47,7 @@
 // ----------------------------------------------------------------------------
 
 // the application icon (under Windows and OS/2 it is in resources)
-#if defined(__WXGTK__) || defined(__WXMOTIF__) || defined(__WXMAC__) || defined(__WXMGL__) || defined(__WXX11__)
+#ifndef wxHAS_IMAGES_IN_RESOURCES
     #include "emulator.xpm"
 #endif
 
@@ -73,14 +73,14 @@ IMPLEMENT_APP(wxEmulatorApp)
 
 static const wxCmdLineEntryDesc sg_cmdLineDesc[] =
 {
-    { wxCMD_LINE_OPTION, _T("u"), _T("use-display"),   _T("display number to use (default 100)"), (wxCmdLineParamType)0, 0 },
+    { wxCMD_LINE_OPTION, "u", "use-display", "display number to use (default 100)" },
 
-    { wxCMD_LINE_SWITCH, _T("h"), _T("help"),   _T("displays help on the command line parameters"), (wxCmdLineParamType)0, 0 },
-    { wxCMD_LINE_SWITCH, _T("v"), _T("version"),    _T("print version"), (wxCmdLineParamType)0, 0 },
+    { wxCMD_LINE_SWITCH, "h", "help", "displays help on the command line parameters" },
+    { wxCMD_LINE_SWITCH, "v", "version", "print version" },
 
-    { wxCMD_LINE_PARAM,  NULL, NULL, _T("config file 1"), wxCMD_LINE_VAL_STRING, wxCMD_LINE_PARAM_OPTIONAL },
+    { wxCMD_LINE_PARAM,  NULL, NULL, "config file 1", wxCMD_LINE_VAL_STRING, wxCMD_LINE_PARAM_OPTIONAL },
 
-    { wxCMD_LINE_NONE, NULL, NULL, NULL, (wxCmdLineParamType)0, 0 }
+    wxCMD_LINE_DESC_END
 };
 
 
@@ -105,7 +105,7 @@ wxEmulatorApp::wxEmulatorApp()
 bool wxEmulatorApp::OnInit()
 {
 #if wxUSE_LOG
-    wxLog::SetTimestamp(NULL);
+    wxLog::DisableTimestamp();
 #endif // wxUSE_LOG
     wxInitAllImageHandlers();
 
@@ -116,10 +116,10 @@ bool wxEmulatorApp::OnInit()
 
     // If the development version, go up a directory.
 #ifdef __WXMSW__
-    if ((m_appDir.Right(5).CmpNoCase(_T("DEBUG")) == 0) ||
-        (m_appDir.Right(11).CmpNoCase(_T("DEBUGSTABLE")) == 0) ||
-        (m_appDir.Right(7).CmpNoCase(_T("RELEASE")) == 0) ||
-        (m_appDir.Right(13).CmpNoCase(_T("RELEASESTABLE")) == 0)
+    if ((m_appDir.Right(5).CmpNoCase(wxT("DEBUG")) == 0) ||
+        (m_appDir.Right(11).CmpNoCase(wxT("DEBUGSTABLE")) == 0) ||
+        (m_appDir.Right(7).CmpNoCase(wxT("RELEASE")) == 0) ||
+        (m_appDir.Right(13).CmpNoCase(wxT("RELEASESTABLE")) == 0)
         )
         m_appDir = wxPathOnly(m_appDir);
 #endif
@@ -175,7 +175,7 @@ bool wxEmulatorApp::OnInit()
     }
 
     // create the main application window
-    wxEmulatorFrame *frame = new wxEmulatorFrame(_T("wxEmulator"),
+    wxEmulatorFrame *frame = new wxEmulatorFrame(wxT("wxEmulator"),
                                  wxPoint(50, 50), wxSize(450, 340));
 
 #if wxUSE_STATUSBAR
@@ -273,14 +273,14 @@ wxEmulatorFrame::wxEmulatorFrame(const wxString& title,
 
     // the "About" item should be in the help menu
     wxMenu *helpMenu = new wxMenu;
-    helpMenu->Append(Emulator_About, _T("&About...\tF1"), _T("Show about dialog"));
+    helpMenu->Append(Emulator_About, wxT("&About\tF1"), wxT("Show about dialog"));
 
-    menuFile->Append(Emulator_Quit, _T("E&xit\tAlt-X"), _T("Quit this program"));
+    menuFile->Append(Emulator_Quit, wxT("E&xit\tAlt-X"), wxT("Quit this program"));
 
     // now append the freshly created menu to the menu bar...
     wxMenuBar *menuBar = new wxMenuBar();
-    menuBar->Append(menuFile, _T("&File"));
-    menuBar->Append(helpMenu, _T("&Help"));
+    menuBar->Append(menuFile, wxT("&File"));
+    menuBar->Append(helpMenu, wxT("&Help"));
 
     // ... and attach this menu bar to the frame
     SetMenuBar(menuBar);
@@ -304,9 +304,9 @@ void wxEmulatorFrame::OnQuit(wxCommandEvent& WXUNUSED(event))
 void wxEmulatorFrame::OnAbout(wxCommandEvent& WXUNUSED(event))
 {
     wxString msg;
-    msg.Printf( _T("wxEmulator is an environment for testing embedded X11 apps.\n"));
+    msg.Printf( wxT("wxEmulator is an environment for testing embedded X11 apps.\n"));
 
-    wxMessageBox(msg, _T("About wxEmulator"), wxOK | wxICON_INFORMATION, this);
+    wxMessageBox(msg, wxT("About wxEmulator"), wxOK | wxICON_INFORMATION, this);
 }
 
 void wxEmulatorFrame::OnCloseWindow(wxCloseEvent& WXUNUSED(event))
@@ -348,7 +348,7 @@ void wxEmulatorContainer::DoResize()
     wxSize sz = GetClientSize();
     if (wxGetApp().m_xnestWindow
 #ifdef __WXX11__
-        && wxGetApp().m_xnestWindow->GetMainWindow()
+        && wxGetApp().m_xnestWindow->X11GetMainWindow()
 #endif
         )
     {
@@ -371,7 +371,7 @@ void wxEmulatorContainer::OnPaint(wxPaintEvent& WXUNUSED(event))
     wxPaintDC dc(this);
 
     wxSize sz = GetClientSize();
-    if (wxGetApp().m_emulatorInfo.m_emulatorBackgroundBitmap.Ok())
+    if (wxGetApp().m_emulatorInfo.m_emulatorBackgroundBitmap.IsOk())
     {
         int deviceWidth = wxGetApp().m_emulatorInfo.m_emulatorDeviceSize.x;
         int deviceHeight = wxGetApp().m_emulatorInfo.m_emulatorDeviceSize.y;
@@ -519,21 +519,21 @@ wxBitmapType wxDetermineImageType(const wxString& filename)
 {
     wxString path, name, ext;
 
-    wxSplitPath(filename, & path, & name, & ext);
+    wxFileName::SplitPath(filename, & path, & name, & ext);
 
     ext.MakeLower();
-    if (ext == _T("jpg") || ext == _T("jpeg"))
+    if (ext == wxT("jpg") || ext == wxT("jpeg"))
         return wxBITMAP_TYPE_JPEG;
-    if (ext == _T("gif"))
+    if (ext == wxT("gif"))
         return wxBITMAP_TYPE_GIF;
-    if (ext == _T("bmp"))
+    if (ext == wxT("bmp"))
         return wxBITMAP_TYPE_BMP;
-    if (ext == _T("png"))
+    if (ext == wxT("png"))
         return wxBITMAP_TYPE_PNG;
-    if (ext == _T("pcx"))
+    if (ext == wxT("pcx"))
         return wxBITMAP_TYPE_PCX;
-    if (ext == _T("tif") || ext == _T("tiff"))
-        return wxBITMAP_TYPE_TIF;
+    if (ext == wxT("tif") || ext == wxT("tiff"))
+        return wxBITMAP_TYPE_TIFF;
 
     return wxBITMAP_TYPE_INVALID;
 }

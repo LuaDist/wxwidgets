@@ -2,7 +2,6 @@
 // Name:        wx/motif/dnd.h
 // Purpose:     declaration of wxDropTarget, wxDropSource classes
 // Author:      Julian Smart
-// RCS-ID:      $Id: dnd.h 41020 2006-09-05 20:47:48Z VZ $
 // Copyright:   (c) 1998 Vadim Zeitlin, Robert Roebling, Julian Smart
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -23,20 +22,20 @@
 // classes
 //-------------------------------------------------------------------------
 
-class WXDLLEXPORT wxWindow;
+class WXDLLIMPEXP_FWD_CORE wxWindow;
 
-class WXDLLEXPORT wxDropTarget;
-class WXDLLEXPORT wxTextDropTarget;
-class WXDLLEXPORT wxFileDropTarget;
-class WXDLLEXPORT wxPrivateDropTarget;
+class WXDLLIMPEXP_FWD_CORE wxDropTarget;
+class WXDLLIMPEXP_FWD_CORE wxTextDropTarget;
+class WXDLLIMPEXP_FWD_CORE wxFileDropTarget;
+class WXDLLIMPEXP_FWD_CORE wxPrivateDropTarget;
 
-class WXDLLEXPORT wxDropSource;
+class WXDLLIMPEXP_FWD_CORE wxDropSource;
 
 //-------------------------------------------------------------------------
 // wxDropTarget
 //-------------------------------------------------------------------------
 
-class WXDLLEXPORT wxDropTarget: public wxObject
+class WXDLLIMPEXP_CORE wxDropTarget: public wxObject
 {
 public:
 
@@ -59,11 +58,11 @@ public:
 // wxTextDropTarget
 //-------------------------------------------------------------------------
 
-class WXDLLEXPORT wxTextDropTarget: public wxDropTarget
+class WXDLLIMPEXP_CORE wxTextDropTarget: public wxDropTarget
 {
 public:
 
-    wxTextDropTarget() {};
+    wxTextDropTarget() {}
     virtual bool OnDrop( long x, long y, const void *data, size_t size );
     virtual bool OnDropText( long x, long y, const char *psz );
 
@@ -77,7 +76,7 @@ protected:
 // wxPrivateDropTarget
 //-------------------------------------------------------------------------
 
-class WXDLLEXPORT wxPrivateDropTarget: public wxDropTarget
+class WXDLLIMPEXP_CORE wxPrivateDropTarget: public wxDropTarget
 {
 public:
 
@@ -107,11 +106,11 @@ private:
 // A drop target which accepts files (dragged from File Manager or Explorer)
 // ----------------------------------------------------------------------------
 
-class WXDLLEXPORT wxFileDropTarget: public wxDropTarget
+class WXDLLIMPEXP_CORE wxFileDropTarget: public wxDropTarget
 {
 public:
 
-    wxFileDropTarget() {};
+    wxFileDropTarget() {}
 
     virtual bool OnDrop( long x, long y, const void *data, size_t size );
     virtual bool OnDropFiles( long x, long y,
@@ -136,7 +135,7 @@ enum wxDragResult
         wxDragCancel    // the operation was cancelled by user (not an error)
 };
 
-class WXDLLEXPORT wxDropSource: public wxObject
+class WXDLLIMPEXP_CORE wxDropSource: public wxObject
 {
 public:
 
@@ -148,7 +147,7 @@ public:
     void SetData( wxDataObject &data  );
     wxDragResult DoDragDrop(int flags = wxDrag_CopyOnly);
 
-    virtual bool GiveFeedback( wxDragResult WXUNUSED(effect), bool WXUNUSED(bScrolling) ) { return true; };
+    virtual bool GiveFeedback( wxDragResult WXUNUSED(effect), bool WXUNUSED(bScrolling) ) { return true; }
 
     // implementation
 #if 0

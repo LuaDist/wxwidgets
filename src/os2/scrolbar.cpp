@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/15/99
-// RCS-ID:      $Id: scrolbar.cpp 39476 2006-05-30 13:43:18Z ABX $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -19,8 +18,6 @@
 #endif
 
 #include "wx/os2/private.h"
-
-IMPLEMENT_DYNAMIC_CLASS(wxScrollBar, wxControl)
 
 // Scrollbar
 bool wxScrollBar::Create(wxWindow* pParent,
@@ -225,7 +222,7 @@ bool wxScrollBar::OS2OnScroll ( int    WXUNUSED(nOrientation),
     vEvent.SetOrientation(IsVertical() ? wxVERTICAL : wxHORIZONTAL);
     vEvent.SetPosition(nPosition);
     vEvent.SetEventObject(this);
-    return GetEventHandler()->ProcessEvent(vEvent);
+    return HandleWindowEvent(vEvent);
 } // end of wxScrollBar::OS2OnScroll
 
 void wxScrollBar::SetThumbPosition ( int nViewStart )

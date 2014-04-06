@@ -3,7 +3,6 @@
 // Purpose:     XRC resource for wxChoicebook
 // Author:      Vaclav Slavik
 // Created:     2000/03/21
-// RCS-ID:      $Id: xh_choicbk.cpp 39627 2006-06-08 06:57:39Z ABX $
 // Copyright:   (c) 2000 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -40,13 +39,11 @@ wxChoicebookXmlHandler::wxChoicebookXmlHandler()
     XRC_ADD_STYLE(wxBK_TOP);
     XRC_ADD_STYLE(wxBK_BOTTOM);
 
-#if WXWIN_COMPATIBILITY_2_6
     XRC_ADD_STYLE(wxCHB_DEFAULT);
     XRC_ADD_STYLE(wxCHB_LEFT);
     XRC_ADD_STYLE(wxCHB_RIGHT);
     XRC_ADD_STYLE(wxCHB_TOP);
     XRC_ADD_STYLE(wxCHB_BOTTOM);
-#endif
 
     AddWindowStyles();
 }
@@ -84,14 +81,29 @@ wxObject *wxChoicebookXmlHandler::DoCreateResource()
                     int imgIndex = imgList->Add(bmp);
                     m_choicebook->SetPageImage(m_choicebook->GetPageCount()-1, imgIndex );
                 }
+                else if ( HasParam(wxT("image")) )
+                {
+                    if ( m_choicebook->GetImageList() )
+                    {
+                        m_choicebook->SetPageImage(m_choicebook->GetPageCount()-1,
+                                                   GetLong(wxT("image")) );
+                    }
+                    else // image without image list?
+                    {
+                        ReportError(n, "image can only be used in conjunction "
+                                       "with imagelist");
+                    }
+                }
             }
             else
-                wxLogError(wxT("Error in resource."));
+            {
+                ReportError(n, "choicebookpage child must be a window");
+            }
             return wnd;
         }
         else
         {
-            wxLogError(wxT("Error in resource: no control within choicebook's <page> tag."));
+            ReportError("choicebookpage must have a window child");
             return NULL;
         }
     }
@@ -105,6 +117,10 @@ wxObject *wxChoicebookXmlHandler::DoCreateResource()
                    GetPosition(), GetSize(),
                    GetStyle(wxT("style")),
                    GetName());
+
+        wxImageList *imagelist = GetImageList();
+        if ( imagelist )
+            nb->AssignImageList(imagelist);
 
         wxChoicebook *old_par = m_choicebook;
         m_choicebook = nb;

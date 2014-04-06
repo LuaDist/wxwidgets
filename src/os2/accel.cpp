@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/13/99
-// RCS-ID:      $Id: accel.cpp 41751 2006-10-08 21:56:55Z VZ $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -75,7 +74,7 @@ wxAcceleratorTable::wxAcceleratorTable(
 
     m_refData = new wxAcceleratorRefData;
 
-    ulId = atol((char*)rResource.c_str());
+    ulId = atol(rResource.c_str());
     hAccel = ::WinLoadAccelTable( vHabmain
                                  ,NULL // resources always in .exe
                                  ,(ULONG)ulId
@@ -199,7 +198,7 @@ bool wxAcceleratorTable::Translate( WXHWND  hWnd,
                              ,GetHaccel()
                              ,pMsg
                             );
-    return (Ok() && rc);
+    return (IsOk() && rc);
 } // end of wxAcceleratorTable::Translate
 
 // ---------------------------------------------------------------------------

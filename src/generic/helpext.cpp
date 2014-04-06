@@ -4,7 +4,6 @@
 // Author:      Karsten Ballueder
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: helpext.cpp 38857 2006-04-20 07:31:44Z ABX $
 // Copyright:   (c) Karsten Ballueder
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -15,7 +14,7 @@
     #pragma hdrstop
 #endif
 
-#if wxUSE_HELP && !defined(__WXWINCE__) && (!defined(__WXMAC__) || defined(__WXMAC_OSX__))
+#if wxUSE_HELP && !defined(__WXWINCE__)
 
 #ifndef WX_PRECOMP
     #include "wx/list.h"
@@ -52,64 +51,62 @@
 // constants
 // ----------------------------------------------------------------------------
 
-/// Name for map file.
-#define WXEXTHELP_MAPFILE   _T("wxhelp.map")
+// Name for map file.
+#define WXEXTHELP_MAPFILE                   wxT("wxhelp.map")
 
-/// Character introducing comments/documentation field in map file.
-#define WXEXTHELP_COMMENTCHAR   ';'
+// Character introducing comments/documentation field in map file.
+#define WXEXTHELP_COMMENTCHAR               ';'
 
-#define CONTENTS_ID   0
+// The ID of the Contents section
+#define WXEXTHELP_CONTENTS_ID               0
+
+// Name of environment variable to set help browser.
+#define WXEXTHELP_ENVVAR_BROWSER            wxT("WX_HELPBROWSER")
+
+// Is browser a netscape browser?
+#define WXEXTHELP_ENVVAR_BROWSERISNETSCAPE  wxT("WX_HELPBROWSER_NS")
 
 IMPLEMENT_CLASS(wxExtHelpController, wxHelpControllerBase)
-
-/// Name of environment variable to set help browser.
-#define   WXEXTHELP_ENVVAR_BROWSER   wxT("WX_HELPBROWSER")
-/// Is browser a netscape browser?
-#define   WXEXTHELP_ENVVAR_BROWSERISNETSCAPE wxT("WX_HELPBROWSER_NS")
-
-/**
-   This class implements help via an external browser.
-   It requires the name of a directory containing the documentation
-   and a file mapping numerical Section numbers to relative URLS.
-*/
 
 wxExtHelpController::wxExtHelpController(wxWindow* parentWindow)
                    : wxHelpControllerBase(parentWindow)
 {
-   m_MapList = NULL;
-   m_NumOfEntries = 0;
-   m_BrowserIsNetscape = false;
+    m_MapList = NULL;
+    m_NumOfEntries = 0;
+    m_BrowserIsNetscape = false;
 
-   wxChar *browser = wxGetenv(WXEXTHELP_ENVVAR_BROWSER);
-   if (browser)
-   {
-      m_BrowserName = browser;
-      browser = wxGetenv(WXEXTHELP_ENVVAR_BROWSERISNETSCAPE);
-      m_BrowserIsNetscape = browser && (wxAtoi(browser) != 0);
-   }
+    wxChar *browser = wxGetenv(WXEXTHELP_ENVVAR_BROWSER);
+    if (browser)
+    {
+        m_BrowserName = browser;
+        browser = wxGetenv(WXEXTHELP_ENVVAR_BROWSERISNETSCAPE);
+        m_BrowserIsNetscape = browser && (wxAtoi(browser) != 0);
+    }
 }
 
 wxExtHelpController::~wxExtHelpController()
 {
-   DeleteList();
+    DeleteList();
 }
 
+#if WXWIN_COMPATIBILITY_2_8
 void wxExtHelpController::SetBrowser(const wxString& browsername, bool isNetscape)
 {
-   m_BrowserName = browsername;
-   m_BrowserIsNetscape = isNetscape;
+    m_BrowserName = browsername;
+    m_BrowserIsNetscape = isNetscape;
 }
+#endif
 
-// Set viewer: new, generic name for SetBrowser
 void wxExtHelpController::SetViewer(const wxString& viewer, long flags)
 {
-    SetBrowser(viewer, (flags & wxHELP_NETSCAPE) != 0);
+    m_BrowserName = viewer;
+    m_BrowserIsNetscape = (flags & wxHELP_NETSCAPE) != 0;
 }
 
 bool wxExtHelpController::DisplayHelp(const wxString &relativeURL)
 {
     // construct hte URL to open -- it's just a file
-    wxString url(_T("file://") + m_helpDir);
+    wxString url(wxT("file://") + m_helpDir);
     url << wxFILE_SEP_PATH << relativeURL;
 
     // use the explicit browser program if specified
@@ -124,7 +121,7 @@ bool wxExtHelpController::DisplayHelp(const wxString &relativeURL)
                 return true;
         }
 
-        if ( wxExecute(m_BrowserName + _T(' ') + url, wxEXEC_SYNC) != -1 )
+        if ( wxExecute(m_BrowserName + wxT(' ') + url, wxEXEC_SYNC) != -1 )
             return true;
     }
     //else: either no browser explicitly specified or we failed to open it
@@ -136,28 +133,28 @@ bool wxExtHelpController::DisplayHelp(const wxString &relativeURL)
 class wxExtHelpMapEntry : public wxObject
 {
 public:
-   int      id;
-   wxString url;
-   wxString doc;
-   wxExtHelpMapEntry(int iid, wxString const &iurl, wxString const &idoc)
-      { id = iid; url = iurl; doc = idoc; }
+    int      entryid;
+    wxString url;
+    wxString doc;
+
+    wxExtHelpMapEntry(int iid, wxString const &iurl, wxString const &idoc)
+        { entryid = iid; url = iurl; doc = idoc; }
 };
 
 void wxExtHelpController::DeleteList()
 {
-   if (m_MapList)
-   {
-      wxList::compatibility_iterator node = m_MapList->GetFirst();
-      while (node)
-      {
-         delete (wxExtHelpMapEntry *)node->GetData();
-         m_MapList->Erase(node);
-         node = m_MapList->GetFirst();
-      }
+    if (m_MapList)
+    {
+        wxList::compatibility_iterator node = m_MapList->GetFirst();
+        while (node)
+        {
+            delete (wxExtHelpMapEntry *)node->GetData();
+            m_MapList->Erase(node);
+            node = m_MapList->GetFirst();
+        }
 
-      delete m_MapList;
-      m_MapList = (wxList*) NULL;
-   }
+        wxDELETE(m_MapList);
+    }
 }
 
 // This must be called to tell the controller where to find the documentation.
@@ -165,7 +162,7 @@ void wxExtHelpController::DeleteList()
 //  @return true on success
 bool wxExtHelpController::Initialize(const wxString& file)
 {
-   return LoadFile(file);
+    return LoadFile(file);
 }
 
 bool wxExtHelpController::ParseMapFileLine(const wxString& line)
@@ -173,11 +170,11 @@ bool wxExtHelpController::ParseMapFileLine(const wxString& line)
     const wxChar *p = line.c_str();
 
     // skip whitespace
-    while ( isascii(*p) && isspace(*p) )
+    while ( isascii(*p) && wxIsspace(*p) )
         p++;
 
     // skip empty lines and comments
-    if ( *p == _T('\0') || *p == WXEXTHELP_COMMENTCHAR )
+    if ( *p == wxT('\0') || *p == WXEXTHELP_COMMENTCHAR )
         return true;
 
     // the line is of the form "num url" so we must have an integer now
@@ -188,16 +185,16 @@ bool wxExtHelpController::ParseMapFileLine(const wxString& line)
         return false;
 
     p = end;
-    while ( isascii(*p) && isspace(*p) )
+    while ( isascii(*p) && wxIsspace(*p) )
         p++;
 
     // next should be the URL
     wxString url;
     url.reserve(line.length());
-    while ( isascii(*p) && !isspace(*p) )
+    while ( isascii(*p) && !wxIsspace(*p) )
         url += *p++;
 
-    while ( isascii(*p) && isspace(*p) )
+    while ( isascii(*p) && wxIsspace(*p) )
         p++;
 
     // and finally the optional description of the entry after comment
@@ -205,7 +202,7 @@ bool wxExtHelpController::ParseMapFileLine(const wxString& line)
     if ( *p == WXEXTHELP_COMMENTCHAR )
     {
         p++;
-        while ( isascii(*p) && isspace(*p) )
+        while ( isascii(*p) && wxIsspace(*p) )
             p++;
         doc = p;
     }
@@ -243,7 +240,7 @@ bool wxExtHelpController::LoadFile(const wxString& file)
         if ( ! dirExists )
         {
             // try without encoding
-            const wxString locNameWithoutEncoding = locName.BeforeLast(_T('.'));
+            const wxString locNameWithoutEncoding = locName.BeforeLast(wxT('.'));
             if ( !locNameWithoutEncoding.empty() )
             {
                 helpDirLoc = helpDir;
@@ -255,7 +252,7 @@ bool wxExtHelpController::LoadFile(const wxString& file)
         if ( !dirExists )
         {
             // try without country part
-            wxString locNameWithoutCountry = locName.BeforeLast(_T('_'));
+            wxString locNameWithoutCountry = locName.BeforeLast(wxT('_'));
             if ( !locNameWithoutCountry.empty() )
             {
                 helpDirLoc = helpDir;
@@ -318,53 +315,53 @@ bool wxExtHelpController::LoadFile(const wxString& file)
 
 bool wxExtHelpController::DisplayContents()
 {
-   if (! m_NumOfEntries)
-      return false;
+    if (! m_NumOfEntries)
+        return false;
 
-   wxString contents;
-   wxList::compatibility_iterator node = m_MapList->GetFirst();
-   wxExtHelpMapEntry *entry;
-   while (node)
-   {
-      entry = (wxExtHelpMapEntry *)node->GetData();
-      if (entry->id == CONTENTS_ID)
-      {
-         contents = entry->url;
-         break;
-      }
+    wxString contents;
+    wxList::compatibility_iterator node = m_MapList->GetFirst();
+    wxExtHelpMapEntry *entry;
+    while (node)
+    {
+        entry = (wxExtHelpMapEntry *)node->GetData();
+        if (entry->entryid == WXEXTHELP_CONTENTS_ID)
+        {
+            contents = entry->url;
+            break;
+        }
 
-      node = node->GetNext();
-   }
+        node = node->GetNext();
+    }
 
-   bool rc = false;
-   wxString file;
-   file << m_helpDir << wxFILE_SEP_PATH << contents;
-   if (file.Contains(wxT('#')))
-      file = file.BeforeLast(wxT('#'));
-   if (contents.length() && wxFileExists(file))
-      rc = DisplaySection(CONTENTS_ID);
+    bool rc = false;
+    wxString file;
+    file << m_helpDir << wxFILE_SEP_PATH << contents;
+    if (file.Contains(wxT('#')))
+        file = file.BeforeLast(wxT('#'));
+    if ( wxFileExists(file) )
+        rc = DisplaySection(WXEXTHELP_CONTENTS_ID);
 
-   // if not found, open homemade toc:
-   return rc ? true : KeywordSearch(wxEmptyString);
+    // if not found, open homemade toc:
+    return rc ? true : KeywordSearch(wxEmptyString);
 }
 
 bool wxExtHelpController::DisplaySection(int sectionNo)
 {
-   if (! m_NumOfEntries)
-      return false;
+    if (! m_NumOfEntries)
+        return false;
 
-   wxBusyCursor b; // display a busy cursor
-   wxList::compatibility_iterator node = m_MapList->GetFirst();
-   wxExtHelpMapEntry *entry;
-   while (node)
-   {
-      entry = (wxExtHelpMapEntry *)node->GetData();
-      if (entry->id == sectionNo)
-         return DisplayHelp(entry->url);
-      node = node->GetNext();
-   }
+    wxBusyCursor b; // display a busy cursor
+    wxList::compatibility_iterator node = m_MapList->GetFirst();
+    wxExtHelpMapEntry *entry;
+    while (node)
+    {
+        entry = (wxExtHelpMapEntry *)node->GetData();
+        if (entry->entryid == sectionNo)
+            return DisplayHelp(entry->url);
+        node = node->GetNext();
+    }
 
-   return false;
+    return false;
 }
 
 bool wxExtHelpController::DisplaySection(const wxString& section)
@@ -379,7 +376,7 @@ bool wxExtHelpController::DisplaySection(const wxString& section)
 
 bool wxExtHelpController::DisplayBlock(long blockNo)
 {
-   return DisplaySection((int)blockNo);
+    return DisplaySection((int)blockNo);
 }
 
 bool wxExtHelpController::KeywordSearch(const wxString& k,
@@ -457,10 +454,15 @@ bool wxExtHelpController::KeywordSearch(const wxString& k,
         break;
 
     default:
-        idx = wxGetSingleChoiceIndex(
-            showAll ? _("Help Index") : _("Relevant entries:"),
-            showAll ? _("Help Index") : _("Entries found"),
-            idx, choices);
+        if (showAll)
+            idx = wxGetSingleChoiceIndex(_("Help Index"),
+                                         _("Help Index"),
+                                         idx, choices);
+        else
+            idx = wxGetSingleChoiceIndex(_("Relevant entries:"),
+                                         _("Entries found"),
+                                         idx, choices);
+
         if (idx >= 0)
             rc = DisplayHelp(urls[idx]);
         break;

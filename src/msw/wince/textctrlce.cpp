@@ -4,9 +4,8 @@
 // Author:      Wlodzimierz ABX Skiba
 // Modified by:
 // Created:     30.08.2004
-// RCS-ID:      $Id: textctrlce.cpp 42816 2006-10-31 08:50:17Z RD $
 // Copyright:   (c) Wlodzimierz Skiba
-// License:     wxWindows licence
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -42,12 +41,6 @@
 // ----------------------------------------------------------------------------
 // event tables and other macros
 // ----------------------------------------------------------------------------
-
-#if wxUSE_EXTENDED_RTTI
-// TODO
-#else
-IMPLEMENT_DYNAMIC_CLASS(wxTextCtrl, wxControl)
-#endif
 
 BEGIN_EVENT_TABLE(wxTextCtrl, wxControl)
     EVT_CHAR(wxTextCtrl::OnChar)
@@ -171,7 +164,7 @@ bool wxTextCtrl::Create(wxWindow *parent, wxWindowID id,
     sizeText.x -= sizeBtn.x + MARGIN_BETWEEN;
     if ( sizeText.x <= 0 )
     {
-        wxLogDebug(_T("not enough space for wxSpinCtrl!"));
+        wxLogDebug(wxT("not enough space for wxSpinCtrl!"));
     }
 
     wxPoint posBtn(pos);
@@ -199,7 +192,7 @@ bool wxTextCtrl::Create(wxWindow *parent, wxWindowID id,
     m_hwndBuddy = (WXHWND)::CreateWindowEx
                     (
                      exStyle,                // sunken border
-                     _T("EDIT"),             // window class
+                     wxT("EDIT"),             // window class
                      valueWin,               // no window title
                      msStyle,                // style (will be shown later)
                      pos.x, pos.y,           // position
@@ -233,7 +226,7 @@ bool wxTextCtrl::Create(wxWindow *parent, wxWindowID id,
     if ( style & wxSP_WRAP )
         spiner_style |= UDS_WRAP;
 
-    if ( !MSWCreateControl(UPDOWN_CLASS, spiner_style, posBtn, sizeBtn, _T(""), 0) )
+    if ( !MSWCreateControl(UPDOWN_CLASS, spiner_style, posBtn, sizeBtn, wxT(""), 0) )
         return false;
 
     // subclass the text ctrl to be able to intercept some events
@@ -264,7 +257,7 @@ bool wxTextCtrl::Create(wxWindow *parent, wxWindowID id,
     (void)::SendMessage(GetHwnd(), UDM_SETBUDDY, (WPARAM)GetBuddyHwnd(), 0);
 
     // do it after finishing with m_hwndBuddy creation to avoid generating
-    // initial wxEVT_COMMAND_TEXT_UPDATED message
+    // initial wxEVT_TEXT message
     ms_allTextSpins.Add(this);
 
     return true;
@@ -807,7 +800,7 @@ wxString wxTextCtrl::GetLineText(long lineNo) const
 
         // remove the '\n' at the end, if any (this is how this function is
         // supposed to work according to the docs)
-        if ( buf[len - 1] == _T('\n') )
+        if ( buf[len - 1] == wxT('\n') )
         {
             len--;
         }
@@ -879,7 +872,7 @@ void wxTextCtrl::OnChar(wxKeyEvent& event)
         case WXK_RETURN:
             if ( !HasFlag(wxTE_MULTILINE) )
             {
-                wxCommandEvent event(wxEVT_COMMAND_TEXT_ENTER, m_windowId);
+                wxCommandEvent event(wxEVT_TEXT_ENTER, m_windowId);
                 InitCommandEvent(event);
                 event.SetString(GetValue());
                 if ( GetEventHandler()->ProcessEvent(event) )
@@ -989,7 +982,7 @@ bool wxTextCtrl::SendUpdateEvent()
         return false;
     }
 
-    wxCommandEvent event(wxEVT_COMMAND_TEXT_UPDATED, GetId());
+    wxCommandEvent event(wxEVT_TEXT, GetId());
     InitCommandEvent(event);
     event.SetString(GetValue());
 
@@ -1019,7 +1012,7 @@ bool wxTextCtrl::MSWCommand(WXUINT param, WXWORD WXUNUSED(id))
             // the text size limit has been hit -- try to increase it
             if ( !AdjustSpaceLimit() )
             {
-                wxCommandEvent event(wxEVT_COMMAND_TEXT_MAXLEN, m_windowId);
+                wxCommandEvent event(wxEVT_TEXT_MAXLEN, m_windowId);
                 InitCommandEvent(event);
                 event.SetString(GetValue());
                 ProcessCommand(event);
@@ -1087,7 +1080,7 @@ void wxTextCtrl::DoMoveWindow(int x, int y, int width, int height)
     int widthText = width - widthBtn - MARGIN_BETWEEN;
     if ( widthText <= 0 )
     {
-        wxLogDebug(_T("not enough space for wxSpinCtrl!"));
+        wxLogDebug(wxT("not enough space for wxSpinCtrl!"));
     }
 
     if ( !::MoveWindow(GetBuddyHwnd(), x, y, widthText, height, TRUE) )

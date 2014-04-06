@@ -3,7 +3,6 @@
 // Purpose:   Region class
 // Author:    Julian Smart, Robert Roebling
 // Created:   Fri Oct 24 10:46:34 MET 1997
-// RCS-ID:    $Id: region.cpp 41429 2006-09-25 11:47:23Z VZ $
 // Copyright: (c) 1997 Julian Smart, Robert Roebling
 // Licence:   wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -31,7 +30,7 @@
 // wxRegionRefData: private class containing the information about the region
 // ----------------------------------------------------------------------------
 
-class wxRegionRefData : public wxObjectRefData
+class wxRegionRefData : public wxGDIRefData
 {
 public:
     wxRegionRefData()
@@ -84,7 +83,7 @@ void wxRegion::InitRect(wxCoord x, wxCoord y, wxCoord w, wxCoord h)
     XUnionRectWithRegion( &rect, M_REGIONDATA->m_region, M_REGIONDATA->m_region );
 }
 
-wxRegion::wxRegion( size_t WXUNUSED(n), const wxPoint *WXUNUSED(points), int WXUNUSED(fillStyle) )
+wxRegion::wxRegion( size_t WXUNUSED(n), const wxPoint *WXUNUSED(points), wxPolygonFillMode WXUNUSED(fillStyle) )
 {
 #if 0
     XPoint *xpoints = new XPoint[n];
@@ -115,12 +114,12 @@ wxRegion::~wxRegion()
     // m_refData unrefed in ~wxObject
 }
 
-wxObjectRefData *wxRegion::CreateRefData() const
+wxGDIRefData *wxRegion::CreateGDIRefData() const
 {
     return new wxRegionRefData;
 }
 
-wxObjectRefData *wxRegion::CloneRefData(const wxObjectRefData *data) const
+wxGDIRefData *wxRegion::CloneGDIRefData(const wxGDIRefData *data) const
 {
     return new wxRegionRefData(*(wxRegionRefData *)data);
 }
@@ -175,7 +174,7 @@ bool wxRegion::DoUnionWithRect(const wxRect& r)
 
 bool wxRegion::DoUnionWithRegion( const wxRegion& region )
 {
-    wxCHECK_MSG( region.Ok(), false, _T("invalid region") );
+    wxCHECK_MSG( region.IsOk(), false, wxT("invalid region") );
 
     if (!m_refData)
     {
@@ -196,7 +195,7 @@ bool wxRegion::DoUnionWithRegion( const wxRegion& region )
 
 bool wxRegion::DoIntersect( const wxRegion& region )
 {
-    wxCHECK_MSG( region.Ok(), false, _T("invalid region") );
+    wxCHECK_MSG( region.IsOk(), false, wxT("invalid region") );
 
     if (!m_refData)
     {
@@ -220,7 +219,7 @@ bool wxRegion::DoIntersect( const wxRegion& region )
 
 bool wxRegion::DoSubtract( const wxRegion& region )
 {
-    wxCHECK_MSG( region.Ok(), false, _T("invalid region") );
+    wxCHECK_MSG( region.IsOk(), false, wxT("invalid region") );
 
     if (!m_refData)
     {
@@ -241,7 +240,7 @@ bool wxRegion::DoSubtract( const wxRegion& region )
 
 bool wxRegion::DoXor( const wxRegion& region )
 {
-    wxCHECK_MSG( region.Ok(), false, _T("invalid region") );
+    wxCHECK_MSG( region.IsOk(), false, wxT("invalid region") );
 
     if (!m_refData)
     {
@@ -337,7 +336,7 @@ wxRegionContain wxRegion::DoContainsRect(const wxRect& r) const
 WXRegion *wxRegion::GetX11Region() const
 {
     if (!m_refData)
-        return (WXRegion*) NULL;
+        return NULL;
 
     return (WXRegion*) M_REGIONDATA->m_region;
 }
@@ -361,7 +360,7 @@ struct _XRegion {
     _XBox *rects, extents;
 };
 
-class wxRIRefData: public wxObjectRefData
+class wxRIRefData: public wxGDIRefData
 {
 public:
 

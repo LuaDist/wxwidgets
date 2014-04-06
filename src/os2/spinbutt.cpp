@@ -1,10 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        spinbutt.cpp
+// Name:        src/os2/spinbutt.cpp
 // Purpose:     wxSpinButton
 // Author:      David Webster
 // Modified by:
 // Created:     10/15/99
-// RCS-ID:      $Id: spinbutt.cpp 61904 2009-09-13 15:47:25Z SN $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -28,8 +27,6 @@ extern void  wxAssociateWinWithHandle( HWND         hWnd
                                       ,wxWindowOS2* pWin
                                      );
 
-IMPLEMENT_DYNAMIC_CLASS(wxSpinEvent, wxNotifyEvent)
-
 #include "wx/os2/private.h"
 
 // ============================================================================
@@ -39,8 +36,6 @@ IMPLEMENT_DYNAMIC_CLASS(wxSpinEvent, wxNotifyEvent)
 // ----------------------------------------------------------------------------
 // wxWin macros
 // ----------------------------------------------------------------------------
-
-IMPLEMENT_DYNAMIC_CLASS(wxSpinButton, wxControl)
 
 bool wxSpinButton::Create(
   wxWindow*                         pParent
@@ -89,12 +84,10 @@ bool wxSpinButton::Create(
     if (nY < 0 )
         nY = 0;
 
-    long                            lSstyle = 0L;
-
-    lSstyle = WS_VISIBLE      |
-              WS_TABSTOP      |
-              SPBS_MASTER     | // We use only single field spin buttons
-              SPBS_NUMERICONLY; // We default to numeric data
+    long lSstyle = WS_VISIBLE      |
+                   WS_TABSTOP      |
+                   SPBS_MASTER     | // We use only single field spin buttons
+                   SPBS_NUMERICONLY; // We default to numeric data
 
     if (m_windowStyle & wxCLIP_SIBLINGS )
         lSstyle |= WS_CLIPSIBLINGS;
@@ -197,7 +190,7 @@ bool wxSpinButton::OS2OnScroll( int    WXUNUSED(nOrientation),
 
     vEvent.SetPosition(nVal);
     vEvent.SetEventObject(this);
-    return(GetEventHandler()->ProcessEvent(vEvent));
+    return(HandleWindowEvent(vEvent));
 } // end of wxSpinButton::OS2OnScroll
 
 bool wxSpinButton::OS2Command( WXUINT WXUNUSED(uCmd),

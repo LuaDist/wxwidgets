@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: msgdlg.cpp 50982 2008-01-01 20:38:33Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -40,6 +39,7 @@
     #include "wx/settings.h"
 #endif
 
+#include "wx/modalhook.h"
 #include "wx/motif/private.h"
 
 // ----------------------------------------------------------------------------
@@ -98,18 +98,6 @@ static void msgboxCallBackClose(Widget w,
 // wxMessageDialog
 // ----------------------------------------------------------------------------
 
-wxMessageDialog::wxMessageDialog(wxWindow *parent,
-                                 const wxString& message,
-                                 const wxString& caption,
-                                 long style,
-                                 const wxPoint& WXUNUSED(pos))
-{
-    m_caption = caption;
-    m_message = message;
-    m_parent = parent;
-    SetMessageDialogStyle(style);
-}
-
 extern "C"
 {
     typedef Widget (*DialogCreateFunction)(Widget, String, ArgList, Cardinal);
@@ -117,6 +105,8 @@ extern "C"
 
 int wxMessageDialog::ShowModal()
 {
+    WX_HOOK_MODAL_DIALOG();
+
     const long style = GetMessageDialogStyle();
 
     DialogCreateFunction dialogCreateFunction;
@@ -159,19 +149,22 @@ int wxMessageDialog::ShowModal()
     Arg args[10];
     int ac = 0;
 
-    wxXmString text(m_message);
+    wxXmString text(GetFullMessage());
     wxXmString title(m_caption);
     XtSetArg(args[ac], XmNmessageString, text()); ac++;
     XtSetArg(args[ac], XmNdialogTitle, title()); ac++;
 
     Display* dpy = XtDisplay(wParent);
 
-    wxComputeColours (dpy, & m_backgroundColour, (wxColour*) NULL);
+    if (m_backgroundColour.IsOk())
+    {
+        wxComputeColours (dpy, & m_backgroundColour, NULL);
 
-    XtSetArg(args[ac], XmNbackground, g_itemColors[wxBACK_INDEX].pixel); ac++;
-    XtSetArg(args[ac], XmNtopShadowColor, g_itemColors[wxTOPS_INDEX].pixel); ac++;
-    XtSetArg(args[ac], XmNbottomShadowColor, g_itemColors[wxBOTS_INDEX].pixel); ac++;
-    XtSetArg(args[ac], XmNforeground, g_itemColors[wxFORE_INDEX].pixel); ac++;
+        XtSetArg(args[ac], XmNbackground, g_itemColors[wxBACK_INDEX].pixel); ac++;
+        XtSetArg(args[ac], XmNtopShadowColor, g_itemColors[wxTOPS_INDEX].pixel); ac++;
+        XtSetArg(args[ac], XmNbottomShadowColor, g_itemColors[wxBOTS_INDEX].pixel); ac++;
+        XtSetArg(args[ac], XmNforeground, g_itemColors[wxFORE_INDEX].pixel); ac++;
+    }
 
     wxFont font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
 

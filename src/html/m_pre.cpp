@@ -2,7 +2,6 @@
 // Name:        src/html/m_pre.cpp
 // Purpose:     wxHtml module for <PRE> ... </PRE> tag (code citation)
 // Author:      Vaclav Slavik
-// RCS-ID:      $Id: m_pre.cpp 56547 2008-10-28 10:06:32Z VS $
 // Copyright:   (c) 1999 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -15,7 +14,7 @@
 
 #if wxUSE_HTML && wxUSE_STREAMS
 
-#ifndef WXPRECOMP
+#ifndef WX_PRECOMP
 #endif
 
 #include "wx/html/forcelnk.h"
@@ -33,40 +32,42 @@ static wxString LINKAGEMODE HtmlizeLinebreaks(const wxString& str)
     wxString out;
     out.reserve(str.length()); // we'll certainly need at least that
 
-    size_t len = str.Len();
-
-    for (size_t i = 0; i < len; i++)
+    const wxString::const_iterator end = str.end();
+    for ( wxString::const_iterator i = str.begin(); i != end; ++i )
     {
-        switch (str[i])
+        switch ( (*i).GetValue() )
         {
-            case wxT('<'):
-                while (i < len && str[i] != wxT('>'))
+            case '<':
+                while ( i != end && *i != '>' )
                 {
-                    out << str[i++];
+                    out << *i++;
                 }
-                out << wxT('>');
+                out << '>';
+                if ( i == end )
+                    return out;
                 break;
 
             // We need to translate any line break into exactly one <br>.
             // Quoting HTML spec: "A line break is defined to be a carriage
             // return (&#x000D;), a line feed (&#x000A;), or a carriage
             // return/line feed pair."
-            case wxT('\r'):
+            case '\r':
                 {
-                    size_t j = i + 1;
-                    if ( j < len && str[j] == wxT('\n') )
+                    wxString::const_iterator j(i + 1);
+                    if ( j != end && *j == '\n' )
                         i = j;
                 }
                 // fall through
-            case wxT('\n'):
-                out << wxT("<br>");
+            case '\n':
+                out << "<br>";
                 break;
 
             default:
-                out << str[i];
+                out << *i;
                 break;
         }
     }
+
     return out;
 }
 

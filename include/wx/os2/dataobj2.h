@@ -4,7 +4,6 @@
 // Author:      Stefan Csomor (adapted from Robert Roebling's gtk port
 // Modified by:
 // Created:     10/21/99
-// RCS-ID:      $Id: dataobj2.h 41020 2006-09-05 20:47:48Z VZ $
 // Copyright:   (c) 1998, 1999 Vadim Zeitlin, Robert Roebling
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -37,7 +36,7 @@ public:
     virtual bool SetData(size_t len, const void *buf);
 
 protected:
-    void Init() { m_pngData = (void *)NULL; m_pngSize = 0; }
+    void Init() { m_pngData = NULL; m_pngSize = 0; }
     void Clear() { free(m_pngData); }
     void ClearAll() { Clear(); Init(); }
 

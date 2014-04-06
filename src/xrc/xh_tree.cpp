@@ -1,9 +1,8 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        xh_tree.cpp
+// Name:        src/xrc/xh_tree.cpp
 // Purpose:     XRC resource for wxTreeCtrl
 // Author:      Brian Gavin
 // Created:     2000/09/09
-// RCS-ID:      $Id: xh_tree.cpp 35650 2005-09-23 12:56:45Z MR $
 // Copyright:   (c) 2000 Brian Gavin
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -37,8 +36,10 @@ wxTreeCtrlXmlHandler::wxTreeCtrlXmlHandler()
     XRC_ADD_STYLE(wxTR_HAS_VARIABLE_ROW_HEIGHT);
     XRC_ADD_STYLE(wxTR_SINGLE);
     XRC_ADD_STYLE(wxTR_MULTIPLE);
-    XRC_ADD_STYLE(wxTR_EXTENDED);
     XRC_ADD_STYLE(wxTR_DEFAULT_STYLE);
+#if WXWIN_COMPATIBILITY_2_8
+    XRC_ADD_STYLE(wxTR_EXTENDED);
+#endif
     AddWindowStyles();
 }
 
@@ -49,9 +50,13 @@ wxObject *wxTreeCtrlXmlHandler::DoCreateResource()
     tree->Create(m_parentAsWindow,
                 GetID(),
                 GetPosition(), GetSize(),
-                GetStyle(_T("style"), wxTR_DEFAULT_STYLE),
+                GetStyle(wxT("style"), wxTR_DEFAULT_STYLE),
                 wxDefaultValidator,
                 GetName());
+
+    wxImageList *imagelist = GetImageList();
+    if ( imagelist )
+        tree->AssignImageList(imagelist);
 
     SetupWindow(tree);
 

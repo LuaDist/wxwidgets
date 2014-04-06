@@ -2,7 +2,6 @@
 // Name:        src/gtk/pen.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: pen.cpp 39724 2006-06-14 17:09:39Z ABX $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -22,21 +21,21 @@
 // wxPen
 //-----------------------------------------------------------------------------
 
-class wxPenRefData: public wxObjectRefData
+class wxPenRefData: public wxGDIRefData
 {
 public:
     wxPenRefData()
     {
         m_width = 1;
-        m_style = wxSOLID;
+        m_style = wxPENSTYLE_SOLID;
         m_joinStyle = wxJOIN_ROUND;
         m_capStyle = wxCAP_ROUND;
-        m_dash = (wxGTKDash*) NULL;
+        m_dash = NULL;
         m_countDashes = 0;
     }
 
     wxPenRefData( const wxPenRefData& data )
-        : wxObjectRefData()
+        : wxGDIRefData()
     {
         m_style = data.m_style;
         m_width = data.m_width;
@@ -74,9 +73,9 @@ public:
     }
 
     int        m_width;
-    int        m_style;
-    int        m_joinStyle;
-    int        m_capStyle;
+    wxPenStyle m_style;
+    wxPenJoin  m_joinStyle;
+    wxPenCap   m_capStyle;
     wxColour   m_colour;
     int        m_countDashes;
     wxGTKDash *m_dash;
@@ -88,7 +87,7 @@ public:
 
 IMPLEMENT_DYNAMIC_CLASS(wxPen,wxGDIObject)
 
-wxPen::wxPen( const wxColour &colour, int width, int style )
+wxPen::wxPen( const wxColour &colour, int width, wxPenStyle style )
 {
     m_refData = new wxPenRefData();
     M_PENDATA->m_width = width;
@@ -96,17 +95,27 @@ wxPen::wxPen( const wxColour &colour, int width, int style )
     M_PENDATA->m_colour = colour;
 }
 
+#if FUTURE_WXWIN_COMPATIBILITY_3_0
+wxPen::wxPen(const wxColour& colour, int width, int style)
+{
+    m_refData = new wxPenRefData();
+    M_PENDATA->m_width = width;
+    M_PENDATA->m_style = (wxPenStyle)style;
+    M_PENDATA->m_colour = colour;
+}
+#endif
+
 wxPen::~wxPen()
 {
     // m_refData unrefed in ~wxObject
 }
 
-wxObjectRefData *wxPen::CreateRefData() const
+wxGDIRefData *wxPen::CreateGDIRefData() const
 {
     return new wxPenRefData;
 }
 
-wxObjectRefData *wxPen::CloneRefData(const wxObjectRefData *data) const
+wxGDIRefData *wxPen::CloneGDIRefData(const wxGDIRefData *data) const
 {
     return new wxPenRefData(*(wxPenRefData *)data);
 }
@@ -142,21 +151,21 @@ void wxPen::SetColour( unsigned char red, unsigned char green, unsigned char blu
     M_PENDATA->m_colour.Set( red, green, blue );
 }
 
-void wxPen::SetCap( int capStyle )
+void wxPen::SetCap( wxPenCap capStyle )
 {
     AllocExclusive();
 
     M_PENDATA->m_capStyle = capStyle;
 }
 
-void wxPen::SetJoin( int joinStyle )
+void wxPen::SetJoin( wxPenJoin joinStyle )
 {
     AllocExclusive();
 
     M_PENDATA->m_joinStyle = joinStyle;
 }
 
-void wxPen::SetStyle( int style )
+void wxPen::SetStyle( wxPenStyle style )
 {
     AllocExclusive();
 
@@ -172,51 +181,69 @@ void wxPen::SetWidth( int width )
 
 int wxPen::GetDashes( wxDash **ptr ) const
 {
-     *ptr = (M_PENDATA ? (wxDash*)M_PENDATA->m_dash : (wxDash*) NULL);
-     return (M_PENDATA ? M_PENDATA->m_countDashes : 0);
+    wxCHECK_MSG( IsOk(), -1, wxT("invalid pen") );
+
+     *ptr = (wxDash*)M_PENDATA->m_dash;
+     return M_PENDATA->m_countDashes;
 }
 
 int wxPen::GetDashCount() const
 {
+    wxCHECK_MSG( IsOk(), -1, wxT("invalid pen") );
+
     return (M_PENDATA->m_countDashes);
 }
 
 wxDash* wxPen::GetDash() const
 {
+    wxCHECK_MSG( IsOk(), NULL, wxT("invalid pen") );
+
     return (wxDash*)M_PENDATA->m_dash;
 }
 
-int wxPen::GetCap() const
+wxPenCap wxPen::GetCap() const
 {
-    wxCHECK_MSG( Ok(), -1, wxT("invalid pen") );
+    wxCHECK_MSG( IsOk(), wxCAP_INVALID, wxT("invalid pen") );
 
     return M_PENDATA->m_capStyle;
 }
 
-int wxPen::GetJoin() const
+wxPenJoin wxPen::GetJoin() const
 {
-    wxCHECK_MSG( Ok(), -1, wxT("invalid pen") );
+    wxCHECK_MSG( IsOk(), wxJOIN_INVALID, wxT("invalid pen") );
 
     return M_PENDATA->m_joinStyle;
 }
 
-int wxPen::GetStyle() const
+wxPenStyle wxPen::GetStyle() const
 {
-    wxCHECK_MSG( Ok(), -1, wxT("invalid pen") );
+    wxCHECK_MSG( IsOk(), wxPENSTYLE_INVALID, wxT("invalid pen") );
 
     return M_PENDATA->m_style;
 }
 
 int wxPen::GetWidth() const
 {
-    wxCHECK_MSG( Ok(), -1, wxT("invalid pen") );
+    wxCHECK_MSG( IsOk(), -1, wxT("invalid pen") );
 
     return M_PENDATA->m_width;
 }
 
-wxColour &wxPen::GetColour() const
+wxColour wxPen::GetColour() const
 {
-    wxCHECK_MSG( Ok(), wxNullColour, wxT("invalid pen") );
+    wxCHECK_MSG( IsOk(), wxNullColour, wxT("invalid pen") );
 
     return M_PENDATA->m_colour;
 }
+
+// stippled pens are not supported by wxGTK
+void wxPen::SetStipple(const wxBitmap& WXUNUSED(stipple))
+{
+    wxFAIL_MSG( "stippled pens not supported" );
+}
+
+wxBitmap *wxPen::GetStipple() const
+{
+    return NULL;
+}
+

@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/12/99
-// RCS-ID:      $Id: window.h 40795 2006-08-24 15:37:25Z ABX $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -34,26 +33,13 @@
 // forward declarations
 // ---------------------------------------------------------------------------
 
-class WXDLLEXPORT wxButton;
-
-// ---------------------------------------------------------------------------
-// constants
-// ---------------------------------------------------------------------------
-
-#if WXWIN_COMPATIBILITY_2_4
-// they're unused by wxWidgets...
-enum
-{
-    wxKEY_SHIFT = 1,
-    wxKEY_CTRL  = 2
-};
-#endif
+class WXDLLIMPEXP_FWD_CORE wxButton;
 
 // ---------------------------------------------------------------------------
 // wxWindow declaration for OS/2 PM
 // ---------------------------------------------------------------------------
 
-class WXDLLEXPORT wxWindowOS2 : public wxWindowBase
+class WXDLLIMPEXP_CORE wxWindowOS2 : public wxWindowBase
 {
 public:
     wxWindowOS2()
@@ -95,37 +81,22 @@ public:
     virtual void     Raise(void);
     virtual void     Lower(void);
     virtual bool     Show(bool bShow = true);
-    virtual bool     Enable(bool bEnable = true);
+    virtual void     DoEnable(bool bEnable);
     virtual void     SetFocus(void);
     virtual void     SetFocusFromKbd(void);
-    virtual bool     Reparent(wxWindow* pNewParent);
+    virtual bool     Reparent(wxWindowBase* pNewParent);
     virtual void     WarpPointer( int x
                                  ,int y
                                 );
     virtual void     Refresh( bool          bEraseBackground = true
                              ,const wxRect* pRect = (const wxRect *)NULL
                             );
-    virtual void     Freeze(void);
     virtual void     Update(void);
-    virtual void     Thaw(void);
     virtual void     SetWindowStyleFlag(long lStyle);
     virtual bool     SetCursor(const wxCursor& rCursor);
     virtual bool     SetFont(const wxFont& rFont);
     virtual int      GetCharHeight(void) const;
     virtual int      GetCharWidth(void) const;
-    virtual void     GetTextExtent( const wxString& rString
-                                   ,int*            pX
-                                   ,int*            pY
-                                   ,int*            pDescent = (int *)NULL
-                                   ,int*            pExternalLeading = (int *)NULL
-                                   ,const wxFont*   pTheFont = (const wxFont *)NULL
-                                  ) const;
-#if wxUSE_MENUS_NATIVE
-    virtual bool     DoPopupMenu( wxMenu* pMenu
-                                 ,int     nX
-                                 ,int     nY
-                                );
-#endif // wxUSE_MENUS_NATIVE
 
     virtual void     SetScrollbar( int  nOrient
                                   ,int  nPos
@@ -142,11 +113,11 @@ public:
     virtual int      GetScrollRange(int nOrient) const;
     virtual void     ScrollWindow( int           nDx
                                   ,int           nDy
-                                  ,const wxRect* pRect = (wxRect *)NULL
+                                  ,const wxRect* pRect = NULL
                                  );
 
     inline HWND                   GetScrollBarHorz(void) const {return m_hWndScrollBarHorz;}
-    inline HWND                   GetScrollBarVert(void) const {return m_hWndScrollBarVert;};
+    inline HWND                   GetScrollBarVert(void) const {return m_hWndScrollBarVert;}
 #if wxUSE_DRAG_AND_DROP
     virtual void SetDropTarget(wxDropTarget* pDropTarget);
 #endif // wxUSE_DRAG_AND_DROP
@@ -210,7 +181,7 @@ public:
                                     );
 
     // PM only: true if this control is part of the main control
-    virtual bool ContainsHWND(WXHWND WXUNUSED(hWnd)) const { return false; };
+    virtual bool ContainsHWND(WXHWND WXUNUSED(hWnd)) const { return false; }
 
     // translate wxWidgets style flags for this control into the PM style
     // and optional extended style for the corresponding native control
@@ -429,6 +400,9 @@ public:
     PSWP GetSwp(void) {return &m_vWinSwp;}
 
 protected:
+    virtual void     DoFreeze(void);
+    virtual void     DoThaw(void);
+
     // PM can't create some MSW styles natively but can perform these after
     // creation by sending messages
     typedef enum extra_flags { kFrameToolWindow = 0x0001
@@ -472,6 +446,19 @@ protected:
     long                            m_lDlgCode;
 
     // implement the base class pure virtuals
+    virtual void     GetTextExtent( const wxString& rString
+                                   ,int*            pX
+                                   ,int*            pY
+                                   ,int*            pDescent = NULL
+                                   ,int*            pExternalLeading = NULL
+                                   ,const wxFont*   pTheFont = NULL
+                                  ) const;
+#if wxUSE_MENUS_NATIVE
+    virtual bool     DoPopupMenu( wxMenu* pMenu
+                                 ,int     nX
+                                 ,int     nY
+                                );
+#endif // wxUSE_MENUS_NATIVE
     virtual void DoClientToScreen( int* pX
                                   ,int* pY
                                  ) const;
@@ -541,20 +528,13 @@ private:
                               ,WXWPARAM    wParam = 0
                              ) const;
 
-    wxWindowList*                   m_pChildrenDisabled;
     HWND                            m_hWndScrollBarHorz;
     HWND                            m_hWndScrollBarVert;
     SWP                             m_vWinSwp;
 
     DECLARE_DYNAMIC_CLASS(wxWindowOS2);
-    DECLARE_NO_COPY_CLASS(wxWindowOS2)
+    wxDECLARE_NO_COPY_CLASS(wxWindowOS2);
     DECLARE_EVENT_TABLE()
-
-    //
-    // Virtual function hiding supression
-    //
-    inline virtual bool Reparent(wxWindowBase* pNewParent)
-    { return(wxWindowBase::Reparent(pNewParent));}
 }; // end of wxWindow
 
 class wxWindowCreationHook
@@ -569,8 +549,8 @@ public:
 // ---------------------------------------------------------------------------
 
 // kbd code translation
-WXDLLEXPORT int wxCharCodeOS2ToWX(int nKeySym);
-WXDLLEXPORT int wxCharCodeWXToOS2( int   nId
+WXDLLIMPEXP_CORE int wxCharCodeOS2ToWX(int nKeySym);
+WXDLLIMPEXP_CORE int wxCharCodeWXToOS2( int   nId
                                   ,bool* pbIsVirtual = NULL
                                  );
 

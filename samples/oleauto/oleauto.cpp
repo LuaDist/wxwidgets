@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     08/12/98
-// RCS-ID:      $Id: oleauto.cpp 40587 2006-08-13 01:17:53Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -32,7 +31,7 @@
 
 #include "wx/msw/ole/automtn.h"
 
-#ifndef __WXMSW__
+#ifndef __WINDOWS__
 #error "Sorry, this sample works under Windows only."
 #endif
 
@@ -40,8 +39,8 @@
 // ressources
 // ----------------------------------------------------------------------------
 // the application icon
-#if defined(__WXGTK__) || defined(__WXX11__) || defined(__WXMOTIF__)
-    #include "mondrian.xpm"
+#ifndef wxHAS_IMAGES_IN_RESOURCES
+    #include "../sample.xpm"
 #endif
 
 // ----------------------------------------------------------------------------
@@ -125,14 +124,15 @@ IMPLEMENT_APP(MyApp)
 // `Main program' equivalent: the program execution "starts" here
 bool MyApp::OnInit()
 {
+    if ( !wxApp::OnInit() )
+        return false;
+
     // Create the main application window
-    MyFrame *frame = new MyFrame(_T("OleAuto wxWidgets App"),
+    MyFrame *frame = new MyFrame(wxT("OleAuto wxWidgets App"),
                                  wxPoint(50, 50), wxSize(450, 340));
 
-    // Show it and tell the application that it's our main window
-    // @@@ what does it do exactly, in fact? is it necessary here?
+    // Show it
     frame->Show(true);
-    SetTopWindow(frame);
 
     // success: wxApp::OnRun() will be called which will enter the main message
     // loop and the application will run. If we returned false here, the
@@ -149,19 +149,19 @@ MyFrame::MyFrame(const wxString& title, const wxPoint& pos, const wxSize& size)
        : wxFrame((wxFrame *)NULL, wxID_ANY, title, pos, size)
 {
     // set the frame icon
-    SetIcon(wxICON(mondrian));
+    SetIcon(wxICON(sample));
 
     // create a menu bar
     wxMenu *menuFile = new wxMenu;
 
-    menuFile->Append(OleAuto_Test, _T("&Test Excel Automation..."));
-    menuFile->Append(OleAuto_About, _T("&About..."));
+    menuFile->Append(OleAuto_Test, wxT("&Test Excel Automation..."));
+    menuFile->Append(OleAuto_About, wxT("&About"));
     menuFile->AppendSeparator();
-    menuFile->Append(OleAuto_Quit, _T("E&xit"));
+    menuFile->Append(OleAuto_Quit, wxT("E&xit"));
 
     // now append the freshly created menu to the menu bar...
     wxMenuBar *menuBar = new wxMenuBar;
-    menuBar->Append(menuFile, _T("&File"));
+    menuBar->Append(menuFile, wxT("&File"));
 
     // ... and attach this menu bar to the frame
     SetMenuBar(menuBar);
@@ -169,7 +169,7 @@ MyFrame::MyFrame(const wxString& title, const wxPoint& pos, const wxSize& size)
 #if wxUSE_STATUSBAR
     // create a status bar just for fun (by default with 1 pane only)
     CreateStatusBar(2);
-    SetStatusText(_T("Welcome to wxWidgets!"));
+    SetStatusText(wxT("Welcome to wxWidgets!"));
 #endif // wxUSE_STATUSBAR
 }
 
@@ -184,8 +184,8 @@ void MyFrame::OnQuit(wxCommandEvent& WXUNUSED(event))
 
 void MyFrame::OnAbout(wxCommandEvent& WXUNUSED(event))
 {
-    wxMessageBox(_T("This is an OLE Automation sample"),
-                 _T("About OleAuto"), wxOK | wxICON_INFORMATION, this);
+    wxMessageBox(wxT("This is an OLE Automation sample"),
+                 wxT("About OleAuto"), wxOK | wxICON_INFORMATION, this);
 }
 
 /* Tests OLE automation by making the active Excel cell bold,
@@ -193,25 +193,47 @@ void MyFrame::OnAbout(wxCommandEvent& WXUNUSED(event))
  */
 void MyFrame::OnTest(wxCommandEvent& WXUNUSED(event))
 {
-    wxMessageBox(_T("Please ensure Excel is running, then press OK.\nThe active cell should then say 'wxWidgets automation test!' in bold."));
+    wxMessageBox(wxT("Excel will be started if it is not running after you have pressed OK button.")
+        wxT("\nThe active cell should then say 'wxWidgets automation test!' in bold."),
+        wxT("Excel start"));
 
-    wxAutomationObject excelObject, rangeObject;
-    if (!excelObject.GetInstance(_T("Excel.Application")))
+    wxAutomationObject excelObject;
+    if ( !excelObject.GetInstance(wxT("Excel.Application")) )
     {
-        if (!excelObject.CreateInstance(_T("Excel.Application")))
+        wxLogError(wxT("Could not create Excel object."));
+        return;
+    }
+
+    // Ensure that Excel is visible
+    if (!excelObject.PutProperty(wxT("Visible"), true))
+    {
+        wxLogError(wxT("Could not make Excel object visible"));
+    }
+    const wxVariant workbooksCountVariant = excelObject.GetProperty(wxT("Workbooks.Count"));
+    if (workbooksCountVariant.IsNull())
+    {
+        wxLogError(wxT("Could not get workbooks count"));
+        return;
+    }
+    const long workbooksCount = workbooksCountVariant;
+    if (workbooksCount == 0)
+    {
+        const wxVariant workbook = excelObject.CallMethod(wxT("Workbooks.Add"));
+        if (workbook.IsNull())
         {
-            wxMessageBox(_T("Could not create Excel object."));
+            wxLogError(wxT("Could not create new Workbook"));
             return;
         }
     }
-    if (!excelObject.PutProperty(_T("ActiveCell.Value"), _T("wxWidgets automation test!")))
+
+    if (!excelObject.PutProperty(wxT("ActiveCell.Value"), wxT("wxWidgets automation test!")))
     {
-        wxMessageBox(_T("Could not set active cell value."));
+        wxLogError(wxT("Could not set active cell value."));
         return;
     }
-    if (!excelObject.PutProperty(_T("ActiveCell.Font.Bold"), wxVariant(true)) )
+    if (!excelObject.PutProperty(wxT("ActiveCell.Font.Bold"), wxVariant(true)) )
     {
-        wxMessageBox(_T("Could not put Bold property to active cell."));
+        wxLogError(wxT("Could not put Bold property to active cell."));
         return;
     }
 }

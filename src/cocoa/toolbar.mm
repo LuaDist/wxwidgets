@@ -4,9 +4,8 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2003/08/17
-// RCS-ID:      $Id: toolbar.mm 42840 2006-10-31 13:09:08Z VZ $
 // Copyright:   (c) 2003 David Elliott
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -60,8 +59,8 @@ public:
         CreateButtonCell();
     }
 
-    wxToolBarTool(wxToolBar *tbar, wxControl *control)
-        : wxToolBarToolBase(tbar, control)
+    wxToolBarTool(wxToolBar *tbar, wxControl *control, const wxString& label)
+        : wxToolBarToolBase(tbar, control, label)
     {
         Init();
     }
@@ -100,7 +99,7 @@ void wxToolBarTool::Init()
 void wxToolBar::CocoaToolClickEnded()
 {
     wxASSERT(m_mouseDownTool);
-    wxCommandEvent event(wxEVT_COMMAND_MENU_SELECTED, m_mouseDownTool->GetId());
+    wxCommandEvent event(wxEVT_MENU, m_mouseDownTool->GetId());
     InitCommandEvent(event);
     Command(event);
 }
@@ -208,9 +207,10 @@ wxToolBarToolBase *wxToolBar::CreateTool(int toolid,
                              clientData, shortHelpString, longHelpString);
 }
 
-wxToolBarToolBase *wxToolBar::CreateTool(wxControl *control)
+wxToolBarToolBase *
+wxToolBar::CreateTool(wxControl *control, const wxString& label)
 {
-    return new wxToolBarTool(this, control);
+    return new wxToolBarTool(this, control, label);
 }
 
 void wxToolBar::SetWindowStyleFlag( long style )

@@ -3,7 +3,6 @@
 // Purpose:     wxCursor implementation
 // Author:      Vaclav Slavik
 // Created:     2006-08-08
-// RCS-ID:      $Id: cursor.cpp 42752 2006-10-30 19:26:48Z VZ $
 // Copyright:   (c) 2006 REA Elektronik GmbH
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -22,11 +21,22 @@
 // wxCursorRefData
 //-----------------------------------------------------------------------------
 
-class wxCursorRefData: public wxObjectRefData
+class wxCursorRefData : public wxGDIRefData
 {
 public:
     wxCursorRefData(const wxBitmap& bmp = wxNullBitmap, int id = -1)
         : m_id(id), m_bitmap(bmp) {}
+
+    virtual bool IsOk() const { return m_bitmap.IsOk(); }
+
+    // Create a deep copy of this object.
+    wxCursorRefData *Clone() const
+    {
+        wxBitmap bitmapCopy(m_bitmap);
+        bitmapCopy.UnShare();
+
+        return new wxCursorRefData(bitmapCopy, m_id);
+    }
 
     int      m_id;
     wxBitmap m_bitmap;
@@ -41,41 +51,26 @@ public:
 
 IMPLEMENT_DYNAMIC_CLASS(wxCursor, wxObject)
 
-wxCursor::wxCursor(int cursorId)
+void wxCursor::InitFromStock(wxStockCursor cursorId)
 {
 #warning "FIXME -- implement the cursor as bitmaps (that's what DFB uses)"
 }
 
-wxCursor::wxCursor(const char WXUNUSED(bits)[],
-                   int WXUNUSED(width),
-                   int WXUNUSED(height),
-                   int WXUNUSED(hotSpotX), int WXUNUSED(hotSpotY),
-                   const char WXUNUSED(maskBits)[],
-                   wxColour * WXUNUSED(fg), wxColour * WXUNUSED(bg) )
-{
-#warning "FIXME"
-}
-
 wxCursor::wxCursor(const wxString& cursor_file,
-                   long flags,
+                   wxBitmapType type,
                    int WXUNUSED(hotSpotX), int WXUNUSED(hotSpotY))
 {
 #warning "FIXME"
 }
 
-bool wxCursor::IsOk() const
-{
-    return m_refData && M_CURSOR->m_bitmap.Ok();
-}
-
-wxObjectRefData *wxCursor::CreateRefData() const
+wxGDIRefData *wxCursor::CreateGDIRefData() const
 {
     return new wxCursorRefData;
 }
 
-wxObjectRefData *wxCursor::CloneRefData(const wxObjectRefData *data) const
+wxGDIRefData *wxCursor::CloneGDIRefData(const wxGDIRefData *data) const
 {
-    return new wxCursorRefData(*(wxCursorRefData *)data);
+    return static_cast<const wxCursorRefData *>(data)->Clone();
 }
 
 

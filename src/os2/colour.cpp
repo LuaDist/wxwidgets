@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/13/99
-// RCS-ID:      $Id: colour.cpp 41123 2006-09-10 02:00:24Z VZ $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -22,8 +21,6 @@
 #define INCL_PM
 #include<os2.h>
 
-IMPLEMENT_DYNAMIC_CLASS(wxColour, wxGDIObject)
-
 // Colour
 
 void wxColour::Init()
@@ -32,11 +29,6 @@ void wxColour::Init()
     m_vPixel = 0;
     m_cRed = m_cBlue = m_cGreen = 0;
 } // end of wxColour::Init
-
-wxColour::wxColour ()
-{
-    Init();
-} // end of wxColour::wxColour
 
 wxColour::wxColour( const wxColour& rCol )
 {

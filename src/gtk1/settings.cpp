@@ -3,7 +3,6 @@
 // Purpose:
 // Author:      Robert Roebling
 // Modified by: Mart Raudsepp (GetMetric)
-// Id:          $Id: settings.cpp 67017 2011-02-25 09:37:28Z JS $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -14,7 +13,6 @@
 #include "wx/settings.h"
 
 #ifndef WX_PRECOMP
-    #include "wx/cmndata.h"
     #include "wx/toplevel.h"
 #endif
 
@@ -82,7 +80,7 @@ static bool GetColourFromGTKWidget(int& red, int& green, int& blue,
     switch ( type )
     {
         default:
-            wxFAIL_MSG( _T("unexpected GTK widget type") );
+            wxFAIL_MSG( wxT("unexpected GTK widget type") );
             // fall through
 
         case wxGTK_BUTTON:
@@ -108,7 +106,7 @@ static bool GetColourFromGTKWidget(int& red, int& green, int& blue,
         switch ( colour )
         {
             default:
-                wxFAIL_MSG( _T("unexpected GTK colour type") );
+                wxFAIL_MSG( wxT("unexpected GTK colour type") );
                 // fall through
 
             case wxGTK_FG:
@@ -149,7 +147,7 @@ static void GetTooltipColors()
     gs_objects.m_colTooltip = wxColor(c.red >> SHIFT, c.green >> SHIFT, c.blue >> SHIFT);
     c = tooltips->tip_window->style->fg[GTK_STATE_NORMAL];
     gs_objects.m_colTooltipText = wxColor(c.red >> SHIFT, c.green >> SHIFT, c.blue >> SHIFT);
-    gtk_object_sink(wx_reinterpret_cast(GtkObject*, tooltips));
+    gtk_object_sink(reinterpret_cast<GtkObject*>(tooltips));
 }
 
 wxColour wxSystemSettingsNative::GetColour( wxSystemColour index )
@@ -166,7 +164,7 @@ wxColour wxSystemSettingsNative::GetColour( wxSystemColour index )
         case wxSYS_COLOUR_BTNFACE:
         case wxSYS_COLOUR_MENUBAR:
         case wxSYS_COLOUR_3DLIGHT:
-            if (!gs_objects.m_colBtnFace.Ok())
+            if (!gs_objects.m_colBtnFace.IsOk())
             {
                 int red, green, blue;
                 if ( !GetColourFromGTKWidget(red, green, blue) )
@@ -191,7 +189,7 @@ wxColour wxSystemSettingsNative::GetColour( wxSystemColour index )
         case wxSYS_COLOUR_GRAYTEXT:
         case wxSYS_COLOUR_BTNSHADOW:
         //case wxSYS_COLOUR_3DSHADOW:
-            if (!gs_objects.m_colBtnShadow.Ok())
+            if (!gs_objects.m_colBtnShadow.IsOk())
             {
                 wxColour faceColour(GetColour(wxSYS_COLOUR_3DFACE));
                 gs_objects.m_colBtnShadow =
@@ -207,7 +205,7 @@ wxColour wxSystemSettingsNative::GetColour( wxSystemColour index )
             return * wxWHITE;
 
         case wxSYS_COLOUR_HIGHLIGHT:
-            if (!gs_objects.m_colHighlight.Ok())
+            if (!gs_objects.m_colHighlight.IsOk())
             {
                 int red, green, blue;
                 if ( !GetColourFromGTKWidget(red, green, blue,
@@ -226,7 +224,7 @@ wxColour wxSystemSettingsNative::GetColour( wxSystemColour index )
             return gs_objects.m_colHighlight;
 
         case wxSYS_COLOUR_LISTBOX:
-            if (!gs_objects.m_colListBox.Ok())
+            if (!gs_objects.m_colListBox.IsOk())
             {
                 int red, green, blue;
                 if ( GetColourFromGTKWidget(red, green, blue,
@@ -251,7 +249,7 @@ wxColour wxSystemSettingsNative::GetColour( wxSystemColour index )
         case wxSYS_COLOUR_INACTIVECAPTIONTEXT:
         case wxSYS_COLOUR_BTNTEXT:
         case wxSYS_COLOUR_LISTBOXTEXT:
-            if (!gs_objects.m_colBtnText.Ok())
+            if (!gs_objects.m_colBtnText.IsOk())
             {
                 int red, green, blue;
                 if ( !GetColourFromGTKWidget(red, green, blue,
@@ -271,20 +269,20 @@ wxColour wxSystemSettingsNative::GetColour( wxSystemColour index )
             return gs_objects.m_colBtnText;
 
         case wxSYS_COLOUR_INFOBK:
-            if (!gs_objects.m_colTooltip.Ok()) {
+            if (!gs_objects.m_colTooltip.IsOk()) {
                 GetTooltipColors();
             }
             return gs_objects.m_colTooltip;
 
         case wxSYS_COLOUR_INFOTEXT:
-            if (!gs_objects.m_colTooltipText.Ok()) {
+            if (!gs_objects.m_colTooltipText.IsOk()) {
                 GetTooltipColors();
             }
             return gs_objects.m_colTooltipText;
 
-        case wxSYS_COLOUR_HIGHLIGHTTEXT:
         case wxSYS_COLOUR_LISTBOXHIGHLIGHTTEXT:
-            if (!gs_objects.m_colHighlightText.Ok())
+        case wxSYS_COLOUR_HIGHLIGHTTEXT:
+            if (!gs_objects.m_colHighlightText.IsOk())
             {
                 wxColour hclr = GetColour(wxSYS_COLOUR_HIGHLIGHT);
                 if (hclr.Red() > 200 && hclr.Green() > 200 && hclr.Blue() > 200)
@@ -299,7 +297,7 @@ wxColour wxSystemSettingsNative::GetColour( wxSystemColour index )
 
         case wxSYS_COLOUR_ACTIVECAPTION:
         case wxSYS_COLOUR_MENUHILIGHT:
-            if (!gs_objects.m_colMenuItemHighlight.Ok())
+            if (!gs_objects.m_colMenuItemHighlight.IsOk())
             {
                 int red, green, blue;
                 if ( !GetColourFromGTKWidget(red, green, blue,
@@ -326,7 +324,7 @@ wxColour wxSystemSettingsNative::GetColour( wxSystemColour index )
 
         case wxSYS_COLOUR_MAX:
         default:
-            wxFAIL_MSG( _T("unknown system colour index") );
+            wxFAIL_MSG( wxT("unknown system colour index") );
     }
 
     return *wxWHITE;
@@ -347,7 +345,7 @@ wxFont wxSystemSettingsNative::GetFont( wxSystemFont index )
         case wxSYS_DEVICE_DEFAULT_FONT:
         case wxSYS_DEFAULT_GUI_FONT:
         {
-            if (!gs_objects.m_fontSystem.Ok())
+            if (!gs_objects.m_fontSystem.IsOk())
             {
                 gs_objects.m_fontSystem = wxFont( 12, wxSWISS, wxNORMAL, wxNORMAL );
             }
@@ -359,7 +357,8 @@ wxFont wxSystemSettingsNative::GetFont( wxSystemFont index )
     }
 }
 
-int wxSystemSettingsNative::GetMetric( wxSystemMetric index, wxWindow* win )
+int
+wxSystemSettingsNative::GetMetric(wxSystemMetric index, wxWindow* WXUNUSED(win))
 {
     switch (index)
     {

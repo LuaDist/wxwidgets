@@ -2,7 +2,6 @@
 // Name:        src/x11/dataobj.cpp
 // Purpose:     wxDataObject class
 // Author:      Julian Smart
-// Id:          $Id: dataobj.cpp 42079 2006-10-17 17:16:53Z JS $
 // Copyright:   (c) 1998 Julian Smart
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -55,12 +54,6 @@ wxDataFormat::wxDataFormat( wxDataFormatId type )
 {
     PrepareFormats();
     SetType( type );
-}
-
-wxDataFormat::wxDataFormat( const wxChar *id )
-{
-    PrepareFormats();
-    SetId( id );
 }
 
 wxDataFormat::wxDataFormat( const wxString &id )
@@ -129,13 +122,12 @@ void wxDataFormat::SetId( NativeFormat format )
         m_type = wxDF_PRIVATE;
 }
 
-void wxDataFormat::SetId( const wxChar *id )
+void wxDataFormat::SetId( const wxString& id )
 {
 #if !wxUSE_NANOX
     PrepareFormats();
     m_type = wxDF_PRIVATE;
-    wxString tmp( id );
-    m_format = XInternAtom( (Display*) wxGetDisplay(), tmp.ToAscii(), FALSE );
+    m_format = XInternAtom( (Display*) wxGetDisplay(), id.ToAscii(), FALSE );
 #endif
 }
 
@@ -250,12 +242,12 @@ bool wxFileDataObject::SetData(size_t WXUNUSED(size), const void *buf)
         if ( (*p == '\r' && *(p+1) == '\n') || !*p )
         {
             size_t lenPrefix = 5; // strlen("file:")
-            if ( filename.Left(lenPrefix).MakeLower() == _T("file:") )
+            if ( filename.Left(lenPrefix).MakeLower() == wxT("file:") )
             {
                 // sometimes the syntax is "file:filename", sometimes it's
                 // URL-like: "file://filename" - deal with both
-                if ( filename[lenPrefix] == _T('/') &&
-                     filename[lenPrefix + 1] == _T('/') )
+                if ( filename[lenPrefix] == wxT('/') &&
+                     filename[lenPrefix + 1] == wxT('/') )
                 {
                     // skip the slashes
                     lenPrefix += 2;
@@ -266,7 +258,7 @@ bool wxFileDataObject::SetData(size_t WXUNUSED(size), const void *buf)
             }
             else
             {
-                wxLogDebug(_T("Unsupported URI '%s' in wxFileDataObject"),
+                wxLogDebug(wxT("Unsupported URI '%s' in wxFileDataObject"),
                            filename.c_str());
             }
 
@@ -356,7 +348,7 @@ bool wxBitmapDataObject::SetData(size_t size, const void *buf)
 
     m_bitmap = image;
 
-    return m_bitmap.Ok();
+    return m_bitmap.IsOk();
 #else
     return false;
 #endif
@@ -365,7 +357,7 @@ bool wxBitmapDataObject::SetData(size_t size, const void *buf)
 void wxBitmapDataObject::DoConvertToPng()
 {
 #if wxUSE_LIBPNG
-    if (!m_bitmap.Ok())
+    if (!m_bitmap.IsOk())
         return;
 
     wxImage image = m_bitmap.ConvertToImage();

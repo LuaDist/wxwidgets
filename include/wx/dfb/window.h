@@ -3,7 +3,6 @@
 // Purpose:     wxWindow class
 // Author:      Vaclav Slavik
 // Created:     2006-08-10
-// RCS-ID:      $Id: window.h 42340 2006-10-24 12:29:14Z VS $
 // Copyright:   (c) 2006 REA Elektronik GmbH
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -20,8 +19,8 @@
 wxDFB_DECLARE_INTERFACE(IDirectFBSurface);
 struct wxDFBWindowEvent;
 
-class WXDLLIMPEXP_CORE wxFont;
-class WXDLLIMPEXP_CORE wxTopLevelWindowDFB;
+class WXDLLIMPEXP_FWD_CORE wxFont;
+class WXDLLIMPEXP_FWD_CORE wxNonOwnedWindow;
 
 class wxOverlayImpl;
 class wxDfbOverlaysList;
@@ -75,22 +74,12 @@ public:
     virtual void Refresh(bool eraseBackground = true,
                          const wxRect *rect = (const wxRect *) NULL);
     virtual void Update();
-    virtual void Clear();
-    virtual void Freeze();
-    virtual void Thaw();
-    virtual bool IsFrozen() const { return m_frozenness > 0; }
 
     virtual bool SetCursor(const wxCursor &cursor);
     virtual bool SetFont(const wxFont &font) { m_font = font; return true; }
 
     virtual int GetCharHeight() const;
     virtual int GetCharWidth() const;
-    virtual void GetTextExtent(const wxString& string,
-                               int *x, int *y,
-                               int *descent = (int *) NULL,
-                               int *externalLeading = (int *) NULL,
-                               const wxFont *theFont = (const wxFont *) NULL)
-                               const;
 
 #if wxUSE_DRAG_AND_DROP
     virtual void SetDropTarget(wxDropTarget *dropTarget);
@@ -108,14 +97,17 @@ public:
     wxIDirectFBSurfacePtr GetDfbSurface();
 
     // returns toplevel window the window belongs to
-    wxTopLevelWindowDFB *GetTLW() const { return m_tlw; }
-
-    void OnInternalIdle();
+    wxNonOwnedWindow *GetTLW() const { return m_tlw; }
 
     virtual bool IsDoubleBuffered() const { return true; }
 
 protected:
     // implement the base class pure virtuals
+    virtual void DoGetTextExtent(const wxString& string,
+                                 int *x, int *y,
+                                 int *descent = NULL,
+                                 int *externalLeading = NULL,
+                                 const wxFont *theFont = NULL) const;
     virtual void DoClientToScreen(int *x, int *y) const;
     virtual void DoScreenToClient(int *x, int *y) const;
     virtual void DoGetPosition(int *x, int *y) const;
@@ -128,6 +120,8 @@ protected:
 
     virtual void DoCaptureMouse();
     virtual void DoReleaseMouse();
+
+    virtual void DoThaw();
 
     // move the window to the specified location and resize it: this is called
     // from both DoSetSize() and DoSetClientSize() and would usually just call
@@ -174,7 +168,7 @@ private:
 
 protected:
     // toplevel window (i.e. DirectFB window) this window belongs to
-    wxTopLevelWindowDFB *m_tlw;
+    wxNonOwnedWindow *m_tlw;
 
 private:
     // subsurface of TLW's surface covered by this window
@@ -184,18 +178,15 @@ private:
     // don't access it directly)
     wxRect m_rect;
 
-    // number of calls to Freeze() minus number of calls to Thaw()
-    unsigned m_frozenness;
-
     // overlays for this window (or NULL if it doesn't have any)
     wxDfbOverlaysList *m_overlays;
 
-    friend class wxTopLevelWindowDFB; // for HandleXXXEvent
+    friend class wxNonOwnedWindow; // for HandleXXXEvent
     friend class wxOverlayImpl; // for Add/RemoveOverlay
-    friend class wxWindowDC; // for PaintOverlays
+    friend class wxWindowDCImpl; // for PaintOverlays
 
     DECLARE_DYNAMIC_CLASS(wxWindowDFB)
-    DECLARE_NO_COPY_CLASS(wxWindowDFB)
+    wxDECLARE_NO_COPY_CLASS(wxWindowDFB);
     DECLARE_EVENT_TABLE()
 };
 

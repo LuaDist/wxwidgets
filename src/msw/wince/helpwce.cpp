@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     2003-07-12
-// RCS-ID:      $Id: helpwce.cpp 41054 2006-09-07 19:01:45Z ABX $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -90,7 +89,7 @@ bool wxWinceHelpController::Quit()
 wxString wxWinceHelpController::GetValidFilename(const wxString& file) const
 {
     wxString path, name, ext;
-    wxSplitPath(file, & path, & name, & ext);
+    wxFileName::SplitPath(file, & path, & name, & ext);
 
     wxString fullName;
     if (path.empty())

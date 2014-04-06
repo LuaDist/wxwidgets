@@ -6,7 +6,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: sashwin.cpp 51249 2008-01-16 13:50:23Z JS $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -35,7 +34,7 @@
 
 #include "wx/laywin.h"
 
-DEFINE_EVENT_TYPE(wxEVT_SASH_DRAGGED)
+wxDEFINE_EVENT( wxEVT_SASH_DRAGGED, wxSashEvent );
 
 IMPLEMENT_DYNAMIC_CLASS(wxSashWindow, wxWindow)
 IMPLEMENT_DYNAMIC_CLASS(wxSashEvent, wxCommandEvent)
@@ -115,8 +114,8 @@ void wxSashWindow::OnMouseEvent(wxMouseEvent& event)
             // the area to draw on.
             wxWindow* parent = this;
 
-            while (parent && !parent->IsKindOf(CLASSINFO(wxDialog)) &&
-                             !parent->IsKindOf(CLASSINFO(wxFrame)))
+            while (parent && !wxDynamicCast(parent, wxDialog) &&
+                             !wxDynamicCast(parent, wxFrame))
               parent = parent->GetParent();
 
             wxScreenDC::StartDrawingOnTop(parent);
@@ -426,10 +425,10 @@ void wxSashWindow::DrawBorders(wxDC& dc)
     int w, h;
     GetClientSize(&w, &h);
 
-    wxPen mediumShadowPen(m_mediumShadowColour, 1, wxSOLID);
-    wxPen darkShadowPen(m_darkShadowColour, 1, wxSOLID);
-    wxPen lightShadowPen(m_lightShadowColour, 1, wxSOLID);
-    wxPen hilightPen(m_hilightColour, 1, wxSOLID);
+    wxPen mediumShadowPen(m_mediumShadowColour, 1, wxPENSTYLE_SOLID);
+    wxPen darkShadowPen(m_darkShadowColour, 1, wxPENSTYLE_SOLID);
+    wxPen lightShadowPen(m_lightShadowColour, 1, wxPENSTYLE_SOLID);
+    wxPen hilightPen(m_hilightColour, 1, wxPENSTYLE_SOLID);
 
     if ( GetWindowStyleFlag() & wxSW_3DBORDER )
     {
@@ -475,16 +474,16 @@ void wxSashWindow::DrawSash(wxSashEdgePosition edge, wxDC& dc)
     int w, h;
     GetClientSize(&w, &h);
 
-    wxPen facePen(m_faceColour, 1, wxSOLID);
-    wxBrush faceBrush(m_faceColour, wxSOLID);
-    wxPen mediumShadowPen(m_mediumShadowColour, 1, wxSOLID);
-    wxPen darkShadowPen(m_darkShadowColour, 1, wxSOLID);
-    wxPen lightShadowPen(m_lightShadowColour, 1, wxSOLID);
-    wxPen hilightPen(m_hilightColour, 1, wxSOLID);
+    wxPen facePen(m_faceColour, 1, wxPENSTYLE_SOLID);
+    wxBrush faceBrush(m_faceColour, wxBRUSHSTYLE_SOLID);
+    wxPen mediumShadowPen(m_mediumShadowColour, 1, wxPENSTYLE_SOLID);
+    wxPen darkShadowPen(m_darkShadowColour, 1, wxPENSTYLE_SOLID);
+    wxPen lightShadowPen(m_lightShadowColour, 1, wxPENSTYLE_SOLID);
+    wxPen hilightPen(m_hilightColour, 1, wxPENSTYLE_SOLID);
     wxColour blackClr(0, 0, 0);
     wxColour whiteClr(255, 255, 255);
-    wxPen blackPen(blackClr, 1, wxSOLID);
-    wxPen whitePen(whiteClr, 1, wxSOLID);
+    wxPen blackPen(blackClr, 1, wxPENSTYLE_SOLID);
+    wxPen whitePen(whiteClr, 1, wxPENSTYLE_SOLID);
 
     if ( edge == wxSASH_LEFT || edge == wxSASH_RIGHT )
     {
@@ -587,7 +586,7 @@ void wxSashWindow::DrawSashTracker(wxSashEdgePosition edge, int x, int y)
     ClientToScreen(&x1, &y1);
     ClientToScreen(&x2, &y2);
 
-    wxPen sashTrackerPen(*wxBLACK, 2, wxSOLID);
+    wxPen sashTrackerPen(*wxBLACK, 2, wxPENSTYLE_SOLID);
 
     screenDC.SetLogicalFunction(wxINVERT);
     screenDC.SetPen(sashTrackerPen);

@@ -1,10 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        scrollbar.h
+// Name:        wx/os2/scrolbar.h
 // Purpose:     wxScrollBar class
 // Author:      David Webster
 // Modified by:
 // Created:     10/15/99
-// RCS-ID:      $Id: scrolbar.h 41020 2006-09-05 20:47:48Z VZ $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -15,7 +14,7 @@
 #include "wx/scrolbar.h"
 
 // Scrollbar item
-class WXDLLEXPORT wxScrollBar : public wxScrollBarBase
+class WXDLLIMPEXP_CORE wxScrollBar : public wxScrollBarBase
 {
 public:
     inline wxScrollBar()

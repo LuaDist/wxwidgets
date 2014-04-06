@@ -4,7 +4,6 @@
 // Author:      Hajo Kirchhoff
 // Modified by:
 // Created:     06/11/2003
-// RCS-ID:      $Id: urlmsw.cpp 58116 2009-01-15 12:45:22Z VZ $
 // Copyright:   (c) 2003 Hajo Kirchhoff
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -137,7 +136,7 @@ protected:
     HINTERNET m_hFile;
     size_t OnSysRead(void *buffer, size_t bufsize);
 
-    DECLARE_NO_COPY_CLASS(wxWinINetInputStream)
+    wxDECLARE_NO_COPY_CLASS(wxWinINetInputStream);
 };
 
 size_t wxWinINetInputStream::GetSize() const
@@ -174,7 +173,7 @@ size_t wxWinINetInputStream::OnSysRead(void *buffer, size_t bufsize)
             );
 
             wxLogError(wxT("Read failed with error %d: %s"),
-                       iError, errorString.c_str());
+                       iError, errorString);
         }
     }
 

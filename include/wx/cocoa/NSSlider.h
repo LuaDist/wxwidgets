@@ -4,9 +4,8 @@
 // Author:      Mark Oxenham
 // Modified by: David Elliott
 // Created:     2007/08/10
-// RCS-ID:      $Id: NSSlider.h 60554 2009-05-08 23:10:00Z VZ $
 // Copyright:   (c) 2007 Software 2000 Ltd. All rights reserved.
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #ifndef _WXNSSLIDER_H_
@@ -21,7 +20,7 @@ DECLARE_WXCOCOA_OBJC_CLASS(NSSlider);
 WX_DECLARE_OBJC_HASHMAP(NSSlider);
 
 // For when we're not in Objective-C mode:
-typedef struct objc_selector    *SEL;    
+typedef struct objc_selector    *SEL;
 
 class wxCocoaNSSliderLastSelectorChanger;
 

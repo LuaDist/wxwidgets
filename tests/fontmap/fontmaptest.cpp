@@ -3,7 +3,6 @@
 // Purpose:     wxFontMapper unit test
 // Author:      Vadim Zeitlin
 // Created:     14.02.04
-// RCS-ID:      $Id: fontmaptest.cpp 38490 2006-03-31 21:14:40Z VZ $
 // Copyright:   (c) 2003 TT-Solutions
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -48,7 +47,7 @@ private:
 // register in the unnamed registry so that these tests are run by default
 CPPUNIT_TEST_SUITE_REGISTRATION( FontMapperTestCase );
 
-// also include in it's own registry so that these tests can be run alone
+// also include in its own registry so that these tests can be run alone
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( FontMapperTestCase, "FontMapperTestCase" );
 
 
@@ -57,62 +56,63 @@ void FontMapperTestCase::NamesAndDesc()
     static const wxChar *charsets[] =
     {
         // some valid charsets
-        _T("us-ascii"    ),
-        _T("iso8859-1"   ),
-        _T("iso-8859-12" ),
-        _T("koi8-r"      ),
-        _T("utf-7"       ),
-        _T("cp1250"      ),
-        _T("windows-1252"),
+        wxT("us-ascii"    ),
+        wxT("iso8859-1"   ),
+        wxT("iso-8859-12" ),
+        wxT("koi8-r"      ),
+        wxT("utf-7"       ),
+        wxT("cp1250"      ),
+        wxT("windows-1252"),
 
         // and now some bogus ones
-        _T(""            ),
-        _T("cp1249"      ),
-        _T("iso--8859-1" ),
-        _T("iso-8859-19" ),
+        wxT(""            ),
+        wxT("cp1249"      ),
+        wxT("iso--8859-1" ),
+        wxT("iso-8859-19" ),
     };
 
     static const wxChar *names[] =
     {
         // some valid charsets
-        _T("default"     ),
-        _T("iso-8859-1"  ),
-        _T("iso-8859-12" ),
-        _T("koi8-r"      ),
-        _T("utf-7"       ),
-        _T("windows-1250"),
-        _T("windows-1252"),
+        wxT("default"     ),
+        wxT("iso-8859-1"  ),
+        wxT("iso-8859-12" ),
+        wxT("koi8-r"      ),
+        wxT("utf-7"       ),
+        wxT("windows-1250"),
+        wxT("windows-1252"),
 
         // and now some bogus ones
-        _T("default"     ),
-        _T("unknown--1"  ),
-        _T("unknown--1"  ),
-        _T("unknown--1"  ),
+        wxT("default"     ),
+        wxT("unknown--1"  ),
+        wxT("unknown--1"  ),
+        wxT("unknown--1"  ),
     };
 
     static const wxChar *descriptions[] =
     {
         // some valid charsets
-        _T("Default encoding"                  ),
-        _T("Western European (ISO-8859-1)"     ),
-        _T("Indian (ISO-8859-12)"              ),
-        _T("KOI8-R"                            ),
-        _T("Unicode 7 bit (UTF-7)"             ),
-        _T("Windows Central European (CP 1250)"),
-        _T("Windows Western European (CP 1252)"),
+        wxT("Default encoding"                  ),
+        wxT("Western European (ISO-8859-1)"     ),
+        wxT("Indian (ISO-8859-12)"              ),
+        wxT("KOI8-R"                            ),
+        wxT("Unicode 7 bit (UTF-7)"             ),
+        wxT("Windows Central European (CP 1250)"),
+        wxT("Windows Western European (CP 1252)"),
 
         // and now some bogus ones
-        _T("Default encoding"                  ),
-        _T("Unknown encoding (-1)"             ),
-        _T("Unknown encoding (-1)"             ),
-        _T("Unknown encoding (-1)"             ),
+        wxT("Default encoding"                  ),
+        wxT("Unknown encoding (-1)"             ),
+        wxT("Unknown encoding (-1)"             ),
+        wxT("Unknown encoding (-1)"             ),
     };
 
+    wxFontMapperBase& fmap = *wxFontMapperBase::Get();
     for ( size_t n = 0; n < WXSIZEOF(charsets); n++ )
     {
-        wxFontEncoding enc = wxFontMapperBase::Get()->CharsetToEncoding(charsets[n]);
-        CPPUNIT_ASSERT( wxFontMapperBase::Get()->GetEncodingName(enc).CmpNoCase(names[n]) == 0 );
-        CPPUNIT_ASSERT( wxFontMapperBase::Get()->GetEncodingDescription(enc) == descriptions[n] );
+        wxFontEncoding enc = fmap.CharsetToEncoding(charsets[n]);
+        CPPUNIT_ASSERT_EQUAL( names[n], fmap.GetEncodingName(enc).Lower() );
+        CPPUNIT_ASSERT_EQUAL( descriptions[n], fmap.GetEncodingDescription(enc) );
     }
 }
 

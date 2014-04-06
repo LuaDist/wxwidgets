@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/27/99
-// RCS-ID:      $Id: frame.cpp 53096 2008-04-09 21:25:28Z SN $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -51,14 +50,6 @@ extern wxMenu *wxCurrentPopupMenu;
 BEGIN_EVENT_TABLE(wxFrame, wxFrameBase)
     EVT_SYS_COLOUR_CHANGED(wxFrame::OnSysColourChanged)
 END_EVENT_TABLE()
-
-IMPLEMENT_DYNAMIC_CLASS(wxFrame, wxWindow)
-
-#if wxUSE_MINIFRAME
-#include "wx/minifram.h"
-IMPLEMENT_DYNAMIC_CLASS(wxMiniFrame, wxFrame)
-#endif // wxUSE_MINIFRAME
-
 
 // ============================================================================
 // implementation
@@ -133,7 +124,8 @@ bool wxFrame::Create( wxWindow*       pParent,
 
 wxFrame::~wxFrame()
 {
-    m_isBeingDeleted = true;
+    SendDestroyEvent();
+
     DeleteAllBars();
 } // end of wxFrame::~wxFrame
 
@@ -286,7 +278,7 @@ void wxFrame::PositionStatusBar()
         {
             vError = ::WinGetLastError(vHabmain);
             sError = wxPMErrorToStr(vError);
-            wxLogError(_T("Error setting parent for StatusBar. Error: %s\n"), sError.c_str());
+            wxLogError(wxT("Error setting parent for StatusBar. Error: %s\n"), sError.c_str());
             return;
         }
     }
@@ -410,14 +402,14 @@ void wxFrame::InternalSetMenuBar()
     {
         vError = ::WinGetLastError(vHabmain);
         sError = wxPMErrorToStr(vError);
-        wxLogError(_T("Error setting parent for submenu. Error: %s\n"), sError.c_str());
+        wxLogError(wxT("Error setting parent for submenu. Error: %s\n"), sError.c_str());
     }
 
     if (!::WinSetOwner(m_hMenu, m_hFrame))
     {
         vError = ::WinGetLastError(vHabmain);
         sError = wxPMErrorToStr(vError);
-        wxLogError(_T("Error setting parent for submenu. Error: %s\n"), sError.c_str());
+        wxLogError(wxT("Error setting parent for submenu. Error: %s\n"), sError.c_str());
     }
     ::WinSendMsg(m_hFrame, WM_UPDATEFRAME, (MPARAM)FCF_MENU, (MPARAM)0);
 } // end of wxFrame::InternalSetMenuBar
@@ -439,7 +431,7 @@ void wxFrame::OnSysColourChanged(
         wxSysColourChangedEvent     vEvent2;
 
         vEvent2.SetEventObject(m_frameStatusBar);
-        m_frameStatusBar->GetEventHandler()->ProcessEvent(vEvent2);
+        m_frameStatusBar->HandleWindowEvent(vEvent2);
     }
 #endif //wxUSE_STATUSBAR
 
@@ -505,7 +497,7 @@ bool wxFrame::ShowFullScreen( bool bShow, long lStyle )
         if ((lStyle & wxFULLSCREEN_NOSTATUSBAR) && pTheStatusBar)
         {
             m_nFsStatusBarFields = pTheStatusBar->GetFieldsCount();
-            SetStatusBar((wxStatusBar*) NULL);
+            SetStatusBar(NULL);
             delete pTheStatusBar;
         }
         else
@@ -576,7 +568,7 @@ bool wxFrame::ShowFullScreen( bool bShow, long lStyle )
         wxSize sz( nWidth, nHeight );
         wxSizeEvent vEvent( sz, GetId() );
 
-        GetEventHandler()->ProcessEvent(vEvent);
+        HandleWindowEvent(vEvent);
         return true;
     }
     else
@@ -859,7 +851,7 @@ bool wxFrame::HandlePaint()
             const wxIcon&           vIcon = GetIcon();
             HPOINTER                hIcon;
 
-            if (vIcon.Ok())
+            if (vIcon.IsOk())
                 hIcon = (HPOINTER)::WinSendMsg(m_hFrame, WM_QUERYICON, 0L, 0L);
             else
                 hIcon = (HPOINTER)m_hDefaultIcon;
@@ -1057,11 +1049,11 @@ bool wxFrame::HandleMenuSelect( WXWORD nItem,
             wxMenuEvent                     vEvent(wxEVT_MENU_HIGHLIGHT, nItem);
 
             vEvent.SetEventObject(this);
-            GetEventHandler()->ProcessEvent(vEvent); // return value would be ignored by PM
+            HandleWindowEvent(vEvent); // return value would be ignored by PM
         }
         else
         {
-            DoGiveHelp(wxEmptyString, false);
+            DoGiveHelp(wxEmptyString, true);
             return false;
         }
     }
@@ -1078,9 +1070,8 @@ MRESULT EXPENTRY wxFrameMainWndProc( HWND   hWnd,
 {
     MRESULT  rc = (MRESULT)0;
     bool     bProcessed = false;
-    wxFrame* pWnd  = NULL;
 
-    pWnd = (wxFrame*) wxFindWinFromHandle((WXHWND) hWnd);
+    wxFrame* pWnd  = (wxFrame*) wxFindWinFromHandle((WXHWND) hWnd);
     switch (ulMsg)
     {
         case WM_QUERYFRAMECTLCOUNT:
@@ -1309,7 +1300,7 @@ MRESULT wxFrame::OS2WindowProc( WXUINT uMessage,
                 const wxIcon&           vIcon = GetIcon();
                 HPOINTER                hIcon;
 
-                if (vIcon.Ok())
+                if (vIcon.IsOk())
                     hIcon = (HPOINTER)::WinSendMsg(GetHWND(), WM_QUERYICON, 0L, 0L);
                 else
                     hIcon = (HPOINTER)m_hDefaultIcon;
@@ -1385,20 +1376,3 @@ wxWindow* wxFrame::GetClient()
     return wxFindWinFromHandle((WXHWND)::WinWindowFromID(m_hFrame, FID_CLIENT));
 }
 
-void wxFrame::SendSizeEvent()
-{
-    if (!m_bIconized)
-    {
-        RECTL                       vRect = wxGetWindowRect(GetHwnd());
-
-        ::WinPostMsg( GetHwnd()
-                     ,WM_SIZE
-                     ,MPFROM2SHORT( vRect.xRight - vRect.xLeft
-                                   ,vRect.xRight - vRect.xLeft
-                                  )
-                     ,MPFROM2SHORT( vRect.yTop - vRect.yBottom
-                                   ,vRect.yTop - vRect.yBottom
-                                  )
-                    );
-    }
-}

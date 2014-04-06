@@ -3,7 +3,6 @@
 // Purpose:     XRC resource for panels
 // Author:      Vaclav Slavik
 // Created:     2000/03/05
-// RCS-ID:      $Id: xh_panel.cpp 39045 2006-05-05 08:10:55Z ABX $
 // Copyright:   (c) 2000 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

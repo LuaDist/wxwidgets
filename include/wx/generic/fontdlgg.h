@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: fontdlgg.h 39286 2006-05-23 11:16:47Z JS $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -12,15 +11,12 @@
 #ifndef _WX_GENERIC_FONTDLGG_H
 #define _WX_GENERIC_FONTDLGG_H
 
-#include "wx/defs.h"
 #include "wx/gdicmn.h"
 #include "wx/font.h"
-#include "wx/dialog.h"
-#include "wx/cmndata.h"
 
 #ifdef __WXWINCE__
 #define USE_SPINCTRL_FOR_POINT_SIZE 1
-class WXDLLEXPORT wxSpinEvent;
+class WXDLLIMPEXP_FWD_CORE wxSpinEvent;
 #else
 #define USE_SPINCTRL_FOR_POINT_SIZE 0
 #endif
@@ -29,10 +25,10 @@ class WXDLLEXPORT wxSpinEvent;
  * FONT DIALOG
  */
 
-class WXDLLEXPORT wxChoice;
-class WXDLLEXPORT wxText;
-class WXDLLEXPORT wxCheckBox;
-class WXDLLEXPORT wxFontPreviewer;
+class WXDLLIMPEXP_FWD_CORE wxChoice;
+class WXDLLIMPEXP_FWD_CORE wxText;
+class WXDLLIMPEXP_FWD_CORE wxCheckBox;
+class WXDLLIMPEXP_FWD_CORE wxFontPreviewer;
 
 enum
 {
@@ -44,7 +40,7 @@ enum
     wxID_FONT_SIZE
 };
 
-class WXDLLEXPORT wxGenericFontDialog : public wxFontDialogBase
+class WXDLLIMPEXP_CORE wxGenericFontDialog : public wxFontDialogBase
 {
 public:
     wxGenericFontDialog() { Init(); }
@@ -103,13 +99,6 @@ private:
     DECLARE_EVENT_TABLE()
     DECLARE_DYNAMIC_CLASS(wxGenericFontDialog)
 };
-
-WXDLLEXPORT const wxChar *wxFontFamilyIntToString(int family);
-WXDLLEXPORT const wxChar *wxFontWeightIntToString(int weight);
-WXDLLEXPORT const wxChar *wxFontStyleIntToString(int style);
-WXDLLEXPORT int wxFontFamilyStringToInt(wxChar *family);
-WXDLLEXPORT int wxFontWeightStringToInt(wxChar *weight);
-WXDLLEXPORT int wxFontStyleStringToInt(wxChar *style);
 
 #if WXWIN_COMPATIBILITY_2_6
     // deprecated, for backwards compatibility only

@@ -4,9 +4,8 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2003/09/08
-// RCS-ID:      $Id: mdi.mm 48107 2007-08-15 16:12:45Z DE $
 // Copyright:   (c) 2003 David Elliott
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #include "wx/wxprec.h"
@@ -95,10 +94,12 @@ bool wxMDIParentFrame::Create(wxWindow *parent,
         const wxPoint& pos, const wxSize& size,
         long style, const wxString& name)
 {
-    bool success = wxFrame::Create(parent,winid,title,pos,size,style,name);
-    if(success)
-        OnCreateClient();
-    return success;
+    if ( !wxFrame::Create(parent,winid,title,pos,size,style,name) )
+        return false;
+
+    m_clientWindow = OnCreateClient();
+
+    return m_clientWindow != NULL;
 }
 
 wxMDIParentFrame::~wxMDIParentFrame()
@@ -127,34 +128,10 @@ void wxMDIParentFrame::RemoveMDIChild(wxMDIChildFrame *child)
         SetActiveChild(NULL);
 }
 
-wxMDIChildFrame *wxMDIParentFrame::GetActiveChild() const
-{
-    return m_currentChild;
-}
-
 void wxMDIParentFrame::SetActiveChild(wxMDIChildFrame *child)
 {
     m_currentChild = child;
     wxMenuBarManager::GetInstance()->UpdateMenuBar();
-}
-
-wxMDIClientWindow *wxMDIParentFrame::GetClientWindow() const
-{
-    return m_clientWindow;
-}
-
-wxMDIClientWindow *wxMDIParentFrame::OnCreateClient()
-{
-    m_clientWindow = new wxMDIClientWindow( this );
-    return m_clientWindow;
-}
-
-void wxMDIParentFrame::ActivateNext()
-{
-}
-
-void wxMDIParentFrame::ActivatePrevious()
-{
 }
 
 wxMenuBar *wxMDIParentFrame::GetAppMenuBar(wxCocoaNSWindow *win)
@@ -323,22 +300,9 @@ bool wxMDIChildFrame::Destroy()
 // ========================================================================
 IMPLEMENT_DYNAMIC_CLASS(wxMDIClientWindow,wxWindow)
 
-wxMDIClientWindow::wxMDIClientWindow()
+bool wxMDIClientWindow::CreateClient(wxMDIParentFrame *parent, long style)
 {
+    return Create(parent, wxID_ANY, wxPoint(0, 0), wxSize(0, 0), style);
 }
 
-wxMDIClientWindow::wxMDIClientWindow(wxMDIParentFrame *parent, long style)
-                  :wxWindow(parent, wxID_ANY)
-{
-}
-
-wxMDIClientWindow::~wxMDIClientWindow()
-{
-}
-
-bool wxMDIClientWindow::CreateClient( wxMDIParentFrame *parent, long style)
-{
-    return false;
-}
-
-#endif
+#endif // wxUSE_MDI

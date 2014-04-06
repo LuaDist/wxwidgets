@@ -3,7 +3,6 @@
 // Purpose:     XRC resource for wxStatusBar
 // Author:      Brian Ravnsgaard Riis
 // Created:     2004/01/21
-// RCS-ID:      $Id: xh_statbar.cpp 48617 2007-09-09 21:32:44Z VZ $
 // Copyright:   (c) 2004 Brian Ravnsgaard Riis
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -31,7 +30,16 @@ IMPLEMENT_DYNAMIC_CLASS(wxStatusBarXmlHandler, wxXmlResourceHandler)
 wxStatusBarXmlHandler::wxStatusBarXmlHandler()
                       :wxXmlResourceHandler()
 {
+    XRC_ADD_STYLE(wxSTB_SIZEGRIP);
+    XRC_ADD_STYLE(wxSTB_SHOW_TIPS);
+    XRC_ADD_STYLE(wxSTB_ELLIPSIZE_START);
+    XRC_ADD_STYLE(wxSTB_ELLIPSIZE_MIDDLE);
+    XRC_ADD_STYLE(wxSTB_ELLIPSIZE_END);
+    XRC_ADD_STYLE(wxSTB_DEFAULT_STYLE);
+
+    // compat style name:
     XRC_ADD_STYLE(wxST_SIZEGRIP);
+
     AddWindowStyles();
 }
 
@@ -78,8 +86,20 @@ wxObject *wxStatusBarXmlHandler::DoCreateResource()
                 style[i] = wxSB_FLAT;
             else if (first == wxT("wxSB_RAISED"))
                 style[i] = wxSB_RAISED;
+            else if (first == wxT("wxSB_SUNKEN"))
+                style[i] = wxSB_SUNKEN;
             else if (!first.empty())
-                wxLogError(wxT("Error in resource, unknown statusbar field style: ") + first);
+            {
+                ReportParamError
+                (
+                    "styles",
+                    wxString::Format
+                    (
+                        "unknown status bar field style \"%s\"",
+                        first
+                    )
+                );
+            }
 
             if(styles.Find(wxT(',')))
                 styles.Remove(0, styles.Find(wxT(',')) + 1);

@@ -5,23 +5,20 @@
 // Modified by:
 // Created:     14/4/2006
 // Copyright:   (c) Francesco Montorsi
-// RCS-ID:      $Id: clrpicker.h 39748 2006-06-15 19:29:08Z PC $
 // Licence:     wxWindows Licence
 /////////////////////////////////////////////////////////////////////////////
 
 #ifndef _WX_GTK_CLRPICKER_H_
 #define _WX_GTK_CLRPICKER_H_
 
-// since GtkColorButton is available only for GTK+ >= 2.4,
-// we need to use generic version if we detect (at runtime)
-// that GTK+ < 2.4
-#include "wx/generic/clrpickerg.h"
+#include "wx/button.h"
 
 //-----------------------------------------------------------------------------
 // wxColourButton
 //-----------------------------------------------------------------------------
 
-class WXDLLIMPEXP_CORE wxColourButton : public wxGenericColourButton
+class WXDLLIMPEXP_CORE wxColourButton : public wxButton,
+                                        public wxColourPickerWidgetBase
 {
 public:
     wxColourButton() : m_topParent(NULL) {}
@@ -38,11 +35,6 @@ public:
         Create(parent, id, initial, pos, size, style, validator, name);
     }
 
-    virtual ~wxColourButton();
-
-
-public:     // overrides
-
     bool Create(wxWindow *parent,
                 wxWindowID id,
                 const wxColour& initial = *wxBLACK,
@@ -52,13 +44,15 @@ public:     // overrides
                 const wxValidator& validator = wxDefaultValidator,
                 const wxString& name = wxColourPickerWidgetNameStr);
 
+    virtual ~wxColourButton();
+
 protected:
     void UpdateColour();
 
 public:     // used by the GTK callback only
 
-    void SetGdkColor(const GdkColor& gdkColor)
-        { m_colour = wxColor(gdkColor); }
+    void GTKSetColour(const wxColour& colour)
+        { m_colour = colour; }
 
     wxWindow *m_topParent;
 

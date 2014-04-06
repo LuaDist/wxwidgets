@@ -4,7 +4,6 @@
 // Author:      Chris Breeze
 // Modified by:
 // Created:     21/07/97
-// RCS-ID:      $Id: playerdg.cpp 50452 2007-12-03 09:45:13Z JS $
 // Copyright:   (c) 1993-1998 Chris Breeze
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -37,10 +36,10 @@ PlayerSelectionDialog::PlayerSelectionDialog(
                             wxWindow* parent,
                             ScoreFile* file
                             ) :
-    wxDialog(parent, wxID_ANY, _T("Player Selection"), wxDefaultPosition),
+    wxDialog(parent, wxID_ANY, wxT("Player Selection"), wxDefaultPosition),
     m_scoreFile(file)
 {
-    wxStaticText* msg = new wxStaticText(this, wxID_ANY, _T("Please select a name or type a new one:"));
+    wxStaticText* msg = new wxStaticText(this, wxID_ANY, wxT("Please select a name or type a new one:"));
 
     wxListBox* list = new wxListBox(
                         this, ID_LISTBOX,
@@ -102,7 +101,7 @@ void PlayerSelectionDialog::OnCloseWindow(wxCloseEvent& WXUNUSED(event))
 
 void PlayerSelectionDialog::SelectCallback(wxCommandEvent& event)
 {
-    if (event.GetEventType() == wxEVT_COMMAND_LISTBOX_SELECTED)
+    if (event.GetEventType() == wxEVT_LISTBOX)
     {
 //        if (event.IsSelection())
         m_textField->SetValue(event.GetString());
@@ -114,11 +113,11 @@ void PlayerSelectionDialog::ButtonCallback(wxCommandEvent& event)
     if (event.GetId() == wxID_OK)
     {
         wxString name = m_textField->GetValue();
-        if (!name.IsNull() && name.Length() > 0)
+        if ( !name.empty() )
         {
-            if (name.Contains(_T('@')))
+            if (name.Contains(wxT('@')))
             {
-                wxMessageBox(_T("Names should not contain the '@' character"), _T("Forty Thieves"));
+                wxMessageBox(wxT("Names should not contain the '@' character"), wxT("Forty Thieves"));
             }
             else
             {
@@ -128,7 +127,7 @@ void PlayerSelectionDialog::ButtonCallback(wxCommandEvent& event)
         }
         else
         {
-             wxMessageBox(_T("Please enter your name"), _T("Forty Thieves"));
+             wxMessageBox(wxT("Please enter your name"), wxT("Forty Thieves"));
         }
     }
     else

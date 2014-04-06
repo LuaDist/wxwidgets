@@ -4,9 +4,8 @@
 // Purpose:     Shows wxFontPickerCtrl
 // Author:      Francesco Montorsi
 // Created:     20/6/2006
-// Id:          $Id: fontpicker.cpp 43755 2006-12-03 13:43:44Z VZ $
 // Copyright:   (c) 2006 Francesco Montorsi
-// License:     wxWindows license
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -130,7 +129,7 @@ END_EVENT_TABLE()
     #define FAMILY_CTRLS GENERIC_CTRLS
 #endif
 
-IMPLEMENT_WIDGETS_PAGE(FontPickerWidgetsPage, _T("FontPicker"),
+IMPLEMENT_WIDGETS_PAGE(FontPickerWidgetsPage, wxT("FontPicker"),
                        PICKER_CTRLS | FAMILY_CTRLS);
 
 FontPickerWidgetsPage::FontPickerWidgetsPage(WidgetsBookCtrl *book,
@@ -144,13 +143,13 @@ void FontPickerWidgetsPage::CreateContent()
     // left pane
     wxSizer *boxleft = new wxBoxSizer(wxVERTICAL);
 
-    wxStaticBoxSizer *fontbox = new wxStaticBoxSizer(wxVERTICAL, this, _T("&FontPicker style"));
-    m_chkFontTextCtrl = CreateCheckBoxAndAddToSizer(fontbox, _T("With textctrl"));
-    m_chkFontDescAsLabel = CreateCheckBoxAndAddToSizer(fontbox, _T("Font desc as btn label"));
-    m_chkFontUseFontForLabel = CreateCheckBoxAndAddToSizer(fontbox, _T("Use font for label"), false);
+    wxStaticBoxSizer *fontbox = new wxStaticBoxSizer(wxVERTICAL, this, wxT("&FontPicker style"));
+    m_chkFontTextCtrl = CreateCheckBoxAndAddToSizer(fontbox, wxT("With textctrl"));
+    m_chkFontDescAsLabel = CreateCheckBoxAndAddToSizer(fontbox, wxT("Font desc as btn label"));
+    m_chkFontUseFontForLabel = CreateCheckBoxAndAddToSizer(fontbox, wxT("Use font for label"));
     boxleft->Add(fontbox, 0, wxALL|wxGROW, 5);
 
-    boxleft->Add(new wxButton(this, PickerPage_Reset, _T("&Reset")),
+    boxleft->Add(new wxButton(this, PickerPage_Reset, wxT("&Reset")),
                  0, wxALIGN_CENTRE_HORIZONTAL | wxALL, 15);
 
     Reset();    // set checkboxes state

@@ -1,10 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        dcmemory.h
+// Name:        wx/x11/dcmemory.h
 // Purpose:     wxMemoryDC class
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: dcmemory.h 42755 2006-10-30 19:41:46Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -12,15 +11,20 @@
 #ifndef _WX_DCMEMORY_H_
 #define _WX_DCMEMORY_H_
 
-#include "wx/dcclient.h"
+#include "wx/dc.h"
+#include "wx/dcmemory.h"
+#include "wx/x11/dcclient.h"
 
-class WXDLLIMPEXP_CORE wxMemoryDC : public wxWindowDC, public wxMemoryDCBase
+class WXDLLIMPEXP_CORE wxMemoryDCImpl : public wxWindowDCImpl
 {
 public:
-    wxMemoryDC() { Init(); }
-    wxMemoryDC(wxBitmap& bitmap) { Init(); SelectObject(bitmap); }
-    wxMemoryDC( wxDC *dc ); // Create compatible DC
-    virtual ~wxMemoryDC();
+    wxMemoryDCImpl( wxDC* owner );
+    wxMemoryDCImpl( wxDC* owner, wxBitmap& bitmap);
+    wxMemoryDCImpl( wxDC* owner, wxDC *dc );
+    virtual ~wxMemoryDCImpl();
+
+    virtual const wxBitmap& GetSelectedBitmap() const;
+    virtual wxBitmap& GetSelectedBitmap();
 
     // implementation
     wxBitmap  m_selected;
@@ -32,7 +36,8 @@ protected:
 private:
     void Init();
 
-    DECLARE_DYNAMIC_CLASS(wxMemoryDC)
+private:
+    DECLARE_CLASS(wxMemoryDCImpl)
 };
 
 #endif

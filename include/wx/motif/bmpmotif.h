@@ -4,7 +4,6 @@
 // Author:      Julian Smart, originally in bitmap.h
 // Modified by:
 // Created:     25/03/2003
-// RCS-ID:      $Id: bmpmotif.h 40325 2006-07-25 14:31:55Z ABX $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -15,7 +14,7 @@
 #include "wx/defs.h"
 #include "wx/bitmap.h"
 
-class WXDLLEXPORT wxBitmapCache
+class WXDLLIMPEXP_CORE wxBitmapCache
 {
 public:
     wxBitmapCache()
@@ -24,7 +23,7 @@ public:
         m_armPixmap = (WXPixmap)NULL;
         m_insensPixmap = (WXPixmap)NULL;
         m_image = (WXImage)NULL;
-        m_display = (WXDisplay*)NULL;
+        m_display = NULL;
         SetColoursChanged();
     }
 

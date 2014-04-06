@@ -1,10 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        src/generic/dirdlg.cpp
+// Name:        src/generic/dirdlgg.cpp
 // Purpose:     wxDirDialog
 // Author:      Harm van der Heijden, Robert Roebling & Julian Smart
 // Modified by:
 // Created:     12/12/98
-// RCS-ID:      $Id: dirdlgg.cpp 41838 2006-10-09 21:08:45Z VZ $
 // Copyright:   (c) Harm van der Heijden, Robert Roebling, Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -33,6 +32,7 @@
 #include "wx/dirctrl.h"
 #include "wx/generic/dirdlgg.h"
 #include "wx/artprov.h"
+#include "wx/menu.h"
 
 // ----------------------------------------------------------------------------
 // constants
@@ -77,6 +77,8 @@ bool wxGenericDirDialog::Create(wxWindow* parent,
                                 const wxString& name)
 {
     wxBusyCursor cursor;
+
+    parent = GetParentForModalDialog(parent, style);
 
     if (!wxDirDialogBase::Create(parent, title, defaultPath, style, pos, sz, name))
         return false;
@@ -163,7 +165,7 @@ bool wxGenericDirDialog::Create(wxWindow* parent,
     topsizer->Add(m_dirCtrl, wxSizerFlags(flagsBorder2).Proportion(1).Expand());
 
 #ifndef __SMARTPHONE__
-    // Make the an option depending on a flag?
+    // TODO: Make this an option depending on a flag?
     wxCheckBox *
         check = new wxCheckBox(this, ID_SHOW_HIDDEN, _("Show &hidden directories"));
     topsizer->Add(check, wxSizerFlags(flagsBorder2).Right());

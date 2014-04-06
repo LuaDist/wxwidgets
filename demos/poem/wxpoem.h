@@ -9,10 +9,13 @@
 //              beware, inelegant code!
 // Author:      Julian Smart
 // Created:     12/12/98
-// RCS-ID:      $Id: wxpoem.h 41020 2006-09-05 20:47:48Z VZ $
 // Copyright:   (c) 1998 Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
+
+#ifndef _WXPOEM_H_
+#define _WXPOEM_H_
+
 
 // Define a new application
 class MyApp: public wxApp
@@ -46,7 +49,8 @@ class MainWindow: public wxFrame
 {
 public:
     MyCanvas *canvas;
-    MainWindow(wxFrame *frame, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style);
+    MainWindow(wxFrame *frame, wxWindowID id, const wxString& title,
+               const wxPoint& pos, const wxSize& size, long style);
     virtual ~MainWindow();
 
     void OnCloseWindow(wxCloseEvent& event);
@@ -107,3 +111,5 @@ enum
     POEM_SEARCH        = wxID_FIND,
     POEM_MINIMIZE      = wxID_ICONIZE_FRAME
 };
+
+#endif      // _WXPOEM_H_

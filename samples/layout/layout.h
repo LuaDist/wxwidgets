@@ -4,9 +4,8 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: layout.h 42642 2006-10-29 18:10:32Z RR $
 // Copyright:   (c) Julian Smart
-// Licence:     wxWindows license
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 // Define a new application
@@ -29,6 +28,7 @@ public:
     void TestGridBagSizer(wxCommandEvent& event);
     void TestNested(wxCommandEvent& event);
     void TestSetMinimal(wxCommandEvent& event);
+    void TestWrap(wxCommandEvent& event);
 
     void OnAbout(wxCommandEvent& event);
     void OnQuit(wxCommandEvent& event);
@@ -57,7 +57,7 @@ protected:
 class MyFlexSizerFrame : public wxFrame
 {
 public:
-    MyFlexSizerFrame(const wxChar *title, int x, int y );
+    MyFlexSizerFrame(wxFrame* parent);
 
 private:
     void InitFlexSizer(wxFlexGridSizer *sizer, wxWindow* parent);
@@ -68,7 +68,7 @@ private:
 class MySizerDialog : public wxDialog
 {
 public:
-    MySizerDialog(wxWindow *parent, const wxChar *title);
+    MySizerDialog(wxWindow *parent, const wxString &title );
 };
 
 
@@ -76,7 +76,7 @@ public:
 class MyGridBagSizerFrame : public wxFrame
 {
 public:
-    MyGridBagSizerFrame(const wxChar *title, int x, int y );
+    MyGridBagSizerFrame(wxFrame* parent);
 
     void OnHideBtn(wxCommandEvent&);
     void OnShowBtn(wxCommandEvent&);
@@ -101,11 +101,11 @@ private:
 class MySimpleSizerFrame : public wxFrame
 {
 public:
-    MySimpleSizerFrame(const wxChar *title, int x, int y );
-    
+    MySimpleSizerFrame(wxFrame* parent);
+
     void OnSetSmallSize( wxCommandEvent &event);
     void OnSetBigSize( wxCommandEvent &event);
-    
+
 private:
     wxTextCtrl  *m_target;
 
@@ -119,11 +119,30 @@ private:
 class MyNestedSizerFrame : public wxFrame
 {
 public:
-    MyNestedSizerFrame(const wxChar *title, int x, int y );
-    
-    
+    MyNestedSizerFrame(wxFrame* parent);
+
+
 private:
     wxTextCtrl  *m_target;
+};
+
+// a frame with several wrapping sizers
+
+class MyWrapSizerFrame: public wxFrame
+{
+public:
+    MyWrapSizerFrame(wxFrame* parent);
+
+private:
+    void OnAddCheckbox(wxCommandEvent& event);
+    void OnRemoveCheckbox(wxCommandEvent& event);
+
+    void DoAddCheckbox();
+
+    wxWindow* m_checkboxParent;
+    wxSizer* m_wrapSizer;
+
+    DECLARE_EVENT_TABLE()
 };
 
 // controls and menu constants
@@ -135,6 +154,7 @@ enum
     LAYOUT_TEST_PROPORTIONS,
     LAYOUT_TEST_SET_MINIMAL,
     LAYOUT_TEST_NESTED,
+    LAYOUT_TEST_WRAP,
     LAYOUT_QUIT = wxID_EXIT,
     LAYOUT_ABOUT = wxID_ABOUT
 };

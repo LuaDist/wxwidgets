@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: checkbox.h 40325 2006-07-25 14:31:55Z ABX $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -13,7 +12,7 @@
 #define _WX_CHECKBOX_H_
 
 // Checkbox item (single checkbox)
-class WXDLLEXPORT wxCheckBox: public wxCheckBoxBase
+class WXDLLIMPEXP_CORE wxCheckBox: public wxCheckBoxBase
 {
     DECLARE_DYNAMIC_CLASS(wxCheckBox)
 
@@ -45,7 +44,7 @@ private:
     // common part of all constructors
     void Init()
     {
-        m_evtType = wxEVT_COMMAND_CHECKBOX_CLICKED;
+        m_evtType = wxEVT_CHECKBOX;
     }
 
     virtual void DoSet3StateValue(wxCheckBoxState state);
@@ -54,7 +53,7 @@ private:
 
     // public for the callback
 public:
-    // either exEVT_COMMAND_CHECKBOX_CLICKED or ..._TOGGLEBUTTON_CLICKED
+    // either wxEVT_CHECKBOX or ..._TOGGLEBUTTON
     wxEventType m_evtType;
 };
 

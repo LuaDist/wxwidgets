@@ -4,15 +4,14 @@
 // Author:      Ryan Norton
 // Modified by:
 // Created:     2005/02/16
-// RCS-ID:      $Id: combobox.mm 48107 2007-08-15 16:12:45Z DE $
 // Copyright:   (c) 2003 David Elliott
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 //
 // Impl notes:
 // There is no custom data source because doing so unnecessarily sacrifices
-// some native autocompletion behavior (we would have to make our own -
+// some native autocompletion behaviour (we would have to make our own -
 // the SimpleComboBox sample does so in the developer folder that
 // comes with OSX).  One reason you might want this would be to have
 // only one array or be able to display numbers returned by an NSNumber
@@ -142,7 +141,7 @@ WX_DECLARE_GET_OBJC_CLASS(wxPoserNSComboBox,NSComboBox)
 - (void)comboBoxSelectionDidChange:(NSNotification *)notification
 {
     wxCocoaNSComboBox *win = wxCocoaNSComboBox::GetFromCocoa(self);
-    win->doWxEvent(wxEVT_COMMAND_COMBOBOX_SELECTED);
+    win->doWxEvent(wxEVT_COMBOBOX);
 }
 
 - (void)comboBoxSelectionIsChanging:(NSNotification *)notification
@@ -168,10 +167,10 @@ WX_IMPLEMENT_GET_OBJC_CLASS(wxPoserNSComboBox,NSComboBox)
 
 #import <AppKit/NSComboBox.h>
 
-IMPLEMENT_DYNAMIC_CLASS(wxComboBox, wxTextCtrl)
-BEGIN_EVENT_TABLE(wxComboBox, wxTextCtrl)
+BEGIN_EVENT_TABLE(wxComboBox, wxControl)
 END_EVENT_TABLE()
 WX_IMPLEMENT_COCOA_OWNER(wxComboBox,NSComboBox,NSTextField,NSView)
+WX_IMPLEMENT_COCOA_OWNER(wxComboBox,NSTextField,NSControl,NSView)
 
 bool wxComboBox::Create(wxWindow *parent, wxWindowID winid,
             const wxString& value,
@@ -210,8 +209,7 @@ bool wxComboBox::Create(wxWindow *parent, wxWindowID winid,
         m_parent->CocoaAddChild(this);
     SetInitialFrameRect(pos,size);
 
-    for(int i = 0; i < n; ++i)
-        wxComboBox::DoAppend(choices[i]);
+    wxComboBox::Append(n, choices);
 
     [GetNSComboBox() setCompletes:true]; //autocomplete :)
 
@@ -225,18 +223,18 @@ wxComboBox::~wxComboBox()
 
 void wxComboBox::doWxEvent(int nEvent)
 {
-    wxCommandEvent event2(wxEVT_COMMAND_COMBOBOX_SELECTED, GetId() );
+    wxCommandEvent event2(wxEVT_COMBOBOX, GetId() );
     event2.SetInt(GetSelection());
     event2.SetEventObject(this);
     event2.SetString(GetStringSelection());
-    GetEventHandler()->ProcessEvent(event2);
+    HandleWindowEvent(event2);
 
     // For consistency with MSW and GTK, also send a text updated event
     // After all, the text is updated when a selection is made
-    wxCommandEvent TextEvent( wxEVT_COMMAND_TEXT_UPDATED, GetId() );
+    wxCommandEvent TextEvent( wxEVT_TEXT, GetId() );
     TextEvent.SetString( GetStringSelection() );
     TextEvent.SetEventObject( this );
-    GetEventHandler()->ProcessEvent( TextEvent );
+    HandleWindowEvent( TextEvent );
 }
 
 
@@ -250,13 +248,13 @@ wxString wxComboBox::GetStringSelection()
     return wxStringWithNSString([GetNSComboBox() objectValueOfSelectedItem]);
 }
 
-void wxComboBox::Clear()
+void wxComboBox::DoClear()
 {
     [GetNSComboBox() removeAllItems];
     m_Datas.Clear();
 }
 
-void wxComboBox::Delete(unsigned int n)
+void wxComboBox::DoDeleteOneItem(unsigned int n)
 {
     [GetNSComboBox() removeItemAtIndex:n];
     m_Datas.RemoveAt(n);
@@ -292,20 +290,20 @@ int wxComboBox::GetSelection() const
     return [GetNSComboBox() indexOfSelectedItem];
 }
 
-int wxComboBox::DoAppend(const wxString& szItem)
+int wxComboBox::DoInsertItems(const wxArrayStringsAdapter& items,
+                              unsigned int pos,
+                              void **clientData,
+                              wxClientDataType type)
 {
-    m_Datas.Add(NULL);
     wxAutoNSAutoreleasePool pool;
-    [GetNSComboBox() addItemWithObjectValue:wxNSStringWithWxString(szItem)];
-    return [GetNSComboBox() numberOfItems];
-}
-
-int wxComboBox::DoInsert(const wxString& szItem, unsigned int nIndex)
-{
-    m_Datas.Insert(NULL, nIndex);
-    wxAutoNSAutoreleasePool pool;
-    [GetNSComboBox() insertItemWithObjectValue:wxNSStringWithWxString(szItem) atIndex:nIndex];
-    return (int)nIndex;
+    const unsigned int numITems = items.GetCount();
+    for ( unsigned int i = 0; i < numITems; ++i, ++pos )
+    {
+        [GetNSComboBox() insertItemWithObjectValue:wxNSStringWithWxString(items[i]) atIndex:(pos)];
+        m_Datas.Insert(NULL, pos);
+        AssignNewItemClientData(pos, clientData, i, type);
+    }
+    return pos - 1;
 }
 
 void wxComboBox::DoSetItemClientData(unsigned int nIndex, void* pData)
@@ -318,14 +316,93 @@ void* wxComboBox::DoGetItemClientData(unsigned int nIndex) const
     return m_Datas[nIndex];
 }
 
-void wxComboBox::DoSetItemClientObject(unsigned int nIndex, wxClientData* pClientData)
+/////////////////////////////////////////////////////////////////////////////
+// wxTextEntry virtual implementations:
+
+void wxComboBox::WriteText(wxString const&)
 {
-    m_Datas[nIndex] = (void*) pClientData;
 }
 
-wxClientData* wxComboBox::DoGetItemClientObject(unsigned int nIndex) const
+wxString wxComboBox::GetValue() const
 {
-    return (wxClientData*) m_Datas[nIndex];
+    wxAutoNSAutoreleasePool pool;
+    return wxStringWithNSString([GetNSTextField() stringValue]);
 }
 
-#endif //wxUSE_COMBOBOX
+void wxComboBox::Remove(long, long)
+{
+}
+
+void wxComboBox::Cut()
+{
+}
+
+void wxComboBox::Copy()
+{
+}
+
+void wxComboBox::Paste()
+{
+}
+
+void wxComboBox::Undo()
+{
+}
+
+void wxComboBox::Redo()
+{
+}
+
+bool wxComboBox::CanUndo() const
+{
+    return false;
+}
+
+bool wxComboBox::CanRedo() const
+{
+    return false;
+}
+
+void wxComboBox::SetInsertionPoint(long)
+{
+}
+
+long wxComboBox::GetInsertionPoint() const
+{
+    return 0;
+}
+
+wxTextPos wxComboBox::GetLastPosition() const
+{
+    // working - returns the size of the wxString
+    return (long)(GetValue().Len());
+}
+
+void wxComboBox::SetSelection(long, long)
+{
+}
+
+void wxComboBox::GetSelection(long*, long*) const
+{
+}
+
+bool wxComboBox::IsEditable() const
+{
+    return [GetNSTextField() isEditable];
+}
+
+void wxComboBox::SetEditable(bool editable)
+{
+    // first ensure that the current value is stored (in case the user had not finished editing
+    // before SetEditable(FALSE) was called)
+    DoSetValue(GetValue(),1);
+
+    [GetNSTextField() setEditable: editable];
+
+    // forces the focus on the textctrl to be lost - while focus is still maintained
+    // after SetEditable(FALSE) the user may still edit the control
+    // (might not the best way to do this..)
+    [GetNSTextField() abortEditing];
+}
+
+#endif // wxUSE_COMBOBOX

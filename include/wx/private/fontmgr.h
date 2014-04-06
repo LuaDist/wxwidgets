@@ -3,7 +3,6 @@
 // Purpose:     font management for ports that don't have their own
 // Author:      Vaclav Slavik
 // Created:     2006-11-18
-// RCS-ID:      $Id: fontmgr.h 43855 2006-12-07 08:57:44Z PC $
 // Copyright:   (c) 2001-2002 SciTech Software, Inc. (www.scitechsoft.com)
 //              (c) 2006 REA Elektronik GmbH
 // Licence:     wxWindows licence
@@ -192,22 +191,20 @@ protected:
 
 
 
-#if defined(__WXMGL__)
-    #include "wx/mgl/private/fontmgr.h"
-#elif defined(__WXDFB__)
+#if defined(__WXDFB__)
     #include "wx/dfb/private/fontmgr.h"
 #endif
 
 
 
 /// wxFontMgrFontRefData implementation using wxFontsManager classes
-class wxFontMgrFontRefData : public wxObjectRefData
+class wxFontMgrFontRefData : public wxGDIRefData
 {
 public:
     wxFontMgrFontRefData(int size = wxDEFAULT,
-                  int family = wxDEFAULT,
-                  int style = wxDEFAULT,
-                  int weight = wxDEFAULT,
+                  wxFontFamily family = wxFONTFAMILY_DEFAULT,
+                  wxFontStyle style = wxFONTSTYLE_NORMAL,
+                  wxFontWeight weight = wxFONTWEIGHT_NORMAL,
                   bool underlined = false,
                   const wxString& faceName = wxEmptyString,
                   wxFontEncoding encoding = wxFONTENCODING_DEFAULT);
@@ -223,29 +220,24 @@ public:
 
     int GetPointSize() const { return m_info.pointSize; }
     wxString GetFaceName() const { return m_info.faceName; }
-    int GetFamily() const { return m_info.family; }
-    int GetStyle() const { return m_info.style; }
-    int GetWeight() const { return m_info.weight; }
+    wxFontFamily GetFamily() const { return m_info.family; }
+    wxFontStyle GetStyle() const { return m_info.style; }
+    wxFontWeight GetWeight() const { return m_info.weight; }
     bool GetUnderlined() const { return m_info.underlined; }
     wxFontEncoding GetEncoding() const { return m_info.encoding; }
 
     void SetPointSize(int pointSize);
-    void SetFamily(int family);
-    void SetStyle(int style);
-    void SetWeight(int weight);
+    void SetFamily(wxFontFamily family);
+    void SetStyle(wxFontStyle style);
+    void SetWeight(wxFontWeight weight);
     void SetFaceName(const wxString& faceName);
     void SetUnderlined(bool underlined);
     void SetEncoding(wxFontEncoding encoding);
-
-    // Unofficial API, don't use
-    void SetNoAntiAliasing(bool no);
-    bool GetNoAntiAliasing() const { return m_noAA; }
 
 private:
     void EnsureValidFont();
 
     wxNativeFontInfo  m_info;
-    bool              m_noAA;
 
     wxFontFace       *m_fontFace;
     wxFontBundle     *m_fontBundle;

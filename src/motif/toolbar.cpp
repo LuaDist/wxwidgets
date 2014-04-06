@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by: 13.12.99 by VZ during toolbar classes reorganization
 // Created:     04/01/98
-// RCS-ID:      $Id: toolbar.cpp 50982 2008-01-01 20:38:33Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -93,8 +92,8 @@ public:
         Init();
     }
 
-    wxToolBarTool(wxToolBar *tbar, wxControl *control)
-        : wxToolBarToolBase(tbar, control)
+    wxToolBarTool(wxToolBar *tbar, wxControl *control, const wxString& label)
+        : wxToolBarToolBase(tbar, control, label)
     {
         Init();
     }
@@ -127,7 +126,7 @@ protected:
 // globals
 // ----------------------------------------------------------------------------
 
-static wxToolBarTimer* wxTheToolBarTimer = (wxToolBarTimer*) NULL;
+static wxToolBarTimer* wxTheToolBarTimer = NULL;
 
 Widget wxToolBarTimer::help_popup = (Widget) 0;
 Widget wxToolBarTimer::buttonWidget = (Widget) 0;
@@ -155,9 +154,10 @@ wxToolBarToolBase *wxToolBar::CreateTool(int id,
 }
 
 
-wxToolBarToolBase *wxToolBar::CreateTool(wxControl *control)
+wxToolBarToolBase *
+wxToolBar::CreateTool(wxControl *control, const wxString& label)
 {
-    return new wxToolBarTool(this, control);
+    return new wxToolBarTool(this, control, label);
 }
 
 void wxToolBarTool::Init()
@@ -199,10 +199,9 @@ bool wxToolBar::Create(wxWindow *parent,
     if( !wxControl::CreateControl( parent, id, pos, size, style,
                                    wxDefaultValidator, name ) )
         return false;
+    PreCreation();
 
     FixupStyle();
-
-    m_backgroundColour = wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE);
 
     Widget parentWidget = (Widget) parent->GetClientWidget();
 
@@ -227,8 +226,6 @@ bool wxToolBar::Create(wxWindow *parent,
 
     m_mainWidget = (WXWidget) toolbar;
 
-    ChangeFont(false);
-
     wxPoint rPos = pos;
     wxSize  rSize = size;
 
@@ -237,18 +234,16 @@ bool wxToolBar::Create(wxWindow *parent,
     if( rSize.x == -1 && GetParent() )
         rSize.x = GetParent()->GetSize().x;
 
+    PostCreation();
     AttachWidget (parent, m_mainWidget, (WXWidget) NULL,
                   rPos.x, rPos.y, rSize.x, rSize.y);
-
-    ChangeBackgroundColour();
 
     return true;
 }
 
 wxToolBar::~wxToolBar()
 {
-    delete wxTheToolBarTimer;
-    wxTheToolBarTimer = NULL;
+    wxDELETE(wxTheToolBarTimer);
 }
 
 bool wxToolBar::Realize()
@@ -384,13 +379,13 @@ bool wxToolBar::Realize()
                     wxColour col;
                     col.SetPixel(backgroundPixel);
 
-                    if( bmp.Ok() && bmp.GetMask() )
+                    if( bmp.IsOk() && bmp.GetMask() )
                     {
                         bmp = wxCreateMaskedBitmap(bmp, col);
                         tool->SetNormalBitmap(bmp);
                     }
 
-                    if( insensBmp.Ok() && insensBmp.GetMask() )
+                    if( insensBmp.IsOk() && insensBmp.GetMask() )
                     {
                         insensBmp = wxCreateMaskedBitmap(insensBmp, col);
                         tool->SetDisabledBitmap(insensBmp);
@@ -414,7 +409,7 @@ bool wxToolBar::Realize()
                 {
                     wxBitmap tmp = tool->GetDisabledBitmap();
 
-                    insensPixmap = tmp.Ok() ?
+                    insensPixmap = tmp.IsOk() ?
                             (Pixmap)tmp.GetDrawable() :
                             tool->GetInsensPixmap();
                 }
@@ -481,9 +476,9 @@ bool wxToolBar::Realize()
 wxToolBarToolBase *wxToolBar::FindToolForPosition(wxCoord WXUNUSED(x),
                                                   wxCoord WXUNUSED(y)) const
 {
-    wxFAIL_MSG( _T("TODO") );
+    wxFAIL_MSG( wxT("TODO") );
 
-    return (wxToolBarToolBase *)NULL;
+    return NULL;
 }
 
 bool wxToolBar::DoInsertTool(size_t WXUNUSED(pos), wxToolBarToolBase *tool)
@@ -655,7 +650,7 @@ wxToolBarToolBase *wxToolBar::FindToolByWidget(WXWidget w) const
         node = node->GetNext();
     }
 
-    return (wxToolBarToolBase *)NULL;
+    return NULL;
 }
 
 static void wxToolButtonCallback(Widget w,

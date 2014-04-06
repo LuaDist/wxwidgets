@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: spinbutt.cpp 41020 2006-09-05 20:47:48Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -180,8 +179,7 @@ void wxArrowButton::StopTimerCallback( Widget w, XtPointer clientData,
         return;
 
     wxArrowButton* btn = (wxArrowButton*)clientData;
-    delete btn->m_timer;
-    btn->m_timer = 0;
+    wxDELETE(btn->m_timer);
 }
 
 bool wxArrowButton::Create( wxSpinButton* parent,
@@ -189,6 +187,8 @@ bool wxArrowButton::Create( wxSpinButton* parent,
                             ArrowDirection d,
                             const wxPoint& pos, const wxSize& size )
 {
+    wxCHECK_MSG( parent, false, wxT("must have a valid parent") );
+
     int arrow_dir = XmARROW_UP;
 
     switch( d )
@@ -207,7 +207,8 @@ bool wxArrowButton::Create( wxSpinButton* parent,
         break;
     }
 
-    if( parent ) parent->AddChild( this );
+    parent->AddChild( this );
+    PreCreation();
 
     Widget parentWidget = (Widget) parent->GetClientWidget();
     m_mainWidget = (WXWidget) XtVaCreateManagedWidget( "XmArrowButton",
@@ -228,10 +229,9 @@ bool wxArrowButton::Create( wxSpinButton* parent,
                    XmNactivateCallback, (XtCallbackProc) StopTimerCallback,
                    (XtPointer) this );
 
+    PostCreation();
     AttachWidget( parent, m_mainWidget, (WXWidget) NULL,
                   pos.x, pos.y, size.x, size.y );
-
-    SetForegroundColour( parent->GetBackgroundColour() );
 
     return true;
 }
@@ -239,9 +239,6 @@ bool wxArrowButton::Create( wxSpinButton* parent,
 // ----------------------------------------------------------------------------
 // wxSpinButton
 // ----------------------------------------------------------------------------
-
-IMPLEMENT_DYNAMIC_CLASS(wxSpinButton, wxControl)
-IMPLEMENT_DYNAMIC_CLASS(wxSpinEvent, wxNotifyEvent)
 
 static void CalcSizes( const wxPoint& pt, const wxSize& sz,
                        wxPoint& pt1, wxSize& sz1,
@@ -350,7 +347,7 @@ void wxSpinButton::Increment( int delta )
     event.SetPosition( npos );
     event.SetEventObject( this );
 
-    GetEventHandler()->ProcessEvent( event );
+    HandleWindowEvent( event );
 
     if( event.IsAllowed() )
     {
@@ -358,7 +355,7 @@ void wxSpinButton::Increment( int delta )
         event.SetEventType( wxEVT_SCROLL_THUMBTRACK );
         event.SetPosition( m_pos );
 
-        GetEventHandler()->ProcessEvent( event );
+        HandleWindowEvent( event );
     }
 }
 

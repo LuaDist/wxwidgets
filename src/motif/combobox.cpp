@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: combobox.cpp 39694 2006-06-13 11:30:40Z ABX $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -38,8 +37,6 @@
 void  wxComboBoxCallback (Widget w, XtPointer clientData,
                           XmComboBoxSelectionCallbackStruct * cbs);
 
-IMPLEMENT_DYNAMIC_CLASS(wxComboBox, wxControl)
-
 bool wxComboBox::Create(wxWindow *parent, wxWindowID id,
                         const wxString& value,
                         const wxPoint& pos,
@@ -51,8 +48,7 @@ bool wxComboBox::Create(wxWindow *parent, wxWindowID id,
 {
     if( !CreateControl( parent, id, pos, size, style, validator, name ) )
         return false;
-
-    m_noStrings = n;
+    PreCreation();
 
     Widget parentWidget = (Widget) parent->GetClientWidget();
 
@@ -71,7 +67,7 @@ bool wxComboBox::Create(wxWindow *parent, wxWindowID id,
     {
         wxXmString str( choices[i] );
         XmComboBoxAddItem(buttonWidget, str(), 0);
-        m_stringList.Add(choices[i]);
+        m_stringArray.Add(choices[i]);
     }
 
     m_mainWidget = (Widget) buttonWidget;
@@ -80,16 +76,13 @@ bool wxComboBox::Create(wxWindow *parent, wxWindowID id,
 
     SetValue(value);
 
-    ChangeFont(false);
-
     XtAddCallback (buttonWidget, XmNselectionCallback, (XtCallbackProc) wxComboBoxCallback,
         (XtPointer) this);
     XtAddCallback (buttonWidget, XmNvalueChangedCallback, (XtCallbackProc) wxComboBoxCallback,
         (XtPointer) this);
 
+    PostCreation();
     AttachWidget (parent, m_mainWidget, (WXWidget) NULL, pos.x, pos.y, size.x, size.y);
-
-    ChangeBackgroundColour();
 
     return true;
 }
@@ -113,8 +106,6 @@ wxComboBox::~wxComboBox()
     DetachWidget((Widget) m_mainWidget); // Removes event handlers
     XtDestroyWidget((Widget) m_mainWidget);
     m_mainWidget = (WXWidget) 0;
-    if ( HasClientObjectData() )
-        m_clientDataDict.DestroyData();
 }
 
 void wxComboBox::DoSetSize(int x, int y,
@@ -125,6 +116,8 @@ void wxComboBox::DoSetSize(int x, int y,
     wxWindow::DoSetSize(x, y, width, DoGetBestSize().y, sizeFlags);
 }
 
+#if 0
+// Already defined in include/motif/combobox.h
 wxString wxComboBox::GetValue() const
 {
     char *s = XmComboBoxGetString ((Widget) m_mainWidget);
@@ -137,14 +130,16 @@ wxString wxComboBox::GetValue() const
     else
         return wxEmptyString;
 }
+#endif
 
 void wxComboBox::SetValue(const wxString& value)
 {
-    m_inSetValue = true;
     if( !value.empty() )
-        XmComboBoxSetString( (Widget)m_mainWidget,
-                             wxConstCast(value.c_str(), char) );
-    m_inSetValue = false;
+    {
+        m_inSetValue = true;
+        XmComboBoxSetString((Widget)m_mainWidget, value.char_str());
+        m_inSetValue = false;
+    }
 }
 
 void wxComboBox::SetString(unsigned int WXUNUSED(n), const wxString& WXUNUSED(s))
@@ -152,54 +147,39 @@ void wxComboBox::SetString(unsigned int WXUNUSED(n), const wxString& WXUNUSED(s)
     wxFAIL_MSG( wxT("wxComboBox::SetString only implemented for Motif 2.0") );
 }
 
-int wxComboBox::DoAppend(const wxString& item)
+// TODO auto-sorting is not supported by the code
+int wxComboBox::DoInsertItems(const wxArrayStringsAdapter& items,
+                              unsigned int pos,
+                              void **clientData,
+                              wxClientDataType type)
 {
-    wxXmString str( item.c_str() );
-    XmComboBoxAddItem((Widget) m_mainWidget, str(), 0);
-    m_stringList.Add(item);
-    m_noStrings ++;
+    const unsigned int numItems = items.GetCount();
 
-    return GetCount() - 1;
+    AllocClientData(numItems);
+    for( unsigned int i = 0; i < numItems; ++i, ++pos )
+    {
+        wxXmString str( items[i].c_str() );
+        XmComboBoxAddItem((Widget) m_mainWidget, str(), GetMotifPosition(pos));
+        m_stringArray.Insert(items[i], pos);
+        InsertNewItemClientData(pos, clientData, i, type);
+    }
+
+    return pos - 1;
 }
 
-int wxComboBox::DoInsert(const wxString& item, unsigned int pos)
-{
-    wxCHECK_MSG(!(GetWindowStyle() & wxCB_SORT), -1, wxT("can't insert into sorted list"));
-    wxCHECK_MSG(IsValidInsert(pos), -1, wxT("invalid index"));
-
-    if (pos == GetCount())
-        return DoAppend(item);
-
-    wxXmString str( item.c_str() );
-    XmComboBoxAddItem((Widget) m_mainWidget, str(), pos+1);
-    wxChar* copy = wxStrcpy(new wxChar[item.length() + 1], item.c_str());
-    m_stringList.Insert(pos, copy);
-    m_noStrings ++;
-
-    return pos;
-}
-
-void wxComboBox::Delete(unsigned int n)
+void wxComboBox::DoDeleteOneItem(unsigned int n)
 {
     XmComboBoxDeletePos((Widget) m_mainWidget, n+1);
-    wxStringList::Node *node = m_stringList.Item(n);
-    if (node)
-    {
-        delete[] node->GetData();
-        delete node;
-    }
-    m_clientDataDict.Delete(n, HasClientObjectData());
-    m_noStrings--;
+    m_stringArray.RemoveAt(n);
+    wxControlWithItems::DoDeleteOneItem(n);
 }
 
 void wxComboBox::Clear()
 {
     XmComboBoxDeleteAllItems((Widget) m_mainWidget);
-    m_stringList.Clear();
+    m_stringArray.Clear();
 
-    if ( HasClientObjectData() )
-        m_clientDataDict.DestroyData();
-    m_noStrings = 0;
+    wxControlWithItems::DoClear();
 }
 
 void wxComboBox::SetSelection (int n)
@@ -218,11 +198,7 @@ int wxComboBox::GetSelection (void) const
 
 wxString wxComboBox::GetString(unsigned int n) const
 {
-    wxStringList::Node *node = m_stringList.Item(n);
-    if (node)
-        return wxString(node->GetData ());
-    else
-        return wxEmptyString;
+    return m_stringArray[n];
 }
 
 int wxComboBox::FindString(const wxString& s, bool WXUNUSED(bCase)) const
@@ -245,68 +221,6 @@ int wxComboBox::FindString(const wxString& s, bool WXUNUSED(bCase)) const
     return wxNOT_FOUND;
 }
 
-// Clipboard operations
-void wxComboBox::Copy()
-{
-    XmComboBoxCopy((Widget) m_mainWidget, CurrentTime);
-}
-
-void wxComboBox::Cut()
-{
-    XmComboBoxCut((Widget) m_mainWidget, CurrentTime);
-}
-
-void wxComboBox::Paste()
-{
-    XmComboBoxPaste((Widget) m_mainWidget);
-}
-
-void wxComboBox::SetEditable(bool WXUNUSED(editable))
-{
-    // TODO
-}
-
-void wxComboBox::SetInsertionPoint(long pos)
-{
-    XmComboBoxSetInsertionPosition ((Widget) m_mainWidget, (XmTextPosition) pos);
-}
-
-void wxComboBox::SetInsertionPointEnd()
-{
-    XmTextPosition pos = XmComboBoxGetLastPosition ((Widget) m_mainWidget);
-    XmComboBoxSetInsertionPosition ((Widget) m_mainWidget, (XmTextPosition) (pos + 1));
-}
-
-long wxComboBox::GetInsertionPoint() const
-{
-    return (long) XmComboBoxGetInsertionPosition ((Widget) m_mainWidget);
-}
-
-wxTextPos wxComboBox::GetLastPosition() const
-{
-    return (wxTextPos) XmComboBoxGetLastPosition ((Widget) m_mainWidget);
-}
-
-void wxComboBox::Replace(long from, long to, const wxString& value)
-{
-    XmComboBoxReplace ((Widget) m_mainWidget, (XmTextPosition) from,
-                       (XmTextPosition) to,
-                       wxConstCast(value.c_str(), char));
-}
-
-void wxComboBox::Remove(long from, long to)
-{
-    XmComboBoxSetSelection ((Widget) m_mainWidget, (XmTextPosition) from, (XmTextPosition) to,
-                      (Time) 0);
-    XmComboBoxRemove ((Widget) m_mainWidget);
-}
-
-void wxComboBox::SetSelection(long from, long to)
-{
-    XmComboBoxSetSelection ((Widget) m_mainWidget, (XmTextPosition) from, (XmTextPosition) to,
-                      (Time) 0);
-}
-
 void  wxComboBoxCallback (Widget WXUNUSED(w), XtPointer clientData,
                           XmComboBoxSelectionCallbackStruct * cbs)
 {
@@ -317,7 +231,7 @@ void  wxComboBoxCallback (Widget WXUNUSED(w), XtPointer clientData,
     case XmCR_SINGLE_SELECT:
     case XmCR_BROWSE_SELECT:
         {
-            wxCommandEvent event (wxEVT_COMMAND_COMBOBOX_SELECTED,
+            wxCommandEvent event (wxEVT_COMBOBOX,
                                   item->GetId());
             event.SetInt(cbs->index - 1);
             event.SetString( item->GetString ( event.GetInt() ) );
@@ -332,7 +246,7 @@ void  wxComboBoxCallback (Widget WXUNUSED(w), XtPointer clientData,
         }
     case XmCR_VALUE_CHANGED:
         {
-            wxCommandEvent event (wxEVT_COMMAND_TEXT_UPDATED, item->GetId());
+            wxCommandEvent event (wxEVT_TEXT, item->GetId());
             event.SetInt(-1);
             event.SetString( item->GetValue() );
             event.SetExtraLong(true);
@@ -373,6 +287,11 @@ wxSize wxComboBox::DoGetBestSize() const
     }
     else
         return wxWindow::DoGetBestSize();
+}
+
+WXWidget wxComboBox::GetTextWidget() const
+{
+    return (WXWidget)XmComboBoxGetEditWidget((Widget) m_mainWidget);
 }
 
 #endif // XmVersion < 2000

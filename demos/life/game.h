@@ -4,25 +4,12 @@
 // Author:      Guillermo Rodriguez Garcia, <guille@iies.es>
 // Modified by:
 // Created:     Jan/2000
-// RCS-ID:      $Id: game.h 38363 2006-03-25 12:04:37Z JS $
 // Copyright:   (c) 2000, Guillermo Rodriguez Garcia
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #ifndef _LIFE_GAME_H_
 #define _LIFE_GAME_H_
-
-// for compilers that support precompilation, includes "wx/wx.h"
-#include "wx/wxprec.h"
-
-#ifdef __BORLANDC__
-    #pragma hdrstop
-#endif
-
-// for all others, include the necessary headers
-#ifndef WX_PRECOMP
-    #include "wx/wx.h"
-#endif
 
 // --------------------------------------------------------------------------
 // LifePattern
@@ -58,7 +45,7 @@ public:
         // causes a crash due to conversion objects not being available
         // during initialisation.
 #ifndef __WXMAC__
-        m_shape.Add( wxString::Format(_T("%i %i"), -width/2, -height/2) );
+        m_shape.Add( wxString::Format(wxT("%i %i"), -width/2, -height/2) );
 #endif
         for(int j = 0; j < height; j++)
         {

@@ -2,11 +2,11 @@
 // Name:        mdi.cpp
 // Purpose:     MDI sample
 // Author:      Julian Smart
-// Modified by:
+// Modified by: 2008-10-31 Vadim Zeitlin: big clean up
 // Created:     04/01/98
-// RCS-ID:      $Id: mdi.cpp 43480 2006-11-18 00:08:27Z VZ $
-// Copyright:   (c) Julian Smart
-// Licence:     wxWindows license
+// Copyright:   (c) 1997 Julian Smart
+//              (c) 2008 Vadim Zeitlin
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 // ===========================================================================
@@ -31,7 +31,7 @@
 
 #include "wx/toolbar.h"
 
-#if !defined(__WXMSW__)
+#ifndef wxHAS_IMAGES_IN_RESOURCES
     #include "../sample.xpm"
     #include "chart.xpm"
 #endif
@@ -45,42 +45,39 @@
 #include "bitmaps/print.xpm"
 #include "bitmaps/help.xpm"
 
+// replace this 0 with 1 to build the sample using the generic MDI classes (you
+// may also need to add src/generic/mdig.cpp to the build)
+#if 0
+    #include "wx/generic/mdig.h"
+    #define wxMDIParentFrame wxGenericMDIParentFrame
+    #define wxMDIChildFrame wxGenericMDIChildFrame
+    #define wxMDIClientWindow wxGenericMDIClientWindow
+#endif
 
 #include "mdi.h"
 
 IMPLEMENT_APP(MyApp)
 
 // ---------------------------------------------------------------------------
-// global variables
-// ---------------------------------------------------------------------------
-
-MyFrame *frame = (MyFrame *) NULL;
-wxList my_children;
-
-// For drawing lines in a canvas
-static long xpos = -1;
-static long ypos = -1;
-
-static int gs_nFrames = 0;
-
-// ---------------------------------------------------------------------------
 // event tables
 // ---------------------------------------------------------------------------
 
 BEGIN_EVENT_TABLE(MyFrame, wxMDIParentFrame)
-    EVT_MENU(MDI_ABOUT, MyFrame::OnAbout)
-    EVT_MENU(MDI_NEW_WINDOW, MyFrame::OnNewWindow)
-    EVT_MENU(MDI_QUIT, MyFrame::OnQuit)
+    EVT_MENU(wxID_ABOUT, MyFrame::OnAbout)
+    EVT_MENU(wxID_NEW, MyFrame::OnNewWindow)
+    EVT_MENU(MDI_FULLSCREEN, MyFrame::OnFullScreen)
+    EVT_MENU(wxID_EXIT, MyFrame::OnQuit)
+
+    EVT_MENU(wxID_CLOSE_ALL, MyFrame::OnCloseAll)
 
     EVT_CLOSE(MyFrame::OnClose)
-    EVT_SIZE(MyFrame::OnSize)
 END_EVENT_TABLE()
 
-// Note that MDI_NEW_WINDOW and MDI_ABOUT commands get passed
+// Note that wxID_NEW and wxID_ABOUT commands get passed
 // to the parent window for processing, so no need to
 // duplicate event handlers here.
 BEGIN_EVENT_TABLE(MyChild, wxMDIChildFrame)
-    EVT_MENU(MDI_CHILD_QUIT, MyChild::OnQuit)
+    EVT_MENU(wxID_CLOSE, MyChild::OnClose)
     EVT_MENU(MDI_REFRESH, MyChild::OnRefresh)
     EVT_MENU(MDI_CHANGE_TITLE, MyChild::OnChangeTitle)
     EVT_MENU(MDI_CHANGE_POSITION, MyChild::OnChangePosition)
@@ -94,11 +91,15 @@ BEGIN_EVENT_TABLE(MyChild, wxMDIChildFrame)
     EVT_SIZE(MyChild::OnSize)
     EVT_MOVE(MyChild::OnMove)
 
-    EVT_CLOSE(MyChild::OnClose)
+    EVT_CLOSE(MyChild::OnCloseWindow)
 END_EVENT_TABLE()
 
 BEGIN_EVENT_TABLE(MyCanvas, wxScrolledWindow)
     EVT_MOUSE_EVENTS(MyCanvas::OnEvent)
+END_EVENT_TABLE()
+
+BEGIN_EVENT_TABLE(MyChild::EventHandler, wxEvtHandler)
+    EVT_MENU(MDI_REFRESH, MyChild::EventHandler::OnRefresh)
 END_EVENT_TABLE()
 
 // ===========================================================================
@@ -112,45 +113,14 @@ END_EVENT_TABLE()
 // Initialise this in OnInit, not statically
 bool MyApp::OnInit()
 {
+    if ( !wxApp::OnInit() )
+        return false;
+
     // Create the main frame window
 
-    frame = new MyFrame((wxFrame *)NULL, wxID_ANY, _T("MDI Demo"),
-                        wxDefaultPosition, wxSize(500, 400),
-                        wxDEFAULT_FRAME_STYLE | wxHSCROLL | wxVSCROLL);
-#if 0
-    // Experimental: change the window menu
-    wxMenu* windowMenu = new wxMenu;
-    windowMenu->Append(5000, _T("My menu item!"));
-    frame->SetWindowMenu(windowMenu);
-#endif
-
-    // Give it an icon
-    frame->SetIcon(wxICON(sample));
-
-    // Make a menubar
-    wxMenu *file_menu = new wxMenu;
-
-    file_menu->Append(MDI_NEW_WINDOW, _T("&New window\tCtrl-N"), _T("Create a new child window"));
-    file_menu->Append(MDI_QUIT, _T("&Exit\tAlt-X"), _T("Quit the program"));
-
-    wxMenu *help_menu = new wxMenu;
-    help_menu->Append(MDI_ABOUT, _T("&About\tF1"));
-
-    wxMenuBar *menu_bar = new wxMenuBar;
-
-    menu_bar->Append(file_menu, _T("&File"));
-    menu_bar->Append(help_menu, _T("&Help"));
-
-    // Associate the menu bar with the frame
-    frame->SetMenuBar(menu_bar);
-
-#if wxUSE_STATUSBAR
-    frame->CreateStatusBar();
-#endif // wxUSE_STATUSBAR
+    MyFrame *frame = new MyFrame;
 
     frame->Show(true);
-
-    SetTopWindow(frame);
 
     return true;
 }
@@ -160,17 +130,54 @@ bool MyApp::OnInit()
 // ---------------------------------------------------------------------------
 
 // Define my frame constructor
-MyFrame::MyFrame(wxWindow *parent,
-                 const wxWindowID id,
-                 const wxString& title,
-                 const wxPoint& pos,
-                 const wxSize& size,
-                 const long style)
-       : wxMDIParentFrame(parent, id, title, pos, size, style)
+MyFrame::MyFrame()
+       : wxMDIParentFrame(NULL, wxID_ANY, "wxWidgets MDI Sample",
+                          wxDefaultPosition, wxSize(500, 400))
 {
-    textWindow = new wxTextCtrl(this, wxID_ANY, _T("A help window"),
-                                wxDefaultPosition, wxDefaultSize,
-                                wxTE_MULTILINE | wxSUNKEN_BORDER);
+    SetIcon(wxICON(sample));
+
+    // Make a menubar
+#if wxUSE_MENUS
+    // Associate the menu bar with the frame
+    SetMenuBar(CreateMainMenubar());
+
+
+    // This shows that the standard window menu may be customized:
+    wxMenu * const windowMenu = GetWindowMenu();
+    if ( windowMenu )
+    {
+        // we can change the labels of standard items (which also means we can
+        // set up accelerators for them as they're part of the label)
+        windowMenu->SetLabel(wxID_MDI_WINDOW_TILE_HORZ,
+                             "&Tile horizontally\tCtrl-Shift-H");
+        windowMenu->SetLabel(wxID_MDI_WINDOW_TILE_VERT,
+                             "&Tile vertically\tCtrl-Shift-V");
+
+        // we can also change the help string
+        windowMenu->SetHelpString(wxID_MDI_WINDOW_CASCADE,
+                                  "Arrange windows in cascade");
+
+        // we can remove some items
+        windowMenu->Delete(wxID_MDI_WINDOW_ARRANGE_ICONS);
+
+        // and we can add completely custom commands -- but then we must handle
+        // them ourselves, see OnCloseAll()
+        windowMenu->AppendSeparator();
+        windowMenu->Append(wxID_CLOSE_ALL, "&Close all windows\tCtrl-Shift-C",
+                           "Close all open windows");
+
+        SetWindowMenu(windowMenu);
+    }
+#endif // wxUSE_MENUS
+
+#if wxUSE_STATUSBAR
+    CreateStatusBar();
+#endif // wxUSE_STATUSBAR
+
+
+    m_textWindow = new wxTextCtrl(this, wxID_ANY, "A help window",
+                                  wxDefaultPosition, wxDefaultSize,
+                                  wxTE_MULTILINE | wxSUNKEN_BORDER);
 
 #if wxUSE_TOOLBAR
     CreateToolBar(wxNO_BORDER | wxTB_FLAT | wxTB_HORIZONTAL);
@@ -180,21 +187,53 @@ MyFrame::MyFrame(wxWindow *parent,
 #if wxUSE_ACCEL
     // Accelerators
     wxAcceleratorEntry entries[3];
-    entries[0].Set(wxACCEL_CTRL, (int) 'N', MDI_NEW_WINDOW);
-    entries[1].Set(wxACCEL_CTRL, (int) 'X', MDI_QUIT);
-    entries[2].Set(wxACCEL_CTRL, (int) 'A', MDI_ABOUT);
+    entries[0].Set(wxACCEL_CTRL, (int) 'N', wxID_NEW);
+    entries[1].Set(wxACCEL_CTRL, (int) 'X', wxID_EXIT);
+    entries[2].Set(wxACCEL_CTRL, (int) 'A', wxID_ABOUT);
     wxAcceleratorTable accel(3, entries);
     SetAcceleratorTable(accel);
 #endif // wxUSE_ACCEL
+
+    // connect it only now, after creating m_textWindow
+    Connect(wxEVT_SIZE, wxSizeEventHandler(MyFrame::OnSize));
 }
+
+MyFrame::~MyFrame()
+{
+    // and disconnect it to prevent accessing already deleted m_textWindow in
+    // the size event handler if it's called during destruction
+    Disconnect(wxEVT_SIZE, wxSizeEventHandler(MyFrame::OnSize));
+}
+
+#if wxUSE_MENUS
+/* static */
+wxMenuBar *MyFrame::CreateMainMenubar()
+{
+    wxMenu *menuFile = new wxMenu;
+
+    menuFile->Append(wxID_NEW, "&New window\tCtrl-N", "Create a new child window");
+    menuFile->AppendCheckItem(MDI_FULLSCREEN, "Show &full screen\tCtrl-F");
+    menuFile->Append(wxID_EXIT, "&Exit\tAlt-X", "Quit the program");
+
+    wxMenu *menuHelp = new wxMenu;
+    menuHelp->Append(wxID_ABOUT, "&About\tF1");
+
+    wxMenuBar *mbar = new wxMenuBar;
+    mbar->Append(menuFile, "&File");
+    mbar->Append(menuHelp, "&Help");
+
+    return mbar;
+}
+#endif // wxUSE_MENUS
 
 void MyFrame::OnClose(wxCloseEvent& event)
 {
-    if ( event.CanVeto() && (gs_nFrames > 0) )
+    unsigned numChildren = MyChild::GetChildrenCount();
+    if ( event.CanVeto() && (numChildren > 0) )
     {
         wxString msg;
-        msg.Printf(_T("%d windows still open, close anyhow?"), gs_nFrames);
-        if ( wxMessageBox(msg, _T("Please confirm"),
+        msg.Printf("%d windows still open, close anyhow?", numChildren);
+        if ( wxMessageBox(msg, "Please confirm",
                           wxICON_QUESTION | wxYES_NO) != wxYES )
         {
             event.Veto();
@@ -213,86 +252,40 @@ void MyFrame::OnQuit(wxCommandEvent& WXUNUSED(event))
 
 void MyFrame::OnAbout(wxCommandEvent& WXUNUSED(event) )
 {
-    (void)wxMessageBox(_T("wxWidgets 2.0 MDI Demo\n")
-                       _T("Author: Julian Smart (c) 1997\n")
-                       _T("Usage: mdi.exe"), _T("About MDI Demo"));
+    (void)wxMessageBox("wxWidgets 2.0 MDI Demo\n"
+                       "Author: Julian Smart (c) 1997\n"
+                       "Usage: mdi.exe", "About MDI Demo");
 }
 
 void MyFrame::OnNewWindow(wxCommandEvent& WXUNUSED(event) )
 {
-    // Make another frame, containing a canvas
-    MyChild *subframe = new MyChild(frame, _T("Canvas Frame"));
-
-    wxString title;
-    title.Printf(_T("Canvas Frame %d"), ++gs_nFrames);
-
-    subframe->SetTitle(title);
-
-    // Give it an icon
-    subframe->SetIcon(wxICON(chart));
-
-#if wxUSE_MENUS
-    // Make a menubar
-    wxMenu *file_menu = new wxMenu;
-
-    file_menu->Append(MDI_NEW_WINDOW, _T("&New window"));
-    file_menu->Append(MDI_CHILD_QUIT, _T("&Close child"), _T("Close this window"));
-    file_menu->Append(MDI_QUIT, _T("&Exit"));
-
-    wxMenu *option_menu = new wxMenu;
-
-    option_menu->Append(MDI_REFRESH, _T("&Refresh picture"));
-    option_menu->Append(MDI_CHANGE_TITLE, _T("Change &title...\tCtrl-T"));
-    option_menu->AppendSeparator();
-    option_menu->Append(MDI_CHANGE_POSITION, _T("Move frame\tCtrl-M"));
-    option_menu->Append(MDI_CHANGE_SIZE, _T("Resize frame\tCtrl-S"));
-#if wxUSE_CLIPBOARD
-    option_menu->AppendSeparator();
-    option_menu->Append(wxID_PASTE, _T("Copy text from clipboard\tCtrl-V"));
-#endif // wxUSE_CLIPBOARD
-
-    wxMenu *help_menu = new wxMenu;
-    help_menu->Append(MDI_ABOUT, _T("&About"));
-
-    wxMenuBar *menu_bar = new wxMenuBar;
-
-    menu_bar->Append(file_menu, _T("&File"));
-    menu_bar->Append(option_menu, _T("&Child"));
-    menu_bar->Append(help_menu, _T("&Help"));
-
-    // Associate the menu bar with the frame
-    subframe->SetMenuBar(menu_bar);
-#endif // wxUSE_MENUS
-
-#if wxUSE_STATUSBAR
-    subframe->CreateStatusBar();
-    subframe->SetStatusText(title);
-#endif // wxUSE_STATUSBAR
-
-    int width, height;
-    subframe->GetClientSize(&width, &height);
-    MyCanvas *canvas = new MyCanvas(subframe, wxPoint(0, 0), wxSize(width, height));
-    canvas->SetCursor(wxCursor(wxCURSOR_PENCIL));
-    subframe->canvas = canvas;
-
-    // Give it scrollbars
-    canvas->SetScrollbars(20, 20, 50, 50);
-
+    // create and show another child frame
+    MyChild *subframe = new MyChild(this);
     subframe->Show(true);
 }
 
-void MyFrame::OnSize(wxSizeEvent&
-                                  #ifdef __WXUNIVERSAL__
-                                  event
-                                  #else
-                                  WXUNUSED(event)
-                                  #endif
-                                  )
+void MyFrame::OnFullScreen(wxCommandEvent& event)
+{
+    ShowFullScreen(event.IsChecked());
+}
+
+void MyFrame::OnCloseAll(wxCommandEvent& WXUNUSED(event))
+{
+    for ( wxWindowList::const_iterator i = GetChildren().begin();
+          i != GetChildren().end();
+          ++i )
+    {
+        if ( wxDynamicCast(*i, wxMDIChildFrame) )
+            (*i)->Close();
+    }
+}
+
+void MyFrame::OnSize(wxSizeEvent& event)
 {
     int w, h;
     GetClientSize(&w, &h);
 
-    textWindow->SetSize(0, 0, 200, h);
+    m_textWindow->SetSize(0, 0, 200, h);
     GetClientWindow()->SetSize(200, 0, w - 200, h);
 
     // FIXME: On wxX11, we need the MDI frame to process this
@@ -300,6 +293,8 @@ void MyFrame::OnSize(wxSizeEvent&
     // be done.
 #ifdef __WXUNIVERSAL__
     event.Skip();
+#else
+    wxUnusedVar(event);
 #endif
 }
 
@@ -317,17 +312,17 @@ void MyFrame::InitToolBar(wxToolBar* toolBar)
     bitmaps[6] = wxBitmap( print_xpm );
     bitmaps[7] = wxBitmap( help_xpm );
 
-    toolBar->AddTool(MDI_NEW_WINDOW, _T("New"), bitmaps[0], _T("New file"));
-    toolBar->AddTool(1, _T("Open"), bitmaps[1], _T("Open file"));
-    toolBar->AddTool(2, _T("Save"), bitmaps[2], _T("Save file"));
+    toolBar->AddTool(wxID_NEW, "New", bitmaps[0], "New file");
+    toolBar->AddTool(1, "Open", bitmaps[1], "Open file");
+    toolBar->AddTool(2, "Save", bitmaps[2], "Save file");
     toolBar->AddSeparator();
-    toolBar->AddTool(3, _T("Copy"), bitmaps[3], _T("Copy"));
-    toolBar->AddTool(4, _T("Cut"), bitmaps[4], _T("Cut"));
-    toolBar->AddTool(5, _T("Paste"), bitmaps[5], _T("Paste"));
+    toolBar->AddTool(3, "Copy", bitmaps[3], "Copy");
+    toolBar->AddTool(4, "Cut", bitmaps[4], "Cut");
+    toolBar->AddTool(5, "Paste", bitmaps[5], "Paste");
     toolBar->AddSeparator();
-    toolBar->AddTool(6, _T("Print"), bitmaps[6], _T("Print"));
+    toolBar->AddTool(6, "Print", bitmaps[6], "Print");
     toolBar->AddSeparator();
-    toolBar->AddTool(MDI_ABOUT, _T("About"), bitmaps[7], _T("Help"));
+    toolBar->AddTool(wxID_ABOUT, "About", bitmaps[7], "Help");
 
     toolBar->Realize();
 }
@@ -344,7 +339,10 @@ MyCanvas::MyCanvas(wxWindow *parent, const wxPoint& pos, const wxSize& size)
                            wxNO_FULL_REPAINT_ON_RESIZE |
                            wxVSCROLL | wxHSCROLL)
 {
-    SetBackgroundColour(wxColour(_T("WHITE")));
+    SetBackgroundColour(*wxWHITE);
+    SetCursor(wxCursor(wxCURSOR_PENCIL));
+
+    SetScrollbars(20, 20, 50, 50);
 
     m_dirty = false;
 }
@@ -370,7 +368,7 @@ void MyCanvas::OnDraw(wxDC& dc)
     dc.DrawSpline(50, 200, 50, 100, 200, 10);
 #endif // wxUSE_SPLINES
     dc.DrawLine(50, 230, 200, 230);
-    dc.DrawText(_T("This is a test string"), 50, 230);
+    dc.DrawText("This is a test string", 50, 230);
 
     wxPoint points[3];
     points[0].x = 200; points[0].y = 300;
@@ -389,6 +387,9 @@ void MyCanvas::OnEvent(wxMouseEvent& event)
 
     wxPoint pt(event.GetLogicalPosition(dc));
 
+    static long xpos = -1;
+    static long ypos = -1;
+
     if (xpos > -1 && ypos > -1 && event.Dragging())
     {
         dc.SetPen(*wxBLACK_PEN);
@@ -405,31 +406,76 @@ void MyCanvas::OnEvent(wxMouseEvent& event)
 // MyChild
 // ---------------------------------------------------------------------------
 
-MyChild::MyChild(wxMDIParentFrame *parent, const wxString& title)
-       : wxMDIChildFrame(parent, wxID_ANY, title, wxDefaultPosition, wxDefaultSize,
-                         wxDEFAULT_FRAME_STYLE | wxNO_FULL_REPAINT_ON_RESIZE)
-{
-    canvas = (MyCanvas *) NULL;
-    my_children.Append(this);
+unsigned MyChild::ms_numChildren = 0;
 
-    // this should work for MDI frames as well as for normal ones
-    SetSizeHints(100, 100);
+MyChild::MyChild(wxMDIParentFrame *parent)
+       : wxMDIChildFrame
+         (
+            parent,
+            wxID_ANY,
+            wxString::Format("Child %u", ++ms_numChildren)
+         )
+{
+    m_canvas = new MyCanvas(this, wxPoint(0, 0), GetClientSize());
+
+    SetIcon(wxICON(chart));
+
+    const bool canBeResized = !IsAlwaysMaximized();
+
+    // create our menu bar: it will be shown instead of the main frame one when
+    // we're active
+#if wxUSE_MENUS
+    wxMenuBar *mbar = MyFrame::CreateMainMenubar();
+    mbar->GetMenu(0)->Insert(1, wxID_CLOSE, "&Close child\tCtrl-W",
+                             "Close this window");
+
+    wxMenu *menuChild = new wxMenu;
+
+    menuChild->Append(MDI_REFRESH, "&Refresh picture");
+    menuChild->Append(MDI_CHANGE_TITLE, "Change &title...\tCtrl-T");
+    if ( canBeResized )
+    {
+        menuChild->AppendSeparator();
+        menuChild->Append(MDI_CHANGE_POSITION, "Move frame\tCtrl-M");
+        menuChild->Append(MDI_CHANGE_SIZE, "Resize frame\tCtrl-S");
+    }
+#if wxUSE_CLIPBOARD
+    menuChild->AppendSeparator();
+    menuChild->Append(wxID_PASTE, "Copy text from clipboard\tCtrl-V");
+#endif // wxUSE_CLIPBOARD
+
+    mbar->Insert(1, menuChild, "&Child");
+
+    // Associate the menu bar with the frame
+    SetMenuBar(mbar);
+#endif // wxUSE_MENUS
+
+    // this should work for MDI frames as well as for normal ones, provided
+    // they can be resized at all
+    if ( canBeResized )
+        SetSizeHints(100, 100);
+
+    // test that event handlers pushed on top of MDI children do work (this
+    // used to be broken, see #11225)
+    PushEventHandler(new EventHandler(ms_numChildren));
 }
 
 MyChild::~MyChild()
 {
-    my_children.DeleteObject(this);
+    PopEventHandler(true);
+
+    ms_numChildren--;
 }
 
-void MyChild::OnQuit(wxCommandEvent& WXUNUSED(event))
+void MyChild::OnClose(wxCommandEvent& WXUNUSED(event))
 {
     Close(true);
 }
 
 void MyChild::OnRefresh(wxCommandEvent& WXUNUSED(event))
 {
-    if ( canvas )
-        canvas->Refresh();
+    if ( m_canvas )
+        m_canvas->Refresh();
 }
 
 void MyChild::OnChangePosition(wxCommandEvent& WXUNUSED(event))
@@ -445,10 +491,10 @@ void MyChild::OnChangeSize(wxCommandEvent& WXUNUSED(event))
 void MyChild::OnChangeTitle(wxCommandEvent& WXUNUSED(event))
 {
 #if wxUSE_TEXTDLG
-    static wxString s_title = _T("Canvas Frame");
+    static wxString s_title = "Canvas Frame";
 
-    wxString title = wxGetTextFromUser(_T("Enter the new title for MDI child"),
-                                       _T("MDI sample question"),
+    wxString title = wxGetTextFromUser("Enter the new title for MDI child",
+                                       "MDI sample question",
                                        s_title,
                                        GetParent()->GetParent());
     if ( !title )
@@ -461,8 +507,8 @@ void MyChild::OnChangeTitle(wxCommandEvent& WXUNUSED(event))
 
 void MyChild::OnActivate(wxActivateEvent& event)
 {
-    if ( event.GetActive() && canvas )
-        canvas->SetFocus();
+    if ( event.GetActive() && m_canvas )
+        m_canvas->SetFocus();
 }
 
 void MyChild::OnMove(wxMoveEvent& event)
@@ -472,7 +518,7 @@ void MyChild::OnMove(wxMoveEvent& event)
     //     to be the width of the MDI canvas border)
     wxPoint pos1 = event.GetPosition(),
             pos2 = GetPosition();
-    wxLogStatus(wxT("position from event: (%d, %d), from frame (%d, %d)"),
+    wxLogStatus("position from event: (%d, %d), from frame (%d, %d)",
                 pos1.x, pos1.y, pos2.x, pos2.y);
 
     event.Skip();
@@ -486,17 +532,17 @@ void MyChild::OnSize(wxSizeEvent& event)
     wxSize size1 = event.GetSize(),
            size2 = GetSize(),
            size3 = GetClientSize();
-    wxLogStatus(wxT("size from event: %dx%d, from frame %dx%d, client %dx%d"),
+    wxLogStatus("size from event: %dx%d, from frame %dx%d, client %dx%d",
                 size1.x, size1.y, size2.x, size2.y, size3.x, size3.y);
 
     event.Skip();
 }
 
-void MyChild::OnClose(wxCloseEvent& event)
+void MyChild::OnCloseWindow(wxCloseEvent& event)
 {
-    if ( canvas && canvas->IsDirty() )
+    if ( m_canvas && m_canvas->IsDirty() )
     {
-        if ( wxMessageBox(_T("Really close?"), _T("Please confirm"),
+        if ( wxMessageBox("Really close?", "Please confirm",
                           wxICON_QUESTION | wxYES_NO) != wxYES )
         {
             event.Veto();
@@ -504,8 +550,6 @@ void MyChild::OnClose(wxCloseEvent& event)
             return;
         }
     }
-
-    gs_nFrames--;
 
     event.Skip();
 }
@@ -518,8 +562,9 @@ void MyChild::OnPaste(wxCommandEvent& WXUNUSED(event))
 {
     wxClipboardLocker lock;
     wxTextDataObject data;
-    canvas->SetText(wxTheClipboard->GetData(data) ? data.GetText().c_str()
-                                                  : _T("No text on clipboard"));
+    m_canvas->SetText(wxTheClipboard->GetData(data)
+                        ? data.GetText()
+                        : wxString("No text on clipboard"));
 }
 
 void MyChild::OnUpdatePaste(wxUpdateUIEvent& event)

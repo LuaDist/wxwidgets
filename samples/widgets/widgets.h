@@ -4,7 +4,6 @@
 // Purpose:     Common stuff for all widgets project files
 // Author:      Vadim Zeitlin
 // Created:     27.03.01
-// Id:          $Id: widgets.h 51519 2008-02-03 13:48:11Z VZ $
 // Copyright:   (c) 2001 Vadim Zeitlin
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -18,7 +17,7 @@
     #define WidgetsBookCtrl wxTreebook
     #define WidgetsBookCtrlEvent wxTreebookEvent
     #define EVT_WIDGETS_PAGE_CHANGING(id,func) EVT_TREEBOOK_PAGE_CHANGING(id,func)
-    #define wxEVT_COMMAND_WIDGETS_PAGE_CHANGED wxEVT_COMMAND_TREEBOOK_PAGE_CHANGED
+    #define wxEVT_COMMAND_WIDGETS_PAGE_CHANGED wxEVT_TREEBOOK_PAGE_CHANGED
     #define wxWidgetsbookEventHandler(func) wxTreebookEventHandler(func)
 #else
     #include "wx/bookctrl.h"
@@ -26,8 +25,8 @@
     #define WidgetsBookCtrl wxBookCtrl
     #define WidgetsBookCtrlEvent wxBookCtrlEvent
     #define EVT_WIDGETS_PAGE_CHANGING(id,func) EVT_BOOKCTRL_PAGE_CHANGING(id,func)
-    #define wxEVT_COMMAND_WIDGETS_PAGE_CHANGED wxEVT_COMMAND_BOOKCTRL_PAGE_CHANGED
-    #define wxWidgetsbookEventHandler(func) wxBookctrlEventHandler(func)
+    #define wxEVT_COMMAND_WIDGETS_PAGE_CHANGED wxEVT_BOOKCTRL_PAGE_CHANGED
+    #define wxWidgetsbookEventHandler(func) wxBookCtrlEventHandler(func)
 #endif
 
 #if wxUSE_LOG && !defined(__WXHANDHELD__)
@@ -40,6 +39,7 @@
     #define USE_ICONS_IN_BOOK 0
 #else
     #define USE_ICONS_IN_BOOK 1
+    #define ICON_SIZE         16
 #endif
 
 class WXDLLIMPEXP_FWD_CORE wxCheckBox;
@@ -51,12 +51,13 @@ class WXDLLIMPEXP_FWD_CORE WidgetsBookCtrl;
 class WidgetsPageInfo;
 
 #include "wx/panel.h"
+#include "wx/vector.h"
 
 // INTRODUCING NEW PAGES DON'T FORGET TO ADD ENTRIES TO 'WidgetsCategories'
 enum
 {
-    // On wxUniversal-based build (wxX11, wxMGL, wxMSWUniv, wxGTKUniv, etc.)
-    // 'native' means 'made with wxUniv port renderer'
+    // In wxUniversal-based builds 'native' means 'made with wxUniv port
+    // renderer'
     NATIVE_PAGE = 0,
     UNIVERSAL_PAGE = NATIVE_PAGE,
     GENERIC_PAGE,
@@ -82,6 +83,8 @@ enum
     ALL_CTRLS        = 1 << ALL_PAGE
 };
 
+typedef wxVector<wxControl *> Widgets;
+
 // ----------------------------------------------------------------------------
 // WidgetsPage: a book page demonstrating some widget
 // ----------------------------------------------------------------------------
@@ -91,16 +94,25 @@ class WidgetsPage : public wxPanel
 public:
     WidgetsPage(WidgetsBookCtrl *book,
                 wxImageList *imaglist,
-                const char* icon[]);
+                const char *const icon[]);
 
     // return the control shown by this page
     virtual wxControl *GetWidget() const = 0;
 
+    // return the control shown by this page, if it supports text entry interface
+    virtual wxTextEntryBase *GetTextEntry() const { return NULL; }
+
     // lazy creation of the content
     virtual void CreateContent() = 0;
 
-    // some pages show 2 controls, in this case override this one as well
-    virtual wxControl *GetWidget2() const { return NULL; }
+    // some pages show additional controls, in this case override this one to
+    // return all of them (including the one returned by GetWidget())
+    virtual Widgets GetWidgets() const
+    {
+        Widgets widgets;
+        widgets.push_back(GetWidget());
+        return widgets;
+    }
 
     // recreate the control shown by this page
     //

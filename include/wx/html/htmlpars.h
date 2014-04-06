@@ -1,8 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        htmlpars.h
+// Name:        wx/html/htmlpars.h
 // Purpose:     wxHtmlParser class (generic parser)
 // Author:      Vaclav Slavik
-// RCS-ID:      $Id: htmlpars.h 49563 2007-10-31 20:46:21Z VZ $
 // Copyright:   (c) 1999 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -15,7 +14,9 @@
 
 #include "wx/html/htmltag.h"
 #include "wx/filesys.h"
-#include "wx/hash.h"
+#include "wx/hashmap.h"
+#include "wx/hashset.h"
+#include "wx/vector.h"
 #include "wx/fontenc.h"
 
 class WXDLLIMPEXP_FWD_BASE wxMBConv;
@@ -25,6 +26,14 @@ class WXDLLIMPEXP_FWD_HTML wxHtmlEntitiesParser;
 
 class wxHtmlTextPieces;
 class wxHtmlParserState;
+
+WX_DECLARE_HASH_SET_WITH_DECL_PTR(wxHtmlTagHandler*,
+                                  wxPointerHash, wxPointerEqual,
+                                  wxHtmlTagHandlersSet,
+                                  class WXDLLIMPEXP_HTML);
+WX_DECLARE_STRING_HASH_MAP_WITH_DECL(wxHtmlTagHandler*,
+                                     wxHtmlTagHandlersHash,
+                                     class WXDLLIMPEXP_HTML);
 
 
 enum wxHtmlURLType
@@ -73,7 +82,8 @@ public:
 
     // Parses the m_Source from begin_pos to end_pos-1.
     // (in noparams version it parses whole m_Source)
-    void DoParsing(int begin_pos, int end_pos);
+    void DoParsing(const wxString::const_iterator& begin_pos,
+                   const wxString::const_iterator& end_pos);
     void DoParsing();
 
     // Returns pointer to the tag at parser's current position
@@ -104,7 +114,7 @@ public:
     // Restores state before last call to PushTagHandler
     void PopTagHandler();
 
-    wxString* GetSource() {return &m_Source;}
+    const wxString* GetSource() {return m_Source;}
     void SetSource(const wxString& src);
 
     // Sets HTML source and remembers current parser's state so that it can
@@ -128,24 +138,31 @@ public:
     // Returns entity parser object, used to substitute HTML &entities;
     wxHtmlEntitiesParser *GetEntitiesParser() const { return m_entitiesParser; }
 
+    // Returns true if the tag starting at the given position is a comment tag
+    //
+    // p should point to '<' character and is modified to point to the closing
+    // '>' of the end comment tag if this is indeed a comment
+    static bool
+    SkipCommentTag(wxString::const_iterator& p, wxString::const_iterator end);
+
 protected:
     // DOM structure
     void CreateDOMTree();
     void DestroyDOMTree();
     void CreateDOMSubTree(wxHtmlTag *cur,
-                          int begin_pos, int end_pos,
+                          const wxString::const_iterator& begin_pos,
+                          const wxString::const_iterator& end_pos,
                           wxHtmlTagsCache *cache);
 
     // Adds text to the output.
-    // This is called from Parse() and must be overriden in derived classes.
-    // txt is not guaranteed to be only one word. It is largest continuous part of text
-    // (= not broken by tags)
-    // NOTE : using char* because of speed improvements
-    virtual void AddText(const wxChar* txt) = 0;
+    // This is called from Parse() and must be overridden in derived classes.
+    // txt is not guaranteed to be only one word. It is largest continuous part
+    // of text (= not broken by tags)
+    virtual void AddText(const wxString& txt) = 0;
 
     // Adds tag and proceeds it. Parse() may (and usually is) called from this method.
-    // This is called from Parse() and may be overriden.
-    // Default behavior is that it looks for proper handler in m_Handlers. The tag is
+    // This is called from Parse() and may be overridden.
+    // Default behaviour is that it looks for proper handler in m_Handlers. The tag is
     // ignored if no hander is found.
     // Derived class is *responsible* for filling in m_Handlers table.
     virtual void AddTag(const wxHtmlTag& tag);
@@ -157,7 +174,7 @@ protected:
     wxHtmlTextPieces *m_TextPieces;
     size_t m_CurTextPiece;
 
-    wxString m_Source;
+    const wxString *m_Source;
 
     wxHtmlParserState *m_SavedStates;
 
@@ -170,15 +187,15 @@ protected:
     //      it may (and often does) contain more references to one object
     // m_HandlersList is list of all handlers and it is guaranteed to contain
     //      only one reference to each handler instance.
-    wxList m_HandlersList;
-    wxHashTable m_HandlersHash;
+    wxHtmlTagHandlersSet m_HandlersSet;
+    wxHtmlTagHandlersHash m_HandlersHash;
 
-    DECLARE_NO_COPY_CLASS(wxHtmlParser)
+    wxDECLARE_NO_COPY_CLASS(wxHtmlParser);
 
     // class for opening files (file system)
     wxFileSystem *m_FS;
     // handlers stack used by PushTagHandler and PopTagHandler
-    wxList *m_HandlersStack;
+    wxVector<wxHtmlTagHandlersHash*> m_HandlersStack;
 
     // entity parse
     wxHtmlEntitiesParser *m_entitiesParser;
@@ -210,6 +227,9 @@ public:
     virtual void SetParser(wxHtmlParser *parser)
         { m_Parser = parser; }
 
+    // Get the parser associated with this tag handler.
+    wxHtmlParser* GetParser() const { return m_Parser; }
+
     // Returns list of supported tags. The list is in uppercase and
     // tags are delimited by ','.
     // Example : "I,B,FONT,P"
@@ -226,7 +246,7 @@ protected:
     // parses input between beginning and ending tag.
     // m_Parser must be set.
     void ParseInner(const wxHtmlTag& tag)
-        { m_Parser->DoParsing(tag.GetBeginPos(), tag.GetEndPos1()); }
+        { m_Parser->DoParsing(tag.GetBeginIter(), tag.GetEndIter1()); }
 
     // Parses given source as if it was tag's inner code (see
     // wxHtmlParser::GetInnerSource).  Unlike ParseInner(), this method lets
@@ -236,7 +256,7 @@ protected:
 
     wxHtmlParser *m_Parser;
 
-    DECLARE_NO_COPY_CLASS(wxHtmlTagHandler)
+    wxDECLARE_NO_COPY_CLASS(wxHtmlTagHandler);
 };
 
 
@@ -251,30 +271,34 @@ public:
     virtual ~wxHtmlEntitiesParser();
 
     // Sets encoding of output string.
-    // Has no effect if wxUSE_WCHAR_T==0 or wxUSE_UNICODE==1
+    // Has no effect if wxUSE_UNICODE==1
+#if wxUSE_UNICODE
+    void SetEncoding(wxFontEncoding WXUNUSED(encoding)) {}
+#else
     void SetEncoding(wxFontEncoding encoding);
+#endif
 
     // Parses entities in input and replaces them with respective characters
     // (with respect to output encoding)
-    wxString Parse(const wxString& input);
+    wxString Parse(const wxString& input) const;
 
     // Returns character for given entity or 0 if the enity is unknown
-    wxChar GetEntityChar(const wxString& entity);
+    wxChar GetEntityChar(const wxString& entity) const;
 
     // Returns character that represents given Unicode code
 #if wxUSE_UNICODE
-    wxChar GetCharForCode(unsigned code) { return (wxChar)code; }
+    wxChar GetCharForCode(unsigned code) const { return (wxChar)code; }
 #else
-    wxChar GetCharForCode(unsigned code);
+    wxChar GetCharForCode(unsigned code) const;
 #endif
 
 protected:
-#if wxUSE_WCHAR_T && !wxUSE_UNICODE
+#if !wxUSE_UNICODE
     wxMBConv *m_conv;
     wxFontEncoding m_encoding;
 #endif
 
-    DECLARE_NO_COPY_CLASS(wxHtmlEntitiesParser)
+    wxDECLARE_NO_COPY_CLASS(wxHtmlEntitiesParser);
 };
 
 

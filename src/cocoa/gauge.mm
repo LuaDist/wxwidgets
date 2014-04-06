@@ -4,9 +4,8 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2003/07/15
-// RCS-ID:      $Id: gauge.mm 39607 2006-06-06 22:02:01Z ABX $
 // Copyright:   (c) 2003 David Elliott
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #include "wx/wxprec.h"
@@ -26,8 +25,6 @@
 #import <Foundation/NSException.h>
 
 #include <math.h>
-
-IMPLEMENT_DYNAMIC_CLASS(wxGauge, wxControl)
 
 BEGIN_EVENT_TABLE(wxGauge, wxGaugeBase)
 END_EVENT_TABLE()

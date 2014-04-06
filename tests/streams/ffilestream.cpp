@@ -2,9 +2,8 @@
 // Name:        tests/streams/ffilestream.cpp
 // Purpose:     Test wxFFileInputStream/wxFFileOutputStream
 // Author:      Hans Van Leemputten
-// RCS-ID:      $Id: ffilestream.cpp 30685 2004-11-22 05:00:19Z RN $
 // Copyright:   (c) 2004 Hans Van Leemputten
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // For compilers that support precompilation, includes "wx/wx.h".
@@ -26,8 +25,8 @@
 
 #define DATABUFFER_SIZE     1024
 
-static const wxString FILENAME_FFILEINSTREAM = _T("ffileinstream.test");
-static const wxString FILENAME_FFILEOUTSTREAM = _T("ffileoutstream.test");
+static const wxString FILENAME_FFILEINSTREAM = wxT("ffileinstream.test");
+static const wxString FILENAME_FFILEOUTSTREAM = wxT("ffileoutstream.test");
 
 ///////////////////////////////////////////////////////////////////////////////
 // The test case
@@ -47,6 +46,7 @@ public:
         CPPUNIT_TEST(Input_Read);
         CPPUNIT_TEST(Input_Eof);
         CPPUNIT_TEST(Input_LastRead);
+        CPPUNIT_TEST(Input_CanRead);
         CPPUNIT_TEST(Input_SeekI);
         CPPUNIT_TEST(Input_TellI);
         CPPUNIT_TEST(Input_Peek);

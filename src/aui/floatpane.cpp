@@ -4,7 +4,6 @@
 // Author:      Benjamin I. Williams
 // Modified by:
 // Created:     2005-05-17
-// RCS-ID:      $Id: floatpane.cpp 54904 2008-08-01 16:07:46Z BIW $
 // Copyright:   (C) Copyright 2005-2006, Kirix Corporation, All Rights Reserved
 // Licence:     wxWindows Library Licence, Version 3.1
 ///////////////////////////////////////////////////////////////////////////////
@@ -43,47 +42,48 @@ wxAuiFloatingFrame::wxAuiFloatingFrame(wxWindow* parent,
                 const wxAuiPaneInfo& pane,
                 wxWindowID id /*= wxID_ANY*/,
                 long style /*=wxRESIZE_BORDER | wxSYSTEM_MENU | wxCAPTION |
-                              wxFRAME_NO_TASKBAR | wxFRAME_FLOAT_ON_PARENT | 
+                              wxFRAME_NO_TASKBAR | wxFRAME_FLOAT_ON_PARENT |
                               wxCLIP_CHILDREN
                            */)
                 : wxAuiFloatingFrameBaseClass(parent, id, wxEmptyString,
                         pane.floating_pos, pane.floating_size,
-                        style | 
+                        style |
                         (pane.HasCloseButton()?wxCLOSE_BOX:0) |
                         (pane.HasMaximizeButton()?wxMAXIMIZE_BOX:0) |
                         (pane.IsFixed()?0:wxRESIZE_BORDER)
                         )
 {
-    m_owner_mgr = owner_mgr;
+    m_ownerMgr = owner_mgr;
     m_moving = false;
     m_mgr.SetManagedWindow(this);
-    m_solid_drag = true;
-    
+    m_solidDrag = true;
+
     // find out if the system supports solid window drag.
     // on non-msw systems, this is assumed to be the case
 #ifdef __WXMSW__
     BOOL b = TRUE;
     SystemParametersInfo(38 /*SPI_GETDRAGFULLWINDOWS*/, 0, &b, 0);
-    m_solid_drag = b ? true : false;
+    m_solidDrag = b ? true : false;
 #endif
-    
+
     SetExtraStyle(wxWS_EX_PROCESS_IDLE);
 }
 
 wxAuiFloatingFrame::~wxAuiFloatingFrame()
 {
     // if we do not do this, then we can crash...
-    if(m_owner_mgr && m_owner_mgr->m_action_window == this)
+    if (m_ownerMgr && m_ownerMgr->m_actionWindow == this)
     {
-        m_owner_mgr->m_action_window = NULL;
+        m_ownerMgr->m_actionWindow = NULL;
     }
+
     m_mgr.UnInit();
 }
 
 void wxAuiFloatingFrame::SetPaneWindow(const wxAuiPaneInfo& pane)
 {
-    m_pane_window = pane.window;
-    m_pane_window->Reparent(this);
+    m_paneWindow = pane.window;
+    m_paneWindow->Reparent(this);
 
     wxAuiPaneInfo contained_pane = pane;
     contained_pane.Dock().Center().Show().
@@ -93,7 +93,7 @@ void wxAuiFloatingFrame::SetPaneWindow(const wxAuiPaneInfo& pane)
 
     // Carry over the minimum size
     wxSize pane_min_size = pane.window->GetMinSize();
-    
+
     // if the frame window's max size is greater than the min size
     // then set the max size to the min size as well
     wxSize cur_max_size = GetMaxSize();
@@ -104,10 +104,10 @@ void wxAuiFloatingFrame::SetPaneWindow(const wxAuiPaneInfo& pane)
     {
         SetMaxSize(pane_min_size);
     }
-    
+
     SetMinSize(pane.window->GetMinSize());
 
-    m_mgr.AddPane(m_pane_window, contained_pane);
+    m_mgr.AddPane(m_paneWindow, contained_pane);
     m_mgr.Update();
 
     if (pane.min_size.IsFullySpecified())
@@ -122,57 +122,74 @@ void wxAuiFloatingFrame::SetPaneWindow(const wxAuiPaneInfo& pane)
 
     SetTitle(pane.caption);
 
-    if (pane.floating_size != wxDefaultSize)
+    // This code is slightly awkward because we need to reset wxRESIZE_BORDER
+    // before calling SetClientSize() below as doing it after setting the
+    // client size would actually change it, at least under MSW, where the
+    // total window size doesn't change and hence, as the borders size changes,
+    // the client size does change.
+    //
+    // So we must call it first but doing it generates a size event and updates
+    // pane.floating_size from inside it so we must also record its original
+    // value before doing it.
+    const bool hasFloatingSize = pane.floating_size != wxDefaultSize;
+    if (pane.IsFixed())
+    {
+        SetWindowStyleFlag(GetWindowStyleFlag() & ~wxRESIZE_BORDER);
+    }
+
+    if ( hasFloatingSize )
     {
         SetSize(pane.floating_size);
     }
-        else
+    else
     {
         wxSize size = pane.best_size;
         if (size == wxDefaultSize)
             size = pane.min_size;
         if (size == wxDefaultSize)
-            size = m_pane_window->GetSize();
-        if (pane.HasGripper())
+            size = m_paneWindow->GetSize();
+        if (m_ownerMgr && pane.HasGripper())
         {
             if (pane.HasGripperTop())
-                size.y += m_owner_mgr->m_art->GetMetric(wxAUI_DOCKART_GRIPPER_SIZE);
+                size.y += m_ownerMgr->m_art->GetMetric(wxAUI_DOCKART_GRIPPER_SIZE);
             else
-                size.x += m_owner_mgr->m_art->GetMetric(wxAUI_DOCKART_GRIPPER_SIZE);
+                size.x += m_ownerMgr->m_art->GetMetric(wxAUI_DOCKART_GRIPPER_SIZE);
         }
 
         SetClientSize(size);
-    }
-    
-    if (pane.IsFixed())
-    {
-        SetWindowStyleFlag(GetWindowStyleFlag() & ~wxRESIZE_BORDER);
     }
 }
 
 wxAuiManager* wxAuiFloatingFrame::GetOwnerManager() const
 {
-    return m_owner_mgr;
+    return m_ownerMgr;
 }
 
 
-void wxAuiFloatingFrame::OnSize(wxSizeEvent& event)
+void wxAuiFloatingFrame::OnSize(wxSizeEvent& WXUNUSED(event))
 {
-    m_owner_mgr->OnFloatingPaneResized(m_pane_window, event.GetSize());
+    if (m_ownerMgr)
+    {
+        m_ownerMgr->OnFloatingPaneResized(m_paneWindow, GetRect());
+    }
 }
 
 void wxAuiFloatingFrame::OnClose(wxCloseEvent& evt)
 {
-    m_owner_mgr->OnFloatingPaneClosed(m_pane_window, evt);
-    if (!evt.GetVeto()) {
-	m_mgr.DetachPane(m_pane_window);
+    if (m_ownerMgr)
+    {
+        m_ownerMgr->OnFloatingPaneClosed(m_paneWindow, evt);
+    }
+    if (!evt.GetVeto())
+    {
+        m_mgr.DetachPane(m_paneWindow);
         Destroy();
     }
 }
 
 void wxAuiFloatingFrame::OnMoveEvent(wxMoveEvent& event)
 {
-    if (!m_solid_drag)
+    if (!m_solidDrag)
     {
         // systems without solid window dragging need to be
         // handled slightly differently, due to the lack of
@@ -184,63 +201,76 @@ void wxAuiFloatingFrame::OnMoveEvent(wxMoveEvent& event)
         m_moving = true;
         return;
     }
-    
-    
-    wxRect win_rect = GetRect();
 
-    if (win_rect == m_last_rect)
+
+    wxRect winRect = GetRect();
+
+    if (winRect == m_lastRect)
         return;
 
     // skip the first move event
-    if (m_last_rect.IsEmpty())
+    if (m_lastRect.IsEmpty())
     {
-        m_last_rect = win_rect;
+        m_lastRect = winRect;
         return;
     }
 
-    // skip if moving too fast to avoid massive redraws and 
+    // as on OSX moving windows are not getting all move events, only sporadically, this difference
+    // is almost always big on OSX, so avoid this early exit opportunity
+#ifndef __WXOSX__
+    // skip if moving too fast to avoid massive redraws and
     // jumping hint windows
-    if ((abs(win_rect.x - m_last_rect.x) > 3) ||
-        (abs(win_rect.y - m_last_rect.y) > 3))
+    if ((abs(winRect.x - m_lastRect.x) > 3) ||
+        (abs(winRect.y - m_lastRect.y) > 3))
     {
-        m_last3_rect = m_last2_rect;
-        m_last2_rect = m_last_rect;
-        m_last_rect = win_rect;
+        m_last3Rect = m_last2Rect;
+        m_last2Rect = m_lastRect;
+        m_lastRect = winRect;
+
+        // However still update the internally stored position to avoid
+        // snapping back to the old one later.
+        if (m_ownerMgr)
+        {
+            m_ownerMgr->GetPane(m_paneWindow).
+                floating_pos = winRect.GetPosition();
+        }
+
         return;
     }
+#endif
 
     // prevent frame redocking during resize
-    if (m_last_rect.GetSize() != win_rect.GetSize())
+    if (m_lastRect.GetSize() != winRect.GetSize())
     {
-        m_last3_rect = m_last2_rect;
-        m_last2_rect = m_last_rect;
-        m_last_rect = win_rect;
+        m_last3Rect = m_last2Rect;
+        m_last2Rect = m_lastRect;
+        m_lastRect = winRect;
         return;
     }
 
     wxDirection dir = wxALL;
-    
-    int horiz_dist = abs(win_rect.x - m_last3_rect.x);
-    int vert_dist = abs(win_rect.y - m_last3_rect.y);
-    
+
+    int horiz_dist = abs(winRect.x - m_last3Rect.x);
+    int vert_dist = abs(winRect.y - m_last3Rect.y);
+
     if (vert_dist >= horiz_dist)
     {
-        if (win_rect.y < m_last3_rect.y)
+        if (winRect.y < m_last3Rect.y)
             dir = wxNORTH;
         else
             dir = wxSOUTH;
     }
     else
     {
-        if (win_rect.x < m_last3_rect.x)
+        if (winRect.x < m_last3Rect.x)
             dir = wxWEST;
         else
             dir = wxEAST;
     }
-    
-    m_last3_rect = m_last2_rect;
-    m_last2_rect = m_last_rect;
-    m_last_rect = win_rect;
+
+    m_last3Rect = m_last2Rect;
+    m_last2Rect = m_lastRect;
+    m_lastRect = winRect;
 
     if (!isMouseDown())
         return;
@@ -251,10 +281,13 @@ void wxAuiFloatingFrame::OnMoveEvent(wxMoveEvent& event)
         m_moving = true;
     }
 
-    if (m_last3_rect.IsEmpty())
+    if (m_last3Rect.IsEmpty())
         return;
-        
-    OnMoving(event.GetRect(), dir);
+
+    if ( event.GetEventType() == wxEVT_MOVING )
+        OnMoving(event.GetRect(), dir);
+    else
+        OnMoving(wxRect(event.GetPosition(),GetSize()), dir);
 }
 
 void wxAuiFloatingFrame::OnIdle(wxIdleEvent& event)
@@ -266,7 +299,7 @@ void wxAuiFloatingFrame::OnIdle(wxIdleEvent& event)
             m_moving = false;
             OnMoveFinished();
         }
-         else
+        else
         {
             event.RequestMore();
         }
@@ -276,37 +309,46 @@ void wxAuiFloatingFrame::OnIdle(wxIdleEvent& event)
 void wxAuiFloatingFrame::OnMoveStart()
 {
     // notify the owner manager that the pane has started to move
-    m_owner_mgr->OnFloatingPaneMoveStart(m_pane_window);
+    if (m_ownerMgr)
+    {
+        m_ownerMgr->OnFloatingPaneMoveStart(m_paneWindow);
+    }
 }
 
 void wxAuiFloatingFrame::OnMoving(const wxRect& WXUNUSED(window_rect), wxDirection dir)
 {
     // notify the owner manager that the pane is moving
-    m_owner_mgr->OnFloatingPaneMoving(m_pane_window, dir);
+    if (m_ownerMgr)
+    {
+        m_ownerMgr->OnFloatingPaneMoving(m_paneWindow, dir);
+    }
     m_lastDirection = dir;
 }
 
 void wxAuiFloatingFrame::OnMoveFinished()
 {
     // notify the owner manager that the pane has finished moving
-    m_owner_mgr->OnFloatingPaneMoved(m_pane_window, m_lastDirection);
+    if (m_ownerMgr)
+    {
+        m_ownerMgr->OnFloatingPaneMoved(m_paneWindow, m_lastDirection);
+    }
 }
 
 void wxAuiFloatingFrame::OnActivate(wxActivateEvent& event)
 {
-    if (event.GetActive())
+    if (m_ownerMgr && event.GetActive())
     {
-        m_owner_mgr->OnFloatingPaneActivated(m_pane_window);
+        m_ownerMgr->OnFloatingPaneActivated(m_paneWindow);
     }
 }
 
 // utility function which determines the state of the mouse button
-// (independant of having a wxMouseEvent handy) - utimately a better
+// (independent of having a wxMouseEvent handy) - utimately a better
 // mechanism for this should be found (possibly by adding the
 // functionality to wxWidgets itself)
 bool wxAuiFloatingFrame::isMouseDown()
 {
-    return wxGetMouseState().LeftDown();
+    return wxGetMouseState().LeftIsDown();
 }
 
 

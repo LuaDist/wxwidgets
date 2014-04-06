@@ -1,7 +1,6 @@
 #
 # Helper functions for wxWidgets bakefiles
 #
-# $Id: wxwin.py 50120 2007-11-20 22:52:40Z VS $
 #
 
 
@@ -38,18 +37,18 @@ def mk_wxid(id):
     return wxid
 
 
-# All libs that are part of the main library (i.e. non-contrib):
-MAIN_LIBS = ['mono', 'base', 'core', 'adv', 'html', 'xml', 'net',
-             'media', 'odbc', 'qa', 'dbgrid', 'xrc', 'aui', 'richtext']
+# All libs that are part of the main library:
+MAIN_LIBS = ['mono', 'base', 'core', 'adv', 'html', 'xml', 'net', 'webview',
+             'media', 'qa', 'xrc', 'aui', 'ribbon', 'propgrid', 'richtext', 'stc']
 # List of library names/ids for categories with different names:
-LIBS_NOGUI = ['xml', 'net', 'odbc']
-LIBS_GUI   = ['core', 'adv', 'html', 'gl', 'qa', 'dbgrid', 'xrc', 'media', 'aui', 'richtext']
+LIBS_NOGUI = ['xml', 'net']
+LIBS_GUI   = ['core', 'adv', 'html', 'gl', 'qa', 'xrc', 'media',
+              'aui', 'propgrid', 'richtext', 'stc', 'ribbon', 'webview']
 # Additional libraries that must be linked in:
 EXTRALIBS = {
     'gl' : '$(EXTRALIBS_OPENGL)',
     'xml' : '$(EXTRALIBS_XML)',
     'html' : '$(EXTRALIBS_HTML)',
-    'odbc' : '$(EXTRALIBS_ODBC)',
     'adv' : '$(PLUGIN_ADV_EXTRALIBS)',
     'media' : '$(EXTRALIBS_MEDIA)',
 }
@@ -84,12 +83,12 @@ def libToLink(wxlibname):
        For one of main libraries, libToLink('foo') returns '$(WXLIB_FOO)' which
        must be defined in common.bkl as either nothing (in monolithic build) or
        mkLibName('foo') (otherwise).
-       For contrib libraries, it returns mkDllName(wxlibname).       
        """
     if wxlibname in MAIN_LIBS:
         return '$(WXLIB_%s)' % wxlibname.upper()
     else:
         return mkLibName(wxlibname)
+
 
 def extraLdflags(wxlibname):
     if wxlibname in EXTRALIBS:
@@ -152,7 +151,3 @@ def headersOnly(files):
 def makeDspDependency(lib):
     """Returns suitable entry for <depends-on-dsp> for main libs."""
     return '%s:$(nativePaths(WXTOPDIR))build\\msw\\wx_%s.dsp' % (lib,lib)
-
-def makeContribDspDependency(lib):
-    """Returns suitable entry for <depends-on-dsp> for contrib libs."""
-    return '%s:$(nativePaths(WXTOPDIR))contrib\\build\\%s\\%s.dsp' % (lib,lib,lib)

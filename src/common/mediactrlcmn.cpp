@@ -1,10 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        src/common/mediactrl.cpp
+// Name:        src/common/mediactrlcmn.cpp
 // Purpose:     wxMediaCtrl common code
 // Author:      Ryan Norton <wxprojects@comcast.net>
 // Modified by:
 // Created:     11/07/04
-// RCS-ID:      $Id: mediactrlcmn.cpp 42816 2006-10-31 08:50:17Z RD $
 // Copyright:   (c) Ryan Norton
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -12,11 +11,11 @@
 // TODO: Platform specific backend defaults?
 
 //===========================================================================
-// Definitions
+// Declarations
 //===========================================================================
 
 //---------------------------------------------------------------------------
-// Pre-compiled header stuff
+// Includes
 //---------------------------------------------------------------------------
 
 #include "wx/wxprec.h"
@@ -29,11 +28,9 @@
 
 #ifndef WX_PRECOMP
     #include "wx/hash.h"
+    #include "wx/log.h"
 #endif
 
-//---------------------------------------------------------------------------
-// Includes
-//---------------------------------------------------------------------------
 #include "wx/mediactrl.h"
 
 //===========================================================================
@@ -47,14 +44,14 @@
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 IMPLEMENT_CLASS(wxMediaCtrl, wxControl)
-DEFINE_EVENT_TYPE(wxEVT_MEDIA_STATECHANGED)
-DEFINE_EVENT_TYPE(wxEVT_MEDIA_PLAY)
-DEFINE_EVENT_TYPE(wxEVT_MEDIA_PAUSE)
+wxDEFINE_EVENT( wxEVT_MEDIA_STATECHANGED, wxMediaEvent );
+wxDEFINE_EVENT( wxEVT_MEDIA_PLAY, wxMediaEvent );
+wxDEFINE_EVENT( wxEVT_MEDIA_PAUSE, wxMediaEvent );
 IMPLEMENT_CLASS(wxMediaBackend, wxObject)
 IMPLEMENT_DYNAMIC_CLASS(wxMediaEvent, wxEvent)
-DEFINE_EVENT_TYPE(wxEVT_MEDIA_FINISHED)
-DEFINE_EVENT_TYPE(wxEVT_MEDIA_LOADED)
-DEFINE_EVENT_TYPE(wxEVT_MEDIA_STOP)
+wxDEFINE_EVENT( wxEVT_MEDIA_FINISHED, wxMediaEvent );
+wxDEFINE_EVENT( wxEVT_MEDIA_LOADED, wxMediaEvent );
+wxDEFINE_EVENT( wxEVT_MEDIA_STOP, wxMediaEvent );
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //
@@ -109,8 +106,7 @@ bool wxMediaCtrl::Create(wxWindow* parent, wxWindowID id,
         {
             if (!Load(fileName))
             {
-                delete m_imp;
-                m_imp = NULL;
+                wxDELETE(m_imp);
                 return false;
             }
         }
@@ -120,11 +116,11 @@ bool wxMediaCtrl::Create(wxWindow* parent, wxWindowID id,
     }
     else
     {
-        wxClassInfo::sm_classTable->BeginFind();
+        wxClassInfo::const_iterator it = wxClassInfo::begin_classinfo();
 
-        wxClassInfo* classInfo;
+        const wxClassInfo* classInfo;
 
-        while((classInfo = NextBackend()) != NULL)
+        while((classInfo = NextBackend(&it)) != NULL)
         {
             if(!DoCreate(classInfo, parent, id,
                          pos, size, style, validator, name))
@@ -173,8 +169,7 @@ bool wxMediaCtrl::Create(wxWindow* parent, wxWindowID id,
 
         if (!Load(location))
         {
-            delete m_imp;
-            m_imp = NULL;
+            wxDELETE(m_imp);
             return false;
         }
 
@@ -183,11 +178,11 @@ bool wxMediaCtrl::Create(wxWindow* parent, wxWindowID id,
     }
     else
     {
-        wxClassInfo::sm_classTable->BeginFind();
+        wxClassInfo::const_iterator it  = wxClassInfo::begin_classinfo();
 
-        wxClassInfo* classInfo;
+        const wxClassInfo* classInfo;
 
-        while((classInfo = NextBackend()) != NULL)
+        while((classInfo = NextBackend(&it)) != NULL)
         {
             if(!DoCreate(classInfo, parent, id,
                          pos, size, style, validator, name))
@@ -212,7 +207,7 @@ bool wxMediaCtrl::Create(wxWindow* parent, wxWindowID id,
 //
 // Attempts to create the control from a backend
 //---------------------------------------------------------------------------
-bool wxMediaCtrl::DoCreate(wxClassInfo* classInfo,
+bool wxMediaCtrl::DoCreate(const wxClassInfo* classInfo,
                             wxWindow* parent, wxWindowID id,
                             const wxPoint& pos,
                             const wxSize& size,
@@ -246,19 +241,18 @@ bool wxMediaCtrl::DoCreate(wxClassInfo* classInfo,
 // incompatible with the old 2.4 stable version - but since
 // we're in 2.5+ only we don't need to worry about the new version
 //---------------------------------------------------------------------------
-wxClassInfo* wxMediaCtrl::NextBackend()
+const wxClassInfo* wxMediaCtrl::NextBackend(wxClassInfo::const_iterator* it)
 {
-    wxHashTable::compatibility_iterator
-            node = wxClassInfo::sm_classTable->Next();
-    while (node)
+    for ( wxClassInfo::const_iterator end = wxClassInfo::end_classinfo();
+          *it != end; ++(*it) )
     {
-        wxClassInfo* classInfo = (wxClassInfo *)node->GetData();
-        if ( classInfo->IsKindOf(CLASSINFO(wxMediaBackend)) &&
-             classInfo != CLASSINFO(wxMediaBackend) )
+        const wxClassInfo* classInfo = **it;
+        if ( classInfo->IsKindOf(wxCLASSINFO(wxMediaBackend))  &&
+             classInfo != wxCLASSINFO(wxMediaBackend) )
         {
+            ++(*it);
             return classInfo;
         }
-        node = wxClassInfo::sm_classTable->Next();
     }
 
     //
@@ -471,7 +465,7 @@ void wxMediaCtrl::DoMoveWindow(int x, int y, int w, int h)
 //---------------------------------------------------------------------------
 // wxMediaCtrl::MacVisibilityChanged
 //---------------------------------------------------------------------------
-#ifdef __WXMAC__
+#ifdef __WXOSX_CARBON__
 void wxMediaCtrl::MacVisibilityChanged()
 {
     wxControl::MacVisibilityChanged();
@@ -515,13 +509,13 @@ bool wxMediaBackendCommonBase::SendStopEvent()
 {
     wxMediaEvent theEvent(wxEVT_MEDIA_STOP, m_ctrl->GetId());
 
-    return !m_ctrl->ProcessEvent(theEvent) || theEvent.IsAllowed();
+    return !m_ctrl->GetEventHandler()->ProcessEvent(theEvent) || theEvent.IsAllowed();
 }
 
 void wxMediaBackendCommonBase::QueueEvent(wxEventType evtType)
 {
     wxMediaEvent theEvent(evtType, m_ctrl->GetId());
-    m_ctrl->AddPendingEvent(theEvent);
+    m_ctrl->GetEventHandler()->AddPendingEvent(theEvent);
 }
 
 void wxMediaBackendCommonBase::QueuePlayEvent()
@@ -549,7 +543,7 @@ void wxMediaBackendCommonBase::QueueStopEvent()
 //
 #include "wx/html/forcelnk.h"
 
-#ifdef __WXMSW__ // MSW has huge backends so we do it seperately
+#ifdef __WXMSW__ // MSW has huge backends so we do it separately
 FORCE_LINK(wxmediabackend_am)
 FORCE_LINK(wxmediabackend_wmp10)
 #else

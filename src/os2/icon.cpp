@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/09/99
-// RCS-ID:      $Id: icon.cpp 39261 2006-05-21 21:45:44Z ABX $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -61,7 +60,7 @@ wxIcon::wxIcon( const char WXUNUSED(bits)[],
 }
 
 wxIcon::wxIcon( const wxString& rIconFile,
-                long            lFlags,
+                wxBitmapType    lFlags,
                 int             nDesiredWidth,
                 int             nDesiredHeight )
        :m_bIsXpm(false)
@@ -85,9 +84,7 @@ wxIcon::~wxIcon()
 {
 }
 
-void wxIcon::CreateIconFromXpm(
-  const char**                      ppData
-)
+void wxIcon::CreateIconFromXpm(const char* const* ppData)
 {
     wxBitmap                        vBmp(ppData);
 
@@ -259,7 +256,7 @@ void wxIcon::CopyFromBitmap( const wxBitmap& rBmp )
 } // end of wxIcon::CopyFromBitmap
 
 bool wxIcon::LoadFile( const wxString& rFilename,
-                       long lType,
+                       wxBitmapType lType,
                        int nDesiredWidth,
                        int nDesiredHeight )
 {

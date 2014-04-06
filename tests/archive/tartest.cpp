@@ -2,7 +2,6 @@
 // Name:        tests/tartest.cpp
 // Purpose:     Test the tar classes
 // Author:      Mike Wetherell
-// RCS-ID:      $Id: tartest.cpp 42512 2006-10-27 10:11:46Z MW $
 // Copyright:   (c) 2004 Mike Wetherell
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -44,8 +43,8 @@ protected:
 tartest::tartest()
   : ArchiveTestSuite("tar")
 {
-    AddArchiver(_T("tar cf %s *"));
-    AddUnArchiver(_T("tar xf %s"));
+    AddArchiver(wxT("tar cf %s *"));
+    AddUnArchiver(wxT("tar xf %s"));
 }
 
 CppUnit::Test *tartest::makeTest(
@@ -59,13 +58,15 @@ CppUnit::Test *tartest::makeTest(
         return NULL;
 
     if (genericInterface)
+    {
         return new ArchiveTestCase<wxArchiveClassFactory>(
                             descr, new wxTarClassFactory,
                             options, archiver, unarchiver);
-    else
-        return new ArchiveTestCase<wxTarClassFactory>(
-                            descr, new wxTarClassFactory,
-                            options, archiver, unarchiver);
+    }
+
+    return new ArchiveTestCase<wxTarClassFactory>(
+                        descr, new wxTarClassFactory,
+                        options, archiver, unarchiver);
 }
 
 CPPUNIT_TEST_SUITE_REGISTRATION(tartest);

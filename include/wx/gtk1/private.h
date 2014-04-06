@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     12.03.02
-// RCS-ID:      $Id: private.h 37065 2006-01-23 02:28:01Z MR $
 // Copyright:   (c) 2002 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -91,15 +90,6 @@ inline wxEventType GtkScrollWinTypeToWx(guint scrollType)
 // Needed for implementing e.g. combobox on wxGTK within a modal dialog.
 void wxAddGrab(wxWindow* window);
 void wxRemoveGrab(wxWindow* window);
-
-// The declaration for gtk_icon_size_lookup was accidentally ifdefed out in
-// GTK+ 2.1.0 which Sun seem to have shipped with some versions of JDS
-// for Solaris 9 x86.
-#ifdef NEED_GTK_ICON_SIZE_LOOKUP
-extern "C" gboolean gtk_icon_size_lookup  (GtkIconSize  size,
-                                           gint         *width,
-                                           gint         *height);
-#endif
 
 #endif // _WX_GTK_PRIVATE_H_
 

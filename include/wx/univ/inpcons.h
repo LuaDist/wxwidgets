@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     14.08.00
-// RCS-ID:      $Id: inpcons.h 61872 2009-09-09 22:37:05Z VZ $
 // Copyright:   (c) 2000 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -12,8 +11,8 @@
 #ifndef _WX_UNIV_INPCONS_H_
 #define _WX_UNIV_INPCONS_H_
 
-class WXDLLEXPORT wxInputHandler;
-class WXDLLEXPORT wxWindow;
+class WXDLLIMPEXP_FWD_CORE wxInputHandler;
+class WXDLLIMPEXP_FWD_CORE wxWindow;
 
 #include "wx/object.h"
 #include "wx/event.h"
@@ -35,7 +34,7 @@ typedef wxString wxControlAction;
 // wxControl and wxTopLevelWindow).
 // ----------------------------------------------------------------------------
 
-class WXDLLEXPORT wxInputConsumer
+class WXDLLIMPEXP_CORE wxInputConsumer
 {
 public:
     wxInputConsumer() { m_inputHandler = NULL; }

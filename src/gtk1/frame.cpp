@@ -2,7 +2,6 @@
 // Name:        src/gtk1/frame.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: frame.cpp 39646 2006-06-09 09:51:39Z ABX $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -55,8 +54,6 @@ extern bool g_isIdle;
 // ----------------------------------------------------------------------------
 // event tables
 // ----------------------------------------------------------------------------
-
-IMPLEMENT_DYNAMIC_CLASS(wxFrame, wxTopLevelWindow)
 
 // ============================================================================
 // implementation
@@ -229,7 +226,8 @@ bool wxFrame::Create( wxWindow *parent,
 
 wxFrame::~wxFrame()
 {
-    m_isBeingDeleted = true;
+    SendDestroyEvent();
+
     DeleteAllBars();
 }
 
@@ -385,7 +383,7 @@ void wxFrame::GtkOnSize( int WXUNUSED(x), int WXUNUSED(y),
         geom.max_width = maxWidth;
         geom.max_height = maxHeight;
         gtk_window_set_geometry_hints( GTK_WINDOW(m_widget),
-                                       (GtkWidget*) NULL,
+                                       NULL,
                                        &geom,
                                        (GdkWindowHints) flag );
 
@@ -486,7 +484,7 @@ void wxFrame::GtkOnSize( int WXUNUSED(x), int WXUNUSED(y),
         gtk_pizza_set_size( GTK_PIZZA(m_wxwindow),
                             m_frameStatusBar->m_widget,
                             xx, yy, ww, hh );
-        gtk_widget_draw( m_frameStatusBar->m_widget, (GdkRectangle*) NULL );
+        gtk_widget_draw( m_frameStatusBar->m_widget, NULL );
     }
 #endif // wxUSE_STATUSBAR
 
@@ -495,7 +493,7 @@ void wxFrame::GtkOnSize( int WXUNUSED(x), int WXUNUSED(y),
     // send size event to frame
     wxSizeEvent event( wxSize(m_width,m_height), GetId() );
     event.SetEventObject( this );
-    GetEventHandler()->ProcessEvent( event );
+    HandleWindowEvent( event );
 
 #if wxUSE_STATUSBAR
     // send size event to status bar
@@ -503,7 +501,7 @@ void wxFrame::GtkOnSize( int WXUNUSED(x), int WXUNUSED(y),
     {
         wxSizeEvent event2( wxSize(m_frameStatusBar->m_width,m_frameStatusBar->m_height), m_frameStatusBar->GetId() );
         event2.SetEventObject( m_frameStatusBar );
-        m_frameStatusBar->GetEventHandler()->ProcessEvent( event2 );
+        m_frameStatusBar->HandleWindowEvent( event2 );
     }
 #endif // wxUSE_STATUSBAR
 
@@ -551,7 +549,7 @@ void wxFrame::DetachMenuBar()
 
     if ( m_frameMenuBar )
     {
-        m_frameMenuBar->UnsetInvokingWindow( this );
+        m_frameMenuBar->Attach( this );
 
         if (m_frameMenuBar->GetWindowStyle() & wxMB_DOCKABLE)
         {
@@ -576,8 +574,6 @@ void wxFrame::AttachMenuBar( wxMenuBar *menuBar )
 
     if (m_frameMenuBar)
     {
-        m_frameMenuBar->SetInvokingWindow( this );
-
         m_frameMenuBar->SetParent(this);
         gtk_pizza_put( GTK_PIZZA(m_mainWidget),
                 m_frameMenuBar->m_widget,

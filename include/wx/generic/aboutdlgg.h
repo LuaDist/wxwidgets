@@ -3,7 +3,6 @@
 // Purpose:     generic wxAboutBox() implementation
 // Author:      Vadim Zeitlin
 // Created:     2006-10-07
-// RCS-ID:      $Id: aboutdlgg.h 49804 2007-11-10 01:09:42Z VZ $
 // Copyright:   (c) 2006 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -21,6 +20,16 @@ class WXDLLIMPEXP_FWD_ADV wxAboutDialogInfo;
 class WXDLLIMPEXP_FWD_CORE wxSizer;
 class WXDLLIMPEXP_FWD_CORE wxSizerFlags;
 
+// Under GTK and OS X "About" dialogs are not supposed to be modal, unlike MSW
+// and, presumably, all the other platforms.
+#ifndef wxUSE_MODAL_ABOUT_DIALOG
+    #if defined(__WXGTK__) || defined(__WXMAC__)
+        #define wxUSE_MODAL_ABOUT_DIALOG 0
+    #else
+        #define wxUSE_MODAL_ABOUT_DIALOG 1
+    #endif
+#endif // wxUSE_MODAL_ABOUT_DIALOG not defined
+
 // ----------------------------------------------------------------------------
 // wxGenericAboutDialog: generic "About" dialog implementation
 // ----------------------------------------------------------------------------
@@ -35,15 +44,15 @@ public:
     wxGenericAboutDialog() { Init(); }
 
     // ctor which fully initializes the object
-    wxGenericAboutDialog(const wxAboutDialogInfo& info)
+    wxGenericAboutDialog(const wxAboutDialogInfo& info, wxWindow* parent = NULL)
     {
         Init();
 
-        (void)Create(info);
+        (void)Create(info, parent);
     }
 
     // this method must be called if and only if the default ctor was used
-    bool Create(const wxAboutDialogInfo& info);
+    bool Create(const wxAboutDialogInfo& info, wxWindow* parent = NULL);
 
 protected:
     // this virtual method may be overridden to add some more controls to the
@@ -73,13 +82,19 @@ private:
     // common part of all ctors
     void Init() { m_sizerText = NULL; }
 
+#if !wxUSE_MODAL_ABOUT_DIALOG
+    // An explicit handler for deleting the dialog when it's closed is needed
+    // when we show it non-modally.
+    void OnCloseWindow(wxCloseEvent& event);
+    void OnOK(wxCommandEvent& event);
+#endif // !wxUSE_MODAL_ABOUT_DIALOG
 
     wxSizer *m_sizerText;
 };
 
 // unlike wxAboutBox which can show either the native or generic about dialog,
 // this function always shows the generic one
-WXDLLIMPEXP_ADV void wxGenericAboutBox(const wxAboutDialogInfo& info);
+WXDLLIMPEXP_ADV void wxGenericAboutBox(const wxAboutDialogInfo& info, wxWindow* parent = NULL);
 
 #endif // wxUSE_ABOUTDLG
 

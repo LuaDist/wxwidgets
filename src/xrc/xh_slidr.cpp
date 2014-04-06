@@ -3,7 +3,6 @@
 // Purpose:     XRC resource for wxSlider
 // Author:      Bob Mitchell
 // Created:     2000/03/21
-// RCS-ID:      $Id: xh_slidr.cpp 39600 2006-06-06 16:28:58Z ABX $
 // Copyright:   (c) 2000 Bob Mitchell and Verant Interactive
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -22,6 +21,11 @@
 #ifndef WX_PRECOMP
     #include "wx/slider.h"
 #endif
+
+static const long DEFAULT_VALUE = 0;
+static const long DEFAULT_MIN = 0;
+static const long DEFAULT_MAX = 100;
+
 
 IMPLEMENT_DYNAMIC_CLASS(wxSliderXmlHandler, wxXmlResourceHandler)
 
@@ -48,9 +52,9 @@ wxObject *wxSliderXmlHandler::DoCreateResource()
 
     control->Create(m_parentAsWindow,
                     GetID(),
-                    GetLong(wxT("value"), wxSL_DEFAULT_VALUE),
-                    GetLong(wxT("min"), wxSL_DEFAULT_MIN),
-                    GetLong(wxT("max"), wxSL_DEFAULT_MAX),
+                    GetLong(wxT("value"), DEFAULT_VALUE),
+                    GetLong(wxT("min"), DEFAULT_MIN),
+                    GetLong(wxT("max"), DEFAULT_MAX),
                     GetPosition(), GetSize(),
                     GetStyle(),
                     wxDefaultValidator,
@@ -58,7 +62,7 @@ wxObject *wxSliderXmlHandler::DoCreateResource()
 
     if( HasParam(wxT("tickfreq")))
     {
-        control->SetTickFreq(GetLong(wxT("tickfreq")), 0);
+        control->SetTickFreq(GetLong(wxT("tickfreq")));
     }
     if( HasParam(wxT("pagesize")))
     {

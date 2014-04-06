@@ -4,7 +4,6 @@
 // Author:      Sandro Sigala
 // Modified by:
 // Created:     2005-11-10
-// RCS-ID:      $Id: dxfrenderer.h 36174 2005-11-14 17:38:24Z JS $
 // Copyright:   (c) Sandro Sigala
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

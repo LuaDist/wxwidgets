@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/10/99
-// RCS-ID:      $Id: msgdlg.cpp 39326 2006-05-25 07:07:23Z ABX $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -22,6 +21,7 @@
     #include "wx/math.h"
 #endif
 
+#include "wx/modalhook.h"
 #include "wx/os2/private.h"
 
 #include <stdlib.h>
@@ -32,20 +32,10 @@
 
 IMPLEMENT_CLASS(wxMessageDialog, wxDialog)
 
-wxMessageDialog::wxMessageDialog( wxWindow*       WXUNUSED(pParent),
-                                  const wxString& rsMessage,
-                                  const wxString& rsCaption,
-                                  long            lStyle,
-                                  const wxPoint&  WXUNUSED(pPos) )
-{
-    m_sCaption     = rsCaption;
-    m_sMessage     = rsMessage;
-    m_pParent      = NULL; // pParent;
-    SetMessageDialogStyle(lStyle);
-} // end of wxMessageDialog::wxMessageDialog
-
 int wxMessageDialog::ShowModal()
 {
+    WX_HOOK_MODAL_DIALOG();
+
     HWND                            hWnd = 0;
     ULONG                           ulStyle = MB_OK;
     int                             nAns = wxOK;
@@ -63,8 +53,8 @@ int wxMessageDialog::ShowModal()
             wxTheApp->Dispatch();
     }
 
-    if (m_pParent)
-        hWnd = (HWND) m_pParent->GetHWND();
+    if (m_parent)
+        hWnd = (HWND) m_parent->GetHWND();
     else
         hWnd = HWND_DESKTOP;
     if (lStyle & wxYES_NO)
@@ -85,14 +75,25 @@ int wxMessageDialog::ShowModal()
         else
             ulStyle = MB_OK;
     }
-    if (lStyle & wxICON_EXCLAMATION)
-        ulStyle |= MB_ICONEXCLAMATION;
-    else if (lStyle & wxICON_HAND)
-        ulStyle |= MB_ICONHAND;
-    else if (lStyle & wxICON_INFORMATION)
-        ulStyle |= MB_ICONEXCLAMATION;
-    else if (lStyle & wxICON_QUESTION)
-        ulStyle |= MB_ICONQUESTION;
+
+    switch ( GetEffectiveIcon() )
+    {
+        case wxICON_ERROR:
+            ulStyle |= MB_ERROR;
+            break;
+
+        case wxICON_WARNING:
+            ulStyle |= MB_WARNING;
+            break;
+
+        case wxICON_QUESTION:
+            ulStyle |= MB_QUERY;
+            break;
+
+        case wxICON_INFORMATION:
+            ulStyle |= MB_INFORMATION;
+            break;
+    }
 
     if (hWnd != HWND_DESKTOP)
         ulStyle |= MB_APPLMODAL;
@@ -109,8 +110,8 @@ int wxMessageDialog::ShowModal()
 
     ULONG                           ulAns = ::WinMessageBox( hWnd
                                                             ,hWnd
-                                                            ,(PSZ)m_sMessage.c_str()
-                                                            ,(PSZ)m_sCaption.c_str()
+                                                            ,GetFullMessage().c_str()
+                                                            ,m_caption.c_str()
                                                             ,0L
                                                             ,ulStyle);
     switch (ulAns)

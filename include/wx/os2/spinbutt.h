@@ -1,10 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        spinbutt.h
+// Name:        wx/os2/spinbutt.h
 // Purpose:     wxSpinButton class
 // Author:      David Webster
 // Modified by:
 // Created:     10/15/99
-// RCS-ID:      $Id: spinbutt.h 33891 2005-04-27 01:12:00Z DW $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -22,7 +21,7 @@ extern MRESULT EXPENTRY wxSpinCtrlWndProc(
 , MPARAM                            lParam
 );
 
-class WXDLLEXPORT wxSpinButton: public wxSpinButtonBase
+class WXDLLIMPEXP_CORE wxSpinButton: public wxSpinButtonBase
 {
 public:
     // Construction

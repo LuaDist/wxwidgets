@@ -1,10 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Name:        msw/tooltip.cpp
+// Name:        src/os2/tooltip.cpp
 // Purpose:     wxToolTip class implementation for MSW
 // Author:      David Webster
 // Modified by:
 // Created:     10/17/99
-// RCS-ID:      $Id: tooltip.cpp 33893 2005-04-27 01:19:43Z DW $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -61,7 +60,7 @@ void wxToolTip::Create(
 
     m_hWnd = ::WinCreateWindow( HWND_DESKTOP
                                ,WC_ENTRYFIELD
-                               ,(PSZ)rsTip.c_str()
+                               ,rsTip.c_str()
                                ,lStyle
                                ,0, 0, 0, 0
                                ,NULLHANDLE
@@ -71,7 +70,9 @@ void wxToolTip::Create(
                                ,NULL
                               );
     if (!m_hWnd)
-        wxLogError(_T("Unable to create tooltip window"));
+    {
+        wxLogError(wxT("Unable to create tooltip window"));
+    }
 
     wxColour                        vColor( wxT("YELLOW") );
     lColor = (LONG)vColor.GetPixel();

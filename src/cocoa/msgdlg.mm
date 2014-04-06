@@ -3,7 +3,6 @@
 // Purpose:     wxMessageDialog for wxCocoa
 // Author:      Gareth Simpson
 // Created:     2007-10-09
-// RCS-ID:      $Id: msgdlg.mm 51798 2008-02-14 21:31:18Z DE $
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
@@ -31,6 +30,7 @@
 
 #include "wx/cocoa/autorelease.h"
 #include "wx/cocoa/string.h"
+#include "wx/modalhook.h"
 
 #import <AppKit/NSAlert.h>
 // ============================================================================
@@ -44,16 +44,13 @@ IMPLEMENT_CLASS(wxCocoaMessageDialog, wxDialog)
 // ----------------------------------------------------------------------------
 
 wxCocoaMessageDialog::wxCocoaMessageDialog(wxWindow *parent,
-                        const wxString& message,
-                        const wxString& caption,
-                        long style,
-                        const wxPoint& pos) : wxDialog(parent,wxID_ANY,caption, pos, wxDefaultSize, style)
+                                           const wxString& message,
+                                           const wxString& caption,
+                                           long style,
+                                           const wxPoint& pos)
+    : wxMessageDialogWithCustomLabels(parent, message, caption, style)
 {
 
-    m_caption = caption;
-    m_message = message;
-
-    //wxTopLevelWindows.Append((wxWindowBase*)this);
     wxTopLevelWindows.Append(this);
 
     wxASSERT(CreateBase(parent,wxID_ANY,wxDefaultPosition,wxDefaultSize,style,wxDefaultValidator,wxDialogNameStr));
@@ -64,21 +61,19 @@ wxCocoaMessageDialog::wxCocoaMessageDialog(wxWindow *parent,
 
     m_cocoaNSWindow = nil;
     m_cocoaNSView = nil;
-
-    m_yes = _("Yes");
-    m_no  = _("No");
-    m_ok  = _("OK");
-    m_cancel = _("Cancel");
-
-    SetMessageDialogStyle(style);
 }
 
-wxCocoaMessageDialog::~wxCocoaMessageDialog()
+void wxCocoaMessageDialog::DoSetCustomLabel(wxString& var, const ButtonLabel& value)
 {
+    wxMessageDialogWithCustomLabels::DoSetCustomLabel(var, value);
+
+    var.Replace("&", "");
 }
 
 int wxCocoaMessageDialog::ShowModal()
 {
+    WX_HOOK_MODAL_DIALOG();
+
     wxAutoNSAutoreleasePool thePool;
 
     NSAlert *alert = [[[NSAlert alloc] init] autorelease];
@@ -86,14 +81,17 @@ int wxCocoaMessageDialog::ShowModal()
     const long style = GetMessageDialogStyle();
 
     NSAlertStyle nsStyle = NSInformationalAlertStyle;
-    if (style & wxICON_EXCLAMATION)
-        nsStyle = NSWarningAlertStyle;
-    else if (style & wxICON_HAND)
-        nsStyle = NSCriticalAlertStyle;
-    else if (style & wxICON_INFORMATION)
-        nsStyle = NSInformationalAlertStyle;
-    else if (style & wxICON_QUESTION)
-        nsStyle = NSInformationalAlertStyle;
+
+    switch ( GetEffectiveIcon() )
+    {
+        case wxICON_ERROR:
+            nsStyle = NSCriticalAlertStyle;
+            break;
+
+        case wxICON_WARNING:
+            nsStyle = NSWarningAlertStyle;
+            break;
+    }
 
     [alert setAlertStyle:nsStyle];
 
@@ -122,21 +120,21 @@ int wxCocoaMessageDialog::ShowModal()
     {
         if ( style & wxNO_DEFAULT )
         {
-            [alert addButtonWithTitle:wxNSStringWithWxString(m_no)];
-            [alert addButtonWithTitle:wxNSStringWithWxString(m_yes)];
+            [alert addButtonWithTitle:wxNSStringWithWxString(GetNoLabel())];
+            [alert addButtonWithTitle:wxNSStringWithWxString(GetYesLabel())];
             buttonId[0] = wxID_NO;
             buttonId[1] = wxID_YES;
         }
         else
         {
-            [alert addButtonWithTitle:wxNSStringWithWxString(m_yes)];
-            [alert addButtonWithTitle:wxNSStringWithWxString(m_no)];
+            [alert addButtonWithTitle:wxNSStringWithWxString(GetYesLabel())];
+            [alert addButtonWithTitle:wxNSStringWithWxString(GetNoLabel())];
             buttonId[0] = wxID_YES;
             buttonId[1] = wxID_NO;
         }
         if (style & wxCANCEL)
         {
-            [alert addButtonWithTitle:wxNSStringWithWxString(m_cancel)];
+            [alert addButtonWithTitle:wxNSStringWithWxString(GetCancelLabel())];
             buttonId[2] = wxID_CANCEL;
         }
     }
@@ -145,10 +143,10 @@ int wxCocoaMessageDialog::ShowModal()
         // the MSW implementation even shows an OK button if it is not specified, we'll do the same
         buttonId[0] = wxID_OK;
         // using null as default title does not work on earlier systems
-        [alert addButtonWithTitle:wxNSStringWithWxString(m_ok)];
+        [alert addButtonWithTitle:wxNSStringWithWxString(GetOKLabel())];
         if (style & wxCANCEL)
         {
-            [alert addButtonWithTitle:wxNSStringWithWxString(m_cancel)];
+            [alert addButtonWithTitle:wxNSStringWithWxString(GetCancelLabel())];
             buttonId[1] = wxID_CANCEL;
         }
     }
@@ -157,39 +155,6 @@ int wxCocoaMessageDialog::ShowModal()
 
 
     return buttonId[ret-NSAlertFirstButtonReturn];
-}
-
-bool wxCocoaMessageDialog::SetYesNoLabels(const wxString& yes,const wxString& no)
-{
-    m_yes = yes;
-    m_yes.Replace(_("&"),_(""));
-    m_no = no;
-    m_no.Replace(_("&"),_(""));
-    return true;
-}
-bool wxCocoaMessageDialog::SetYesNoCancelLabels(const wxString& yes, const wxString& no, const wxString& cancel)
-{
-    m_yes = yes;
-    m_yes.Replace(_("&"),_(""));
-    m_no = no;
-    m_no.Replace(_("&"),_(""));
-    m_cancel = cancel;
-    m_cancel.Replace(_("&"),_(""));
-    return true;
-}
-bool wxCocoaMessageDialog::SetOKLabel(const wxString& ok)
-{
-    m_ok = ok;
-    m_ok.Replace(_("&"),_(""));
-    return true;
-}
-bool wxCocoaMessageDialog::SetOKCancelLabels(const wxString& ok, const wxString& cancel)
-{
-    m_ok = ok;
-    m_ok.Replace(_("&"),_(""));
-    m_cancel = cancel;
-    m_cancel.Replace(_("&"),_(""));
-    return true;
 }
 
 #endif // wxUSE_DIRDLG

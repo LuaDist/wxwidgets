@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: colour.h 41751 2006-10-08 21:56:55Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -15,26 +14,23 @@
 #include "wx/object.h"
 
 // Colour
-class WXDLLEXPORT wxColour: public wxColourBase
+class WXDLLIMPEXP_CORE wxColour: public wxColourBase
 {
 public:
     // constructors
     // ------------
-
-    // default
-    wxColour();
     DEFINE_STD_WXCOLOUR_CONSTRUCTORS
 
     // copy ctors and assignment operators
-    wxColour(const wxColour& col);
+    wxColour(const wxColour& col)
+    {
+        *this = col;
+    }
+
     wxColour& operator=(const wxColour& col);
 
-    // dtor
-    virtual ~wxColour();
-
     // accessors
-    bool Ok() const { return IsOk(); }
-    bool IsOk() const { return m_isInit; }
+    virtual bool IsOk() const { return m_isInit; }
 
     unsigned char Red() const { return m_red; }
     unsigned char Green() const { return m_green; }

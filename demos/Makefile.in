@@ -21,7 +21,7 @@ DESTDIR =
 
 ### Targets: ###
 
-all: bombs dbbrowse forty fractal life poem
+all: bombs forty fractal life poem
 
 install: 
 
@@ -33,7 +33,6 @@ clean:
 	rm -rf ./.deps ./.pch
 	rm -f ./*.o
 	-(cd bombs && $(MAKE) clean)
-	-(cd dbbrowse && $(MAKE) clean)
 	-(cd forty && $(MAKE) clean)
 	-(cd fractal && $(MAKE) clean)
 	-(cd life && $(MAKE) clean)
@@ -42,7 +41,6 @@ clean:
 distclean: clean
 	rm -f config.cache config.log config.status bk-deps bk-make-pch shared-ld-sh Makefile
 	-(cd bombs && $(MAKE) distclean)
-	-(cd dbbrowse && $(MAKE) distclean)
 	-(cd forty && $(MAKE) distclean)
 	-(cd fractal && $(MAKE) distclean)
 	-(cd life && $(MAKE) distclean)
@@ -50,9 +48,6 @@ distclean: clean
 
 bombs: 
 	(cd bombs && $(MAKE) all)
-
-dbbrowse: 
-	(cd dbbrowse && $(MAKE) all)
 
 forty: 
 	(cd forty && $(MAKE) all)
@@ -70,4 +65,4 @@ poem:
 # Include dependency info, if present:
 @IF_GNU_MAKE@-include ./.deps/*.d
 
-.PHONY: all install uninstall clean distclean bombs dbbrowse forty fractal life poem
+.PHONY: all install uninstall clean distclean bombs forty fractal life poem

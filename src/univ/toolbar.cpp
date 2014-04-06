@@ -4,7 +4,6 @@
 // Author:      Robert Roebling, Vadim Zeitlin (universalization)
 // Modified by:
 // Created:     20.02.02
-// Id:          $Id: toolbar.cpp 42840 2006-10-31 13:09:08Z VZ $
 // Copyright:   (c) 2001 Robert Roebling,
 //              (c) 2002 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
@@ -104,8 +103,8 @@ public:
         m_underMouse = false;
     }
 
-    wxToolBarTool(wxToolBar *tbar, wxControl *control)
-        : wxToolBarToolBase(tbar, control)
+    wxToolBarTool(wxToolBar *tbar, wxControl *control, const wxString& label)
+        : wxToolBarToolBase(tbar, control, label)
     {
         // no position yet
         m_x =
@@ -260,7 +259,7 @@ void wxToolBar::SetToolShortHelp(int id, const wxString& help)
 {
     wxToolBarToolBase *tool = FindById(id);
 
-    wxCHECK_RET( tool, _T("SetToolShortHelp: no such tool") );
+    wxCHECK_RET( tool, wxT("SetToolShortHelp: no such tool") );
 
     tool->SetShortHelp(help);
 }
@@ -292,7 +291,7 @@ void wxToolBar::DoEnableTool(wxToolBarToolBase *tool, bool enable)
 {
 #if wxUSE_IMAGE
     // created disabled-state bitmap on demand
-    if ( !enable && !tool->GetDisabledBitmap().Ok() )
+    if ( !enable && !tool->GetDisabledBitmap().IsOk() )
     {
         wxImage image(tool->GetNormalBitmap().ConvertToImage());
 
@@ -328,9 +327,10 @@ wxToolBarToolBase *wxToolBar::CreateTool(int id,
                              clientData, shortHelp, longHelp);
 }
 
-wxToolBarToolBase *wxToolBar::CreateTool(wxControl *control)
+wxToolBarToolBase *
+wxToolBar::CreateTool(wxControl *control, const wxString& label)
 {
-    return new wxToolBarTool(this, control);
+    return new wxToolBarTool(this, control, label);
 }
 
 // ----------------------------------------------------------------------------
@@ -343,7 +343,7 @@ wxRect wxToolBar::GetToolRect(wxToolBarToolBase *toolBase) const
 
     wxRect rect;
 
-    wxCHECK_MSG( tool, rect, _T("GetToolRect: NULL tool") );
+    wxCHECK_MSG( tool, rect, wxT("GetToolRect: NULL tool") );
 
     // ensure that we always have the valid tool position
     if ( m_needsLayout )
@@ -423,6 +423,29 @@ bool wxToolBar::Realize()
     m_needsLayout = true;
     DoLayout();
 
+    // the first item in the radio group is checked by default to be consistent
+    // with wxGTK and the menu radio items
+    int radioGroupCount = 0;
+
+    for ( wxToolBarToolsList::compatibility_iterator node = m_tools.GetFirst();
+          node;
+          node = node->GetNext() )
+    {
+        wxToolBarTool *tool = (wxToolBarTool*) node->GetData();
+
+        if ( !tool->IsButton() || tool->GetKind() != wxITEM_RADIO )
+        {
+            radioGroupCount = 0;
+            continue;
+        }
+
+        bool toggle = !radioGroupCount++;
+        if ( tool->Toggle(toggle) )
+        {
+            DoToggleTool(tool, toggle);
+        }
+    }
+
     SetInitialSize(wxDefaultSize);
 
     return true;
@@ -439,7 +462,7 @@ void wxToolBar::SetWindowStyleFlag( long style )
 
 void wxToolBar::DoLayout()
 {
-    wxASSERT_MSG( m_needsLayout, _T("why are we called?") );
+    wxASSERT_MSG( m_needsLayout, wxT("why are we called?") );
 
     m_needsLayout = false;
 
@@ -563,13 +586,7 @@ void wxToolBar::DoSetSize(int x, int y, int width, int height, int sizeFlags)
     // otherwise the toolbar can be shown incorrectly
     if ( old_width != width || old_height != height )
     {
-        // But before we send the size event check it
-        // we have a frame that is not being deleted.
-        wxFrame *frame = wxDynamicCast(GetParent(), wxFrame);
-        if ( frame && !frame->IsBeingDeleted() )
-        {
-            frame->SendSizeEvent();
-        }
+        SendSizeEventToParent();
     }
 }
 
@@ -586,7 +603,7 @@ void wxToolBar::GetRectLimits(const wxRect& rect,
                               wxCoord *start,
                               wxCoord *end) const
 {
-    wxCHECK_RET( start && end, _T("NULL pointer in GetRectLimits") );
+    wxCHECK_RET( start && end, wxT("NULL pointer in GetRectLimits") );
 
     if ( IsVertical() )
     {
@@ -673,26 +690,26 @@ void wxToolBar::DoDraw(wxControlRenderer *renderer)
         {
             label = tool->GetLabel();
             bitmap = tool->GetBitmap();
+
+            if ( !bitmap.IsOk() )
+            {
+                // it's better not to draw anything than to assert inside
+                // drawing code as this results in an almost guaranteed crash
+                // as we're likely to be called by a paint event handler and so
+                // the assert is going to be triggered again and again and ...
+                continue;
+            }
         }
         //else: leave both the label and the bitmap invalid to draw a separator
 
         if ( !tool->IsControl() )
         {
-            int tbStyle = 0;
-            if(HasFlag(wxTB_TEXT))
-            {
+            int tbStyle = HasFlag(wxTB_VERTICAL) ? wxTB_VERTICAL : wxTB_HORIZONTAL;
+            if ( HasFlag(wxTB_TEXT) )
                 tbStyle |= wxTB_TEXT;
-            }
 
-            if(HasFlag(wxTB_VERTICAL))
-            {
-                tbStyle |= wxTB_VERTICAL;
-            }
-            else
-            {
-                tbStyle |= wxTB_HORIZONTAL;
-            }
-            rend->DrawToolBarButton(dc, label, bitmap, rectTool, flags, tool->GetStyle(), tbStyle);
+            rend->DrawToolBarButton(dc, label, bitmap, rectTool, flags,
+                                    tool->GetStyle(), tbStyle);
         }
         else // control
         {
@@ -720,25 +737,13 @@ bool wxToolBar::PerformAction(const wxControlAction& action,
 
         PerformAction( wxACTION_BUTTON_CLICK, numArg );
 
-        // Write by Danny Raynor to change state again.
-        // Check button still pressed or not
-        if ( tool->CanBeToggled() && tool->IsToggled() )
-        {
-            tool->Toggle(false);
-        }
-
-        if( tool->IsInverted() )
-        {
-            PerformAction( wxACTION_TOOLBAR_RELEASE, numArg );
-        }
-
         // Set mouse leave toolbar button range (If still in the range,
         // toolbar button would get focus again
         PerformAction( wxACTION_TOOLBAR_LEAVE, numArg );
     }
     else if ( action == wxACTION_TOOLBAR_PRESS )
     {
-        wxLogTrace(_T("toolbar"), _T("Button '%s' pressed."), tool->GetShortHelp().c_str());
+        wxLogTrace(wxT("toolbar"), wxT("Button '%s' pressed."), tool->GetShortHelp().c_str());
 
         tool->Invert();
 
@@ -746,11 +751,14 @@ bool wxToolBar::PerformAction(const wxControlAction& action,
     }
     else if ( action == wxACTION_TOOLBAR_RELEASE )
     {
-        wxLogTrace(_T("toolbar"), _T("Button '%s' released."), tool->GetShortHelp().c_str());
+        wxLogTrace(wxT("toolbar"), wxT("Button '%s' released."), tool->GetShortHelp().c_str());
 
-        wxASSERT_MSG( tool->IsInverted(), _T("release unpressed button?") );
+        wxASSERT_MSG( tool->IsInverted(), wxT("release unpressed button?") );
 
-        tool->Invert();
+        if(tool->IsInverted())
+        {
+            tool->Invert();
+        }
 
         RefreshTool( tool );
     }
@@ -759,7 +767,15 @@ bool wxToolBar::PerformAction(const wxControlAction& action,
         bool isToggled;
         if ( tool->CanBeToggled() )
         {
-            tool->Toggle();
+            if ( tool->IsButton() && tool->GetKind() == wxITEM_RADIO )
+            {
+                UnToggleRadioGroup(tool);
+                tool->Toggle(true);
+            }
+            else
+            {
+                tool->Toggle();
+            }
 
             RefreshTool( tool );
 
@@ -773,7 +789,7 @@ bool wxToolBar::PerformAction(const wxControlAction& action,
     }
     else if ( action == wxACTION_TOOLBAR_ENTER )
     {
-        wxCHECK_MSG( tool, false, _T("no tool to enter?") );
+        wxCHECK_MSG( tool, false, wxT("no tool to enter?") );
 
         if ( HasFlag(wxTB_FLAT) && tool->IsEnabled() )
         {
@@ -785,7 +801,7 @@ bool wxToolBar::PerformAction(const wxControlAction& action,
     }
     else if ( action == wxACTION_TOOLBAR_LEAVE )
     {
-        wxCHECK_MSG( tool, false, _T("no tool to leave?") );
+        wxCHECK_MSG( tool, false, wxT("no tool to leave?") );
 
         if ( HasFlag(wxTB_FLAT) && tool->IsEnabled() )
         {

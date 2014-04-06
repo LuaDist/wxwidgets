@@ -3,7 +3,6 @@
 // Purpose:     XRC resource for wxStaticBitmap
 // Author:      Vaclav Slavik
 // Created:     2000/04/22
-// RCS-ID:      $Id: xh_stbmp.cpp 39481 2006-05-31 09:34:05Z ABX $
 // Copyright:   (c) 2000 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

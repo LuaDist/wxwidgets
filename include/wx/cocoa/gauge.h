@@ -4,7 +4,6 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2003/07/15
-// RCS-ID:      $Id: gauge.h 42077 2006-10-17 14:44:52Z ABX $
 // Copyright:   (c) 2003 David Elliott
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -19,7 +18,7 @@ DECLARE_WXCOCOA_OBJC_CLASS(NSProgressIndicator);
 // ========================================================================
 // wxGauge
 // ========================================================================
-class WXDLLEXPORT wxGauge: public wxGaugeBase// , protected wxCocoaNSProgressIndicator
+class WXDLLIMPEXP_CORE wxGauge: public wxGaugeBase// , protected wxCocoaNSProgressIndicator
 {
     DECLARE_DYNAMIC_CLASS(wxGauge)
     DECLARE_EVENT_TABLE()
@@ -54,7 +53,7 @@ public:
     inline WX_NSProgressIndicator GetNSProgressIndicator() const { return (WX_NSProgressIndicator)m_cocoaNSView; }
 protected:
     // NSProgressIndicator cannot be enabled/disabled
-    virtual void CocoaSetEnabled(bool enable) { }
+    virtual void CocoaSetEnabled(bool WXUNUSED(enable)) { }
 // ------------------------------------------------------------------------
 // Implementation
 // ------------------------------------------------------------------------

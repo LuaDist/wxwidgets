@@ -6,7 +6,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     06.08.00
-// RCS-ID:      $Id: window.h 39633 2006-06-08 11:25:30Z ABX $
 // Copyright:   (c) 2000 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -16,18 +15,18 @@
 
 #include "wx/bitmap.h"      // for m_bitmapBg
 
-class WXDLLEXPORT wxControlRenderer;
-class WXDLLEXPORT wxEventLoop;
+class WXDLLIMPEXP_FWD_CORE wxControlRenderer;
+class WXDLLIMPEXP_FWD_CORE wxEventLoop;
 
 #if wxUSE_MENUS
-    class WXDLLEXPORT wxMenu;
-    class WXDLLEXPORT wxMenuBar;
+    class WXDLLIMPEXP_FWD_CORE wxMenu;
+    class WXDLLIMPEXP_FWD_CORE wxMenuBar;
 #endif // wxUSE_MENUS
 
-class WXDLLEXPORT wxRenderer;
+class WXDLLIMPEXP_FWD_CORE wxRenderer;
 
 #if wxUSE_SCROLLBAR
-    class WXDLLEXPORT wxScrollBar;
+    class WXDLLIMPEXP_FWD_CORE wxScrollBar;
 #endif // wxUSE_SCROLLBAR
 
 #ifdef __WXX11__
@@ -44,15 +43,13 @@ class WXDLLEXPORT wxRenderer;
 #define wxWindowNative wxWindowMSW
 #elif defined(__WXGTK__)
 #define wxWindowNative wxWindowGTK
-#elif defined(__WXMGL__)
-#define wxWindowNative wxWindowMGL
 #elif defined(__WXX11__)
 #define wxWindowNative wxWindowX11
 #elif defined(__WXMAC__)
 #define wxWindowNative wxWindowMac
 #endif
 
-class WXDLLEXPORT wxWindow : public wxWindowNative
+class WXDLLIMPEXP_CORE wxWindow : public wxWindowNative
 {
 public:
     // ctors and create functions
@@ -102,7 +99,7 @@ public:
     virtual int GetScrollThumb(int orient) const;
     virtual int GetScrollRange(int orient) const;
     virtual void ScrollWindow(int dx, int dy,
-                              const wxRect* rect = (wxRect *) NULL);
+                              const wxRect* rect = NULL);
 
     // take into account the borders here
     virtual wxPoint GetClientAreaOrigin() const;
@@ -190,6 +187,16 @@ public:
     // should we use the standard control colours or not?
     virtual bool ShouldInheritColours() const { return false; }
 
+    virtual bool IsClientAreaChild(const wxWindow *child) const
+    {
+#if wxUSE_SCROLLBAR
+        if ( child == (wxWindow*)m_scrollbarHorz ||
+             child == (wxWindow*)m_scrollbarVert )
+            return false;
+#endif
+        return wxWindowNative::IsClientAreaChild(child);
+    }
+
 protected:
     // common part of all ctors
     void Init();
@@ -227,11 +234,8 @@ protected:
     // draw the controls contents
     virtual void DoDraw(wxControlRenderer *renderer);
 
-    // calculate the best size for the client area of the window: default
-    // implementation of DoGetBestSize() uses this method and adds the border
-    // width to the result
-    virtual wxSize DoGetBestClientSize() const;
-    virtual wxSize DoGetBestSize() const;
+    // override the base class method to return the size of the window borders
+    virtual wxSize DoGetBorderSize() const;
 
     // adjust the size of the window to take into account its borders
     wxSize AdjustSize(const wxSize& size) const;

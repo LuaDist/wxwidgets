@@ -1,21 +1,20 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        notebook.h
+// Name:        wx/gtk/notebook.h
 // Purpose:     wxNotebook class
 // Author:      Robert Roebling
 // Modified by:
-// RCS-ID:      $Id: notebook.h 43051 2006-11-04 18:29:28Z RR $
 // Copyright:   (c) Julian Smart and Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
-#ifndef __GTKNOTEBOOKH__
-#define __GTKNOTEBOOKH__
+#ifndef _WX_GTKNOTEBOOK_H_
+#define _WX_GTKNOTEBOOK_H_
 
 //-----------------------------------------------------------------------------
 // internal class
 //-----------------------------------------------------------------------------
 
-class WXDLLIMPEXP_CORE wxGtkNotebookPage;
+class WXDLLIMPEXP_FWD_CORE wxGtkNotebookPage;
 
 #include "wx/list.h"
 WX_DECLARE_LIST(wxGtkNotebookPage, wxGtkNotebookPagesList);
@@ -50,7 +49,7 @@ public:
   // ---------
 
     // set the currently selected page, return the index of the previously
-    // selected one (or -1 on error)
+    // selected one (or wxNOT_FOUND on error)
     // NB: this function will _not_ generate wxEVT_NOTEBOOK_PAGE_xxx events
     int SetSelection(size_t nPage) { return DoSetSelection(nPage, SetSelection_SendEvent); }
     // get the currently selected page
@@ -68,13 +67,13 @@ public:
   bool SetPageImage(size_t nPage, int nImage);
 
   // control the appearance of the notebook pages
-    // set the size (the same for all pages)
-  void SetPageSize(const wxSize& size);
     // set the padding between tabs (in pixels)
   void SetPadding(const wxSize& padding);
     // sets the size of the tabs (assumes all tabs are the same size)
   void SetTabSize(const wxSize& sz);
 
+  // geometry
+  virtual wxSize CalcSizeFromPage(const wxSize& sizePage) const;
   virtual int HitTest(const wxPoint& pt, long *flags = NULL) const;
 
   // operations
@@ -89,7 +88,7 @@ public:
                      wxNotebookPage *win,
                      const wxString& strText,
                      bool bSelect = false,
-                     int imageId = -1 );
+                     int imageId = NO_IMAGE );
 
     // handler for tab navigation
     // --------------------------
@@ -107,8 +106,8 @@ public:
     bool DoPhase(int phase);
 #endif
 
-    // common part of all ctors
-    void Init();
+    // Called by GTK event handler when the current page is definitely changed.
+    void GTKOnPageChanged();
 
     // helper function
     wxGtkNotebookPage* GetNotebookPage(int page) const;
@@ -135,9 +134,11 @@ private:
     // the padding set by SetPadding()
     int m_padding;
 
+    void Init();
+    virtual void AddChildGTK(wxWindowGTK* child);
+
     DECLARE_DYNAMIC_CLASS(wxNotebook)
     DECLARE_EVENT_TABLE()
 };
 
-#endif
-    // __GTKNOTEBOOKH__
+#endif // _WX_GTKNOTEBOOK_H_

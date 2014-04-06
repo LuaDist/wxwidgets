@@ -1,16 +1,13 @@
-On Mac OS X, wxWidgets can be compiled using Apple's Carbon or Cocoa libraries.
-
-To compile using Carbon or Cocoa, see the instructions in docs/mac/install.txt
+----------------------------------------------------------------------------
+NB: This is the old wxCocoa port, you almost certainly want to read
+    docs/osx/install.txt for instructions about building wxOSX/Cocoa instead.
+----------------------------------------------------------------------------
 
 wxCocoa is still a work in progress.
 
 To compile it, you will need Apple's Developer Tools.  However, please
 note that any work to make it suitable for GNUstep (which will require
 a GCC release with Objective-C++) will be much appreciated.
-
-Some users also report success with Metrowerks CodeWarrior IDE and I've even
-on occasion used the command-line MW compilers (see docs/metrowerks) with
-configure instead of GCC and Apple's LD.
 
 Like most UNIX ports, the standard configure/make method works.  You should
 be able to build the library as static or shared.  I usually build static.

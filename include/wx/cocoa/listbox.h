@@ -4,7 +4,6 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2003/03/16
-// RCS-ID:      $Id: listbox.h 51894 2008-02-18 21:51:29Z DE $
 // Copyright:   (c) 2003 David Elliott
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -19,7 +18,7 @@
 // ========================================================================
 // wxListBox
 // ========================================================================
-class WXDLLEXPORT wxListBox: public wxListBoxBase, protected wxCocoaNSTableView
+class WXDLLIMPEXP_CORE wxListBox: public wxListBoxBase, protected wxCocoaNSTableView
 {
     DECLARE_DYNAMIC_CLASS(wxListBox)
     DECLARE_EVENT_TABLE()
@@ -76,9 +75,10 @@ protected:
     WX_NSMutableArray m_cocoaItems;
     wxArrayPtrVoid m_itemClientData;
     struct objc_object *m_cocoaDataSource;
+    bool m_needsUpdate;
     inline bool _WxCocoa_GetNeedsUpdate();
     inline void _WxCocoa_SetNeedsUpdate(bool needsUpdate);
-    void _WxCocoa_OnIdle(wxIdleEvent &event);
+    virtual void OnInternalIdle();
 // ------------------------------------------------------------------------
 // Implementation
 // ------------------------------------------------------------------------
@@ -88,16 +88,14 @@ public:
     virtual bool IsSelected(int n) const;
     virtual int GetSelections(wxArrayInt& aSelections) const;
 protected:
-    virtual void DoInsertItems(const wxArrayString& items, unsigned int pos);
-    virtual void DoSetItems(const wxArrayString& items, void **clientData);
     virtual void DoSetFirstItem(int n);
     virtual void DoSetSelection(int n, bool select);
 
 // pure virtuals from wxItemContainer
 public:
     // deleting items
-    virtual void Clear();
-    virtual void Delete(unsigned int n);
+    virtual void DoClear();
+    virtual void DoDeleteOneItem(unsigned int n);
     // accessing strings
     virtual unsigned int GetCount() const;
     virtual wxString GetString(unsigned int n) const;
@@ -106,11 +104,11 @@ public:
     // selection
     virtual int GetSelection() const;
 protected:
-    virtual int DoAppend(const wxString& item);
+    virtual int DoInsertItems(const wxArrayStringsAdapter& items,
+                              unsigned int pos,
+                              void **clientData, wxClientDataType type);
     virtual void DoSetItemClientData(unsigned int n, void* clientData);
     virtual void* DoGetItemClientData(unsigned int n) const;
-    virtual void DoSetItemClientObject(unsigned int n, wxClientData* clientData);
-    virtual wxClientData* DoGetItemClientObject(unsigned int n) const;
 };
 
 #endif // __WX_COCOA_LISTBOX_H__

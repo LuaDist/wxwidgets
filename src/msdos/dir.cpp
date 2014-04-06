@@ -4,7 +4,6 @@
 // Author:      derived from wxPalmOS code
 // Modified by:
 // Created:     10.13.04
-// RCS-ID:      $Id: dir.cpp 36043 2005-10-31 17:14:55Z ABX $
 // Copyright:   (c) William Osborne
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -30,7 +29,6 @@
 #endif // PCH
 
 #include "wx/dir.h"
-#include "wx/filefn.h"          // for wxDirExists()
 
 // ----------------------------------------------------------------------------
 // define the types and functions used for file searching
@@ -57,16 +55,6 @@
 // ============================================================================
 // implementation
 // ============================================================================
-
-// ----------------------------------------------------------------------------
-// wxDir helpers
-// ----------------------------------------------------------------------------
-
-/* static */
-bool wxDir::Exists(const wxString& WXUNUSED(dir))
-{
-    return false;
-}
 
 // ----------------------------------------------------------------------------
 // wxDir construction/destruction

@@ -3,7 +3,6 @@
 // Purpose:
 // Author:      Robert Roebling
 // Created:     01/02/97
-// Id:          $Id: textctrl.h 61872 2009-09-09 22:37:05Z VZ $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -21,13 +20,12 @@
 
 #include "wx/scrolwin.h"
 #include "wx/arrstr.h"
-#include "wx/datetime.h"
 
 //-----------------------------------------------------------------------------
 // classes
 //-----------------------------------------------------------------------------
 
-class WXDLLIMPEXP_CORE wxTextCtrl;
+class WXDLLIMPEXP_FWD_CORE wxTextCtrl;
 
 //-----------------------------------------------------------------------------
 // helpers
@@ -205,9 +203,6 @@ public:
 
     void SetModified() { m_modified = true; }
 
-    virtual void Freeze();
-    virtual void Thaw();
-
     // textctrl specific scrolling
     virtual bool ScrollLines(int lines);
     virtual bool ScrollPages(int pages);
@@ -363,7 +358,7 @@ private:
 // wxTextCtrl types
 // ----------------------------------------------------------------------------
 
-class WXDLLEXPORT wxStdTextCtrlInputHandler : public wxStdInputHandler
+class WXDLLIMPEXP_CORE wxStdTextCtrlInputHandler : public wxStdInputHandler
 {
 public:
     wxStdTextCtrlInputHandler(wxInputHandler *inphand) : wxStdInputHandler(inphand) {}

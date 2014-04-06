@@ -2,7 +2,6 @@
 // Name:        src/gtk1/popupwin.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: popupwin.cpp 39264 2006-05-22 07:11:26Z ABX $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -62,7 +61,7 @@ static gint gtk_popup_button_press (GtkWidget *widget, GdkEvent *gdk_event, wxPo
     wxFocusEvent event( wxEVT_KILL_FOCUS, win->GetId() );
     event.SetEventObject( win );
 
-    (void)win->GetEventHandler()->ProcessEvent( event );
+    (void)win->HandleWindowEvent( event );
 
     return TRUE;
 }
@@ -328,7 +327,7 @@ void wxPopupWindow::GtkOnSize( int WXUNUSED(x), int WXUNUSED(y), int width, int 
     geom.max_width = m_width;
     geom.max_height = m_height;
     gtk_window_set_geometry_hints( GTK_WINDOW(m_widget),
-                                   (GtkWidget*) NULL,
+                                   NULL,
                                    &geom,
                                    (GdkWindowHints) flag );
 
@@ -337,7 +336,7 @@ void wxPopupWindow::GtkOnSize( int WXUNUSED(x), int WXUNUSED(y), int width, int 
 
     wxSizeEvent event( wxSize(m_width,m_height), GetId() );
     event.SetEventObject( this );
-    GetEventHandler()->ProcessEvent( event );
+    HandleWindowEvent( event );
 }
 
 void wxPopupWindow::OnInternalIdle()

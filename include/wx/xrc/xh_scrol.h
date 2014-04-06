@@ -3,7 +3,6 @@
 // Purpose:     XML resource handler for wxScrollBar
 // Author:      Brian Gavin
 // Created:     2000/09/09
-// RCS-ID:      $Id: xh_scrol.h 41590 2006-10-03 14:53:40Z VZ $
 // Copyright:   (c) 2000 Brian Gavin
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -17,18 +16,12 @@
 
 class WXDLLIMPEXP_XRC wxScrollBarXmlHandler : public wxXmlResourceHandler
 {
-    DECLARE_DYNAMIC_CLASS(wxScrollBarXmlHandler)
-    enum
-    {
-        wxSL_DEFAULT_VALUE = 0,
-        wxSL_DEFAULT_MIN = 0,
-        wxSL_DEFAULT_MAX = 100
-    };
-
 public:
     wxScrollBarXmlHandler();
     virtual wxObject *DoCreateResource();
     virtual bool CanHandle(wxXmlNode *node);
+
+    DECLARE_DYNAMIC_CLASS(wxScrollBarXmlHandler)
 };
 
 #endif // wxUSE_XRC && wxUSE_SCROLLBAR

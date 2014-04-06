@@ -1,277 +1,408 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        docview.cpp
+// Name:        samples/docview/docview.cpp
 // Purpose:     Document/view demo
 // Author:      Julian Smart
-// Modified by:
+// Modified by: Vadim Zeitlin: merge with the MDI version and general cleanup
 // Created:     04/01/98
-// RCS-ID:      $Id: docview.cpp 35650 2005-09-23 12:56:45Z MR $
-// Copyright:   (c) Julian Smart
-// Licence:     wxWindows license
+// Copyright:   (c) 1998 Julian Smart
+//              (c) 2008 Vadim Zeitlin
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 /*
-* Purpose:  Document/view architecture demo for wxWidgets class library
-*           Run with no arguments for multiple top-level windows, -single
-*           for a single window.
-*/
+    This sample show document/view support in wxWidgets.
 
+    It can be run in several ways:
+        * With "--mdi" command line option to use multiple MDI child frames
+          for the multiple documents (this is the default).
+        * With "--sdi" command line option to use multiple top level windows
+          for the multiple documents
+        * With "--single" command line option to support opening a single
+          document only
+
+    Notice that doing it like this somewhat complicates the code, you could
+    make things much simpler in your own programs by using either
+    wxDocParentFrame or wxDocMDIParentFrame unconditionally (and never using
+    the single mode) instead of supporting all of them as this sample does.
+ */
+
+// ----------------------------------------------------------------------------
+// headers
+// ----------------------------------------------------------------------------
 
 // For compilers that support precompilation, includes "wx/wx.h".
 #include "wx/wxprec.h"
 
 #ifdef __BORLANDC__
-#pragma hdrstop
+    #pragma hdrstop
 #endif
 
 #ifndef WX_PRECOMP
-#include "wx/wx.h"
+    #include "wx/wx.h"
+    #include "wx/stockitem.h"
 #endif
 
 #if !wxUSE_DOC_VIEW_ARCHITECTURE
-#error You must set wxUSE_DOC_VIEW_ARCHITECTURE to 1 in setup.h!
+    #error You must set wxUSE_DOC_VIEW_ARCHITECTURE to 1 in setup.h!
 #endif
 
 #include "wx/docview.h"
+#include "wx/docmdi.h"
 
 #include "docview.h"
 #include "doc.h"
 #include "view.h"
+
+#include "wx/cmdline.h"
+#include "wx/config.h"
+
 #ifdef __WXMAC__
-#include "wx/filename.h"
+    #include "wx/filename.h"
 #endif
 
-MyFrame *frame = (MyFrame *) NULL;
+#ifndef wxHAS_IMAGES_IN_RESOURCES
+    #include "doc.xpm"
+    #include "chart.xpm"
+    #include "notepad.xpm"
+#endif
 
-// In single window mode, don't have any child windows; use
-// main window.
-bool singleWindowMode = false;
+// ----------------------------------------------------------------------------
+// MyApp implementation
+// ----------------------------------------------------------------------------
 
 IMPLEMENT_APP(MyApp)
 
-MyApp::MyApp(void)
+BEGIN_EVENT_TABLE(MyApp, wxApp)
+    EVT_MENU(wxID_ABOUT, MyApp::OnAbout)
+END_EVENT_TABLE()
+
+MyApp::MyApp()
 {
-    m_docManager = (wxDocManager *) NULL;
+#if wxUSE_MDI_ARCHITECTURE
+    m_mode = Mode_MDI;
+#else
+    m_mode = Mode_SDI;
+#endif
+
+    m_canvas = NULL;
+    m_menuEdit = NULL;
 }
 
-bool MyApp::OnInit(void)
+// constants for the command line options names
+namespace CmdLineOption
 {
-    //// Find out if we're:
-    ////  multiple window: multiple windows, each view in a separate frame
-    ////  single window:   one view (within the main frame) and one document at a time, as in Windows Write.
-    ////                   In single window mode, we only allow one document type
-    if (argc > 1)
+
+const char * const MDI = "mdi";
+const char * const SDI = "sdi";
+const char * const SINGLE = "single";
+
+} // namespace CmdLineOption
+
+void MyApp::OnInitCmdLine(wxCmdLineParser& parser)
+{
+    wxApp::OnInitCmdLine(parser);
+
+    parser.AddSwitch("", CmdLineOption::MDI,
+                     "run in MDI mode: multiple documents, single window");
+    parser.AddSwitch("", CmdLineOption::SDI,
+                     "run in SDI mode: multiple documents, multiple windows");
+    parser.AddSwitch("", CmdLineOption::SINGLE,
+                     "run in single document mode");
+}
+
+bool MyApp::OnCmdLineParsed(wxCmdLineParser& parser)
+{
+    int numModeOptions = 0;
+
+#if wxUSE_MDI_ARCHITECTURE
+    if ( parser.Found(CmdLineOption::MDI) )
     {
-        if (wxStrcmp(argv[1], _T("-single")) == 0)
-        {
-            singleWindowMode = true;
-        }
+        m_mode = Mode_MDI;
+        numModeOptions++;
     }
-    
+#endif // wxUSE_MDI_ARCHITECTURE
+
+    if ( parser.Found(CmdLineOption::SDI) )
+    {
+        m_mode = Mode_SDI;
+        numModeOptions++;
+    }
+
+    if ( parser.Found(CmdLineOption::SINGLE) )
+    {
+        m_mode = Mode_Single;
+        numModeOptions++;
+    }
+
+    if ( numModeOptions > 1 )
+    {
+        wxLogError("Only a single option choosing the mode can be given.");
+        return false;
+    }
+
+    return wxApp::OnCmdLineParsed(parser);
+}
+
+bool MyApp::OnInit()
+{
+    if ( !wxApp::OnInit() )
+        return false;
+
+    ::wxInitAllImageHandlers();
+
+    // Fill in the application information fields before creating wxConfig.
+    SetVendorName("wxWidgets");
+    SetAppName("wx_docview_sample");
+    SetAppDisplayName("wxWidgets DocView Sample");
+
     //// Create a document manager
-    m_docManager = new wxDocManager;
+    wxDocManager *docManager = new wxDocManager;
 
     //// Create a template relating drawing documents to their views
-    (void) new wxDocTemplate(m_docManager, _T("Drawing"), _T("*.drw"), _T(""), _T("drw"), _T("Drawing Doc"), _T("Drawing View"),
-        CLASSINFO(DrawingDocument), CLASSINFO(DrawingView));
-#ifdef __WXMAC__
-    wxFileName::MacRegisterDefaultTypeAndCreator( wxT("drw") , 'WXMB' , 'WXMA' ) ;
+    new wxDocTemplate(docManager, "Drawing", "*.drw", "", "drw",
+                      "Drawing Doc", "Drawing View",
+                      CLASSINFO(DrawingDocument), CLASSINFO(DrawingView));
+#if defined( __WXMAC__ )  && wxOSX_USE_CARBON
+    wxFileName::MacRegisterDefaultTypeAndCreator("drw" , 'WXMB' , 'WXMA');
 #endif
-    
-    if (singleWindowMode)
+
+    if ( m_mode == Mode_Single )
     {
-        // If we've only got one window, we only get to edit
-        // one document at a time. Therefore no text editing, just
-        // doodling.
-        m_docManager->SetMaxDocsOpen(1);
+        // If we've only got one window, we only get to edit one document at a
+        // time. Therefore no text editing, just doodling.
+        docManager->SetMaxDocsOpen(1);
+    }
+    else // multiple documents mode: allow documents of different types
+    {
+        // Create a template relating text documents to their views
+        new wxDocTemplate(docManager, "Text", "*.txt;*.text", "", "txt;text",
+                          "Text Doc", "Text View",
+                          CLASSINFO(TextEditDocument), CLASSINFO(TextEditView));
+#if defined( __WXMAC__ ) && wxOSX_USE_CARBON
+        wxFileName::MacRegisterDefaultTypeAndCreator("txt" , 'TEXT' , 'WXMA');
+#endif
+        // Create a template relating image documents to their views
+        new wxDocTemplate(docManager, "Image", "*.png;*.jpg", "", "png;jpg",
+                          "Image Doc", "Image View",
+                          CLASSINFO(ImageDocument), CLASSINFO(ImageView));
+    }
+
+    // create the main frame window
+    wxFrame *frame;
+#if wxUSE_MDI_ARCHITECTURE
+    if ( m_mode == Mode_MDI )
+    {
+        frame = new wxDocMDIParentFrame(docManager, NULL, wxID_ANY,
+                                        GetAppDisplayName(),
+                                        wxDefaultPosition,
+                                        wxSize(500, 400));
     }
     else
+#endif // wxUSE_MDI_ARCHITECTURE
     {
-        //// Create a template relating text documents to their views
-        (void) new wxDocTemplate(m_docManager, _T("Text"), _T("*.txt;*.text"), _T(""), _T("txt;text"), _T("Text Doc"), _T("Text View"),
-        CLASSINFO(TextEditDocument), CLASSINFO(TextEditView));
-#ifdef __WXMAC__
-        wxFileName::MacRegisterDefaultTypeAndCreator( wxT("txt") , 'TEXT' , 'WXMA' ) ;
-#endif
+        frame = new wxDocParentFrame(docManager, NULL, wxID_ANY,
+                                     GetAppDisplayName(),
+                                     wxDefaultPosition,
+                                     wxSize(500, 400));
     }
-    
-    //// Create the main frame window
-    frame = new MyFrame(m_docManager, (wxFrame *) NULL, wxID_ANY, _T("DocView Demo"), wxPoint(0, 0), wxSize(500, 400), wxDEFAULT_FRAME_STYLE);
-    
-    //// Give it an icon (this is ignored in MDI mode: uses resources)
-#ifdef __WXMSW__
-    frame->SetIcon(wxIcon(_T("doc_icn")));
-#endif
-    
-    //// Make a menubar
-    wxMenu *file_menu = new wxMenu;
-    wxMenu *edit_menu = (wxMenu *) NULL;
-    
-    file_menu->Append(wxID_NEW, _T("&New..."));
-    file_menu->Append(wxID_OPEN, _T("&Open..."));
-    
-    if (singleWindowMode)
-    {
-        file_menu->Append(wxID_CLOSE, _T("&Close"));
-        file_menu->Append(wxID_SAVE, _T("&Save"));
-        file_menu->Append(wxID_SAVEAS, _T("Save &As..."));
-        file_menu->AppendSeparator();
-        file_menu->Append(wxID_PRINT, _T("&Print..."));
-        file_menu->Append(wxID_PRINT_SETUP, _T("Print &Setup..."));
-        file_menu->Append(wxID_PREVIEW, _T("Print Pre&view"));
-        
-        edit_menu = new wxMenu;
-        edit_menu->Append(wxID_UNDO, _T("&Undo"));
-        edit_menu->Append(wxID_REDO, _T("&Redo"));
-        edit_menu->AppendSeparator();
-        edit_menu->Append(DOCVIEW_CUT, _T("&Cut last segment"));
-        
-        frame->editMenu = edit_menu;
-    }
-    
-    file_menu->AppendSeparator();
-    file_menu->Append(wxID_EXIT, _T("E&xit"));
-    
+
+    // and its menu bar
+    wxMenu *menuFile = new wxMenu;
+
+    menuFile->Append(wxID_NEW);
+    menuFile->Append(wxID_OPEN);
+
+    if ( m_mode == Mode_Single )
+        AppendDocumentFileCommands(menuFile, true);
+
+    menuFile->AppendSeparator();
+    menuFile->Append(wxID_EXIT);
+
     // A nice touch: a history of files visited. Use this menu.
-    m_docManager->FileHistoryUseMenu(file_menu);
-    
-    wxMenu *help_menu = new wxMenu;
-    help_menu->Append(DOCVIEW_ABOUT, _T("&About"));
-    
-    wxMenuBar *menu_bar = new wxMenuBar;
-    
-    menu_bar->Append(file_menu, _T("&File"));
-    if (edit_menu)
-        menu_bar->Append(edit_menu, _T("&Edit"));
-    menu_bar->Append(help_menu, _T("&Help"));
-    
-    if (singleWindowMode)
-        frame->canvas = frame->CreateCanvas((wxView *) NULL, frame);
-    
-    //// Associate the menu bar with the frame
-    frame->SetMenuBar(menu_bar);
-    
-    frame->Centre(wxBOTH);
-    frame->Show(true);
-    
-    SetTopWindow(frame);
+    docManager->FileHistoryUseMenu(menuFile);
+#if wxUSE_CONFIG
+    docManager->FileHistoryLoad(*wxConfig::Get());
+#endif // wxUSE_CONFIG
+
+
+    if ( m_mode == Mode_Single )
+    {
+        m_canvas = new MyCanvas(NULL, frame);
+        m_menuEdit = CreateDrawingEditMenu();
+        docManager->CreateNewDocument();
+    }
+
+    CreateMenuBarForFrame(frame, menuFile, m_menuEdit);
+
+    frame->SetIcon(wxICON(doc));
+    frame->Centre();
+    frame->Show();
+
     return true;
 }
 
-int MyApp::OnExit(void)
+int MyApp::OnExit()
 {
-    delete m_docManager;
-    return 0;
+    wxDocManager * const manager = wxDocManager::GetDocumentManager();
+#if wxUSE_CONFIG
+    manager->FileHistorySave(*wxConfig::Get());
+#endif // wxUSE_CONFIG
+    delete manager;
+
+    return wxApp::OnExit();
 }
 
-/*
-* Centralised code for creating a document frame.
-* Called from view.cpp, when a view is created, but not used at all
-* in 'single window' mode.
-*/
-
-wxFrame *MyApp::CreateChildFrame(wxDocument *doc, wxView *view, bool isCanvas)
+void MyApp::AppendDocumentFileCommands(wxMenu *menu, bool supportsPrinting)
 {
-    //// Make a child frame
-    wxDocChildFrame *subframe = new wxDocChildFrame(doc, view, GetMainFrame(), wxID_ANY, _T("Child Frame"),
-        wxPoint(10, 10), wxSize(300, 300), wxDEFAULT_FRAME_STYLE);
-    
-#ifdef __WXMSW__
-    subframe->SetIcon(wxString(isCanvas ? _T("chrt_icn") : _T("notepad_icn")));
-#endif
-    
-    //// Make a menubar
-    wxMenu *file_menu = new wxMenu;
-    
-    file_menu->Append(wxID_NEW, _T("&New..."));
-    file_menu->Append(wxID_OPEN, _T("&Open..."));
-    file_menu->Append(wxID_CLOSE, _T("&Close"));
-    file_menu->Append(wxID_SAVE, _T("&Save"));
-    file_menu->Append(wxID_SAVEAS, _T("Save &As..."));
-    
-    if (isCanvas)
+    menu->Append(wxID_CLOSE);
+    menu->Append(wxID_SAVE);
+    menu->Append(wxID_SAVEAS);
+    menu->Append(wxID_REVERT, _("Re&vert..."));
+
+    if ( supportsPrinting )
     {
-        file_menu->AppendSeparator();
-        file_menu->Append(wxID_PRINT, _T("&Print..."));
-        file_menu->Append(wxID_PRINT_SETUP, _T("Print &Setup..."));
-        file_menu->Append(wxID_PREVIEW, _T("Print Pre&view"));
+        menu->AppendSeparator();
+        menu->Append(wxID_PRINT);
+        menu->Append(wxID_PRINT_SETUP, "Print &Setup...");
+        menu->Append(wxID_PREVIEW);
     }
-    
-    wxMenu *edit_menu = (wxMenu *) NULL;
-    
-    if (isCanvas)
+}
+
+wxMenu *MyApp::CreateDrawingEditMenu()
+{
+    wxMenu * const menu = new wxMenu;
+    menu->Append(wxID_UNDO);
+    menu->Append(wxID_REDO);
+    menu->AppendSeparator();
+    menu->Append(wxID_CUT, "&Cut last segment");
+
+    return menu;
+}
+
+void MyApp::CreateMenuBarForFrame(wxFrame *frame, wxMenu *file, wxMenu *edit)
+{
+    wxMenuBar *menubar = new wxMenuBar;
+
+    menubar->Append(file, wxGetStockLabel(wxID_FILE));
+
+    if ( edit )
+        menubar->Append(edit, wxGetStockLabel(wxID_EDIT));
+
+    wxMenu *help= new wxMenu;
+    help->Append(wxID_ABOUT);
+    menubar->Append(help, wxGetStockLabel(wxID_HELP));
+
+    frame->SetMenuBar(menubar);
+}
+
+wxFrame *MyApp::CreateChildFrame(wxView *view, bool isCanvas)
+{
+    // create a child frame of appropriate class for the current mode
+    wxFrame *subframe;
+    wxDocument *doc = view->GetDocument();
+#if wxUSE_MDI_ARCHITECTURE
+    if ( GetMode() == Mode_MDI )
     {
-        edit_menu = new wxMenu;
-        edit_menu->Append(wxID_UNDO, _T("&Undo"));
-        edit_menu->Append(wxID_REDO, _T("&Redo"));
-        edit_menu->AppendSeparator();
-        edit_menu->Append(DOCVIEW_CUT, _T("&Cut last segment"));
-        
-        doc->GetCommandProcessor()->SetEditMenu(edit_menu);
+        subframe = new wxDocMDIChildFrame
+                       (
+                            doc,
+                            view,
+                            wxStaticCast(GetTopWindow(), wxDocMDIParentFrame),
+                            wxID_ANY,
+                            "Child Frame",
+                            wxDefaultPosition,
+                            wxSize(300, 300)
+                       );
     }
-    
-    wxMenu *help_menu = new wxMenu;
-    help_menu->Append(DOCVIEW_ABOUT, _T("&About"));
-    
-    wxMenuBar *menu_bar = new wxMenuBar;
-    
-    menu_bar->Append(file_menu, _T("&File"));
-    if (isCanvas)
-        menu_bar->Append(edit_menu, _T("&Edit"));
-    menu_bar->Append(help_menu, _T("&Help"));
-    
-    //// Associate the menu bar with the frame
-    subframe->SetMenuBar(menu_bar);
-    
-    subframe->Centre(wxBOTH);
-    
+    else
+#endif // wxUSE_MDI_ARCHITECTURE
+    {
+        subframe = new wxDocChildFrame
+                       (
+                            doc,
+                            view,
+                            wxStaticCast(GetTopWindow(), wxDocParentFrame),
+                            wxID_ANY,
+                            "Child Frame",
+                            wxDefaultPosition,
+                            wxSize(300, 300)
+                       );
+
+        subframe->Centre();
+    }
+
+    wxMenu *menuFile = new wxMenu;
+
+    menuFile->Append(wxID_NEW);
+    menuFile->Append(wxID_OPEN);
+    AppendDocumentFileCommands(menuFile, isCanvas);
+    menuFile->AppendSeparator();
+    menuFile->Append(wxID_EXIT);
+
+    wxMenu *menuEdit;
+    if ( isCanvas )
+    {
+        menuEdit = CreateDrawingEditMenu();
+
+        doc->GetCommandProcessor()->SetEditMenu(menuEdit);
+        doc->GetCommandProcessor()->Initialize();
+    }
+    else // text frame
+    {
+        menuEdit = new wxMenu;
+        menuEdit->Append(wxID_COPY);
+        menuEdit->Append(wxID_PASTE);
+        menuEdit->Append(wxID_SELECTALL);
+    }
+
+    CreateMenuBarForFrame(subframe, menuFile, menuEdit);
+
+    subframe->SetIcon(isCanvas ? wxICON(chrt) : wxICON(notepad));
+
     return subframe;
 }
 
-/*
-* This is the top-level window of the application.
-*/
-
-IMPLEMENT_CLASS(MyFrame, wxDocParentFrame)
-BEGIN_EVENT_TABLE(MyFrame, wxDocParentFrame)
-    EVT_MENU(DOCVIEW_ABOUT, MyFrame::OnAbout)
-END_EVENT_TABLE()
-
-MyFrame::MyFrame(wxDocManager *manager, wxFrame *frame, wxWindowID id, const wxString& title,
-                 const wxPoint& pos, const wxSize& size, const long type):
-wxDocParentFrame(manager, frame, id, title, pos, size, type)
+void MyApp::OnAbout(wxCommandEvent& WXUNUSED(event))
 {
-    // This pointer only needed if in single window mode
-    canvas = (MyCanvas *) NULL;
-    editMenu = (wxMenu *) NULL;
-}
+    wxString modeName;
+    switch ( m_mode )
+    {
+#if wxUSE_MDI_ARCHITECTURE
+        case Mode_MDI:
+            modeName = "MDI";
+            break;
+#endif // wxUSE_MDI_ARCHITECTURE
 
-void MyFrame::OnAbout(wxCommandEvent& WXUNUSED(event) )
-{
-    (void)wxMessageBox(_T("DocView Demo\nAuthor: Julian Smart\nUsage: docview.exe [-single]"), _T("About DocView"));
-}
+        case Mode_SDI:
+            modeName = "SDI";
+            break;
 
-// Creates a canvas. Called either from view.cc when a new drawing
-// view is created, or in OnInit as a child of the main window,
-// if in 'single window' mode.
-MyCanvas *MyFrame::CreateCanvas(wxView *view, wxFrame *parent)
-{
-    int width, height;
-    parent->GetClientSize(&width, &height);
-    
-    // Non-retained canvas
-    MyCanvas *canvas = new MyCanvas(view, parent, wxPoint(0, 0), wxSize(width, height), 0);
-    canvas->SetCursor(wxCursor(wxCURSOR_PENCIL));
-    
-    // Give it scrollbars
-    canvas->SetScrollbars(20, 20, 50, 50);
-    canvas->SetBackgroundColour(*wxWHITE);
-    canvas->ClearBackground();
-    
-    return canvas;
-}
+        case Mode_Single:
+            modeName = "single document";
+            break;
 
-MyFrame *GetMainFrame(void)
-{
-    return frame;
-}
+        default:
+            wxFAIL_MSG( "unknown mode ");
+    }
 
+#ifdef __VISUALC6__
+    const int docsCount =
+        wxDocManager::GetDocumentManager()->GetDocuments().GetCount();
+#else
+    const int docsCount =
+        wxDocManager::GetDocumentManager()->GetDocumentsVector().size();
+#endif
+
+    wxLogMessage
+    (
+        "This is the wxWidgets Document/View Sample\n"
+        "running in %s mode.\n"
+        "%d open documents.\n"
+        "\n"
+        "Authors: Julian Smart, Vadim Zeitlin\n"
+        "\n"
+        "Usage: docview [--{mdi,sdi,single}]",
+        modeName,
+        docsCount
+    );
+}

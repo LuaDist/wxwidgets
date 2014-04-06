@@ -2,7 +2,6 @@
 // Name:        src/gtk1/button.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: button.cpp 40311 2006-07-25 06:50:19Z ABX $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -12,10 +11,8 @@
 
 #if wxUSE_BUTTON
 
-#include "wx/button.h"
-
 #ifndef WX_PRECOMP
-    #include "wx/toplevel.h"
+    #include "wx/button.h"
 #endif
 
 #include "wx/stockitem.h"
@@ -55,9 +52,9 @@ static void gtk_button_clicked_callback( GtkWidget *WXUNUSED(widget), wxButton *
     if (!button->m_hasVMT) return;
     if (g_blockEventsOnDrag) return;
 
-    wxCommandEvent event(wxEVT_COMMAND_BUTTON_CLICKED, button->GetId());
+    wxCommandEvent event(wxEVT_BUTTON, button->GetId());
     event.SetEventObject(button);
-    button->GetEventHandler()->ProcessEvent(event);
+    button->HandleWindowEvent(event);
 }
 }
 
@@ -95,8 +92,6 @@ gtk_button_style_set_callback( GtkWidget *m_widget, GtkStyle *WXUNUSED(style), w
 //-----------------------------------------------------------------------------
 // wxButton
 //-----------------------------------------------------------------------------
-
-IMPLEMENT_DYNAMIC_CLASS(wxButton,wxControl)
 
 wxButton::wxButton()
 {
@@ -157,18 +152,17 @@ bool wxButton::Create(  wxWindow *parent, wxWindowID id, const wxString &label,
 }
 
 
-void wxButton::SetDefault()
+wxWindow *wxButton::SetDefault()
 {
-    wxTopLevelWindow *tlw = wxDynamicCast(wxGetTopLevelParent(this), wxTopLevelWindow);
-    wxCHECK_RET( tlw, _T("button without top level window?") );
-
-    tlw->SetDefaultItem(this);
+    wxWindow *oldDefault = wxButtonBase::SetDefault();
 
     GTK_WIDGET_SET_FLAGS( m_widget, GTK_CAN_DEFAULT );
     gtk_widget_grab_default( m_widget );
 
     // resize for default border
     gtk_button_style_set_callback( m_widget, NULL, this );
+
+    return oldDefault;
 }
 
 /* static */

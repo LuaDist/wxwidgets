@@ -2,7 +2,6 @@
 // Name:        src/gtk/dnd.cpp
 // Purpose:     wxDropTarget class
 // Author:      Robert Roebling
-// Id:          $Id: dnd.cpp 65480 2010-09-08 20:01:32Z RR $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -23,12 +22,10 @@
     #include "wx/gdicmn.h"
 #endif
 
-#include "wx/gtk/private.h"
+#include "wx/scopeguard.h"
 
-#include <gdk/gdkprivate.h>
-
-#include <gtk/gtkdnd.h>
-#include <gtk/gtkselection.h>
+#include <gtk/gtk.h>
+#include "wx/gtk/private/gtk2-compat.h"
 
 //----------------------------------------------------------------------------
 // global data
@@ -39,12 +36,10 @@ extern bool g_blockEventsOnDrag;
 // the flags used for the last DoDragDrop()
 static long gs_flagsForDrag = 0;
 
-#ifdef __WXDEBUG__
 // the trace mask we use with wxLogTrace() - call
 // wxLog::AddTraceMask(TRACE_DND) to enable the trace messages from here
 // (there are quite a few of them, so don't enable this by default)
-static const wxChar *TRACE_DND = _T("dnd");
-#endif
+#define TRACE_DND "dnd"
 
 // global variables because GTK+ DnD want to have the
 // mouse event that caused it
@@ -167,11 +162,9 @@ static void target_drag_leave( GtkWidget *WXUNUSED(widget),
                                guint WXUNUSED(time),
                                wxDropTarget *drop_target )
 {
-    if (g_isIdle) wxapp_install_idle_handler();
-
     /* inform the wxDropTarget about the current GdkDragContext.
        this is only valid for the duration of this call */
-    drop_target->SetDragContext( context );
+    drop_target->GTKSetDragContext( context );
 
     /* we don't need return values. this event is just for
        information */
@@ -181,7 +174,7 @@ static void target_drag_leave( GtkWidget *WXUNUSED(widget),
     drop_target->m_firstMotion = true;
 
     /* after this, invalidate the drop_target's GdkDragContext */
-    drop_target->SetDragContext( (GdkDragContext*) NULL );
+    drop_target->GTKSetDragContext( NULL );
 }
 }
 
@@ -197,86 +190,65 @@ static gboolean target_drag_motion( GtkWidget *WXUNUSED(widget),
                                     guint time,
                                     wxDropTarget *drop_target )
 {
-    if (g_isIdle) wxapp_install_idle_handler();
-
     /* Owen Taylor: "if the coordinates not in a drop zone,
        return FALSE, otherwise call gtk_drag_status() and
        return TRUE" */
 
-    /* inform the wxDropTarget about the current GdkDragContext.
-       this is only valid for the duration of this call */
-    drop_target->SetDragContext( context );
+#if 0
+    wxPrintf( "motion\n" );
+    GList *tmp_list;
+    for (tmp_list = context->targets; tmp_list; tmp_list = tmp_list->next)
+    {
+        wxString atom = wxString::FromAscii( gdk_atom_name (GDK_POINTER_TO_ATOM (tmp_list->data)) );
+        wxPrintf( "Atom: %s\n", atom );
+    }
+#endif
 
-    // GTK+ always supposes that we want to copy the data by default while we
-    // might want to move it, so examine not only suggested_action - which is
-    // only good if we don't have our own preferences - but also the actions
-    // field
-    wxDragResult result;
-    if (drop_target->GetDefaultAction() == wxDragNone)
-    {
-        // use default action set by wxDropSource::DoDragDrop()
-    if ( (gs_flagsForDrag & wxDrag_DefaultMove) == wxDrag_DefaultMove &&
-            (context->actions & GDK_ACTION_MOVE ) )
-    {
-        // move is requested by the program and allowed by GTK+ - do it, even
-        // though suggested_action may be currently wxDragCopy
-        result = wxDragMove;
-    }
-    else // use whatever GTK+ says we should
-    {
-        result = ConvertFromGTK(context->suggested_action);
+    // Inform the wxDropTarget about the current GdkDragContext.
+    // This is only valid for the duration of this call.
+    drop_target->GTKSetDragContext( context );
 
-        if ( (result == wxDragMove) && !(gs_flagsForDrag & wxDrag_AllowMove) )
-        {
-            // we're requested to move but we can't
-            result = wxDragCopy;
-        }
-    }
-    }
-    else if (drop_target->GetDefaultAction() == wxDragMove &&
-                (context->actions & GDK_ACTION_MOVE))
+    // Does the source actually accept the data type?
+    if (drop_target->GTKGetMatchingPair() == (GdkAtom) 0)
     {
-       result = wxDragMove;
+        drop_target->GTKSetDragContext( NULL );
+        return FALSE;
     }
-    else
-    {
-        if (context->actions & GDK_ACTION_COPY)
-            result = wxDragCopy;
-        else if (context->actions & GDK_ACTION_MOVE)
-            result = wxDragMove;
-        else
-            result = wxDragNone;
-    }
+
+    wxDragResult suggested_action = drop_target->GTKFigureOutSuggestedAction();
+
+    wxDragResult result = wxDragNone;
 
     if (drop_target->m_firstMotion)
     {
-        /* the first "drag_motion" event substitutes a "drag_enter" event */
-        result = drop_target->OnEnter( x, y, result );
+        // the first "drag_motion" event substitutes a "drag_enter" event
+        result = drop_target->OnEnter( x, y, suggested_action );
     }
     else
     {
-        /* give program a chance to react (i.e. to say no by returning FALSE) */
-        result = drop_target->OnDragOver( x, y, result );
+        // give program a chance to react (i.e. to say no by returning FALSE)
+        result = drop_target->OnDragOver( x, y, suggested_action );
     }
 
-    bool ret = wxIsDragResultOk( result );
+    GdkDragAction result_action = GDK_ACTION_DEFAULT;
+    if (result == wxDragCopy)
+        result_action = GDK_ACTION_COPY;
+    else if (result == wxDragLink)
+        result_action = GDK_ACTION_LINK;
+    else
+        result_action = GDK_ACTION_MOVE;
+
+    // is result action actually supported
+    bool ret = (result_action != GDK_ACTION_DEFAULT) &&
+               (gdk_drag_context_get_actions(context) & result_action);
+
     if (ret)
-    {
-        GdkDragAction action;
-        if (result == wxDragCopy)
-            action = GDK_ACTION_COPY;
-        else if (result == wxDragLink)
-            action = GDK_ACTION_LINK;
-        else
-            action = GDK_ACTION_MOVE;
+        gdk_drag_status( context, result_action, time );
 
-        gdk_drag_status( context, action, time );
-    }
+    // after this, invalidate the drop_target's GdkDragContext
+    drop_target->GTKSetDragContext( NULL );
 
-    /* after this, invalidate the drop_target's GdkDragContext */
-    drop_target->SetDragContext( (GdkDragContext*) NULL );
-
-    /* this has to be done because GDK has no "drag_enter" event */
+    // this has to be done because GDK has no "drag_enter" event
     drop_target->m_firstMotion = false;
 
     return ret;
@@ -295,35 +267,38 @@ static gboolean target_drag_drop( GtkWidget *widget,
                                   guint time,
                                   wxDropTarget *drop_target )
 {
-    if (g_isIdle) wxapp_install_idle_handler();
-
     /* Owen Taylor: "if the drop is not in a drop zone,
        return FALSE, otherwise, if you aren't accepting
        the drop, call gtk_drag_finish() with success == FALSE
        otherwise call gtk_drag_data_get()" */
 
-//    printf( "drop.\n" );
-
-    /* this seems to make a difference between not accepting
-       due to wrong target area and due to wrong format. let
-       us hope that this is not required.. */
-
     /* inform the wxDropTarget about the current GdkDragContext.
        this is only valid for the duration of this call */
-    drop_target->SetDragContext( context );
+    drop_target->GTKSetDragContext( context );
+
+    // Does the source actually accept the data type?
+    if (drop_target->GTKGetMatchingPair() == (GdkAtom) 0)
+    {
+        // cancel the whole thing
+        gtk_drag_finish( context,
+                          FALSE,        // no success
+                          FALSE,        // don't delete data on dropping side
+                          time );
+
+        drop_target->GTKSetDragContext( NULL );
+
+        drop_target->m_firstMotion = true;
+
+        return FALSE;
+    }
 
     /* inform the wxDropTarget about the current drag widget.
        this is only valid for the duration of this call */
-    drop_target->SetDragWidget( widget );
+    drop_target->GTKSetDragWidget( widget );
 
     /* inform the wxDropTarget about the current drag time.
        this is only valid for the duration of this call */
-    drop_target->SetDragTime( time );
-
-/*
-    wxDragResult result = wxDragMove;
-    if (context->suggested_action == GDK_ACTION_COPY) result = wxDragCopy;
-*/
+    drop_target->GTKSetDragTime( time );
 
     /* reset the block here as someone might very well
        show a dialog as a reaction to a drop and this
@@ -334,10 +309,8 @@ static gboolean target_drag_drop( GtkWidget *widget,
 
     if (!ret)
     {
-#ifdef __WXDEBUG__
         wxLogTrace(TRACE_DND, wxT( "Drop target: OnDrop returned FALSE") );
-#endif
-       
+
         /* cancel the whole thing */
         gtk_drag_finish( context,
                           FALSE,        /* no success */
@@ -346,40 +319,25 @@ static gboolean target_drag_drop( GtkWidget *widget,
     }
     else
     {
-#ifdef __WXDEBUG__
         wxLogTrace(TRACE_DND, wxT( "Drop target: OnDrop returned true") );
-#endif
-       
-#if wxUSE_THREADS
-        /* disable GUI threads */
-#endif
 
-        GdkAtom format = drop_target->GetMatchingPair();
+        GdkAtom format = drop_target->GTKGetMatchingPair();
 
         // this does happen somehow, see bug 555111
-        wxCHECK_MSG( format, FALSE, _T("no matching GdkAtom for format?") );
+        wxCHECK_MSG( format, FALSE, wxT("no matching GdkAtom for format?") );
 
-/*
-        GdkDragAction action = GDK_ACTION_MOVE;
-        if (result == wxDragCopy) action == GDK_ACTION_COPY;
-        context->action = action;
-*/
         /* this should trigger an "drag_data_received" event */
         gtk_drag_get_data( widget,
                            context,
                            format,
                            time );
-
-#if wxUSE_THREADS
-        /* re-enable GUI threads */
-#endif
     }
 
     /* after this, invalidate the drop_target's GdkDragContext */
-    drop_target->SetDragContext( (GdkDragContext*) NULL );
+    drop_target->GTKSetDragContext( NULL );
 
     /* after this, invalidate the drop_target's drag widget */
-    drop_target->SetDragWidget( (GtkWidget*) NULL );
+    drop_target->GTKSetDragWidget( NULL );
 
     /* this has to be done because GDK has no "drag_enter" event */
     drop_target->m_firstMotion = true;
@@ -402,12 +360,10 @@ static void target_drag_data_received( GtkWidget *WXUNUSED(widget),
                                        guint time,
                                        wxDropTarget *drop_target )
 {
-    if (g_isIdle) wxapp_install_idle_handler();
-
     /* Owen Taylor: "call gtk_drag_finish() with
        success == TRUE" */
 
-    if ((data->length <= 0) || (data->format != 8))
+    if (gtk_selection_data_get_length(data) <= 0 || gtk_selection_data_get_format(data) != 8)
     {
         /* negative data length and non 8-bit data format
            qualifies for junk */
@@ -416,37 +372,31 @@ static void target_drag_data_received( GtkWidget *WXUNUSED(widget),
         return;
     }
 
-#ifdef __WXDEBUG__
     wxLogTrace(TRACE_DND, wxT( "Drop target: data received event") );
-#endif
-   
+
     /* inform the wxDropTarget about the current GtkSelectionData.
        this is only valid for the duration of this call */
-    drop_target->SetDragData( data );
+    drop_target->GTKSetDragData( data );
 
-    wxDragResult result = ConvertFromGTK(context->action);
+    wxDragResult result = ConvertFromGTK(gdk_drag_context_get_selected_action(context));
 
     if ( wxIsDragResultOk( drop_target->OnData( x, y, result ) ) )
     {
-#ifdef __WXDEBUG__
         wxLogTrace(TRACE_DND, wxT( "Drop target: OnData returned true") );
-#endif
-       
+
         /* tell GTK that data transfer was successful */
         gtk_drag_finish( context, TRUE, FALSE, time );
     }
     else
     {
-#ifdef __WXDEBUG__
         wxLogTrace(TRACE_DND, wxT( "Drop target: OnData returned FALSE") );
-#endif
-       
+
         /* tell GTK that data transfer was not successful */
         gtk_drag_finish( context, FALSE, FALSE, time );
     }
 
     /* after this, invalidate the drop_target's drag data */
-    drop_target->SetDragData( (GtkSelectionData*) NULL );
+    drop_target->GTKSetDragData( NULL );
 }
 }
 
@@ -458,9 +408,9 @@ wxDropTarget::wxDropTarget( wxDataObject *data )
             : wxDropTargetBase( data )
 {
     m_firstMotion = true;
-    m_dragContext = (GdkDragContext*) NULL;
-    m_dragWidget = (GtkWidget*) NULL;
-    m_dragData = (GtkSelectionData*) NULL;
+    m_dragContext = NULL;
+    m_dragWidget = NULL;
+    m_dragData = NULL;
     m_dragTime = 0;
 }
 
@@ -468,38 +418,86 @@ wxDragResult wxDropTarget::OnDragOver( wxCoord WXUNUSED(x),
                                        wxCoord WXUNUSED(y),
                                        wxDragResult def )
 {
-    // GetMatchingPair() checks for m_dataObject too, no need to do it here
-
-    // disable the debug message from GetMatchingPair() - there are too many
-    // of them otherwise
-#ifdef __WXDEBUG__
-    wxLogNull noLog;
-#endif // Debug
-
-    return (GetMatchingPair() != (GdkAtom) 0) ? def : wxDragNone;
+    return def;
 }
 
 bool wxDropTarget::OnDrop( wxCoord WXUNUSED(x), wxCoord WXUNUSED(y) )
 {
-    if (!m_dataObject)
-        return false;
-
-    return (GetMatchingPair() != (GdkAtom) 0);
+    return true;
 }
 
 wxDragResult wxDropTarget::OnData( wxCoord WXUNUSED(x), wxCoord WXUNUSED(y),
                                    wxDragResult def )
 {
-    if (!m_dataObject)
-        return wxDragNone;
-
-    if (GetMatchingPair() == (GdkAtom) 0)
-        return wxDragNone;
-
     return GetData() ? def : wxDragNone;
 }
 
-GdkAtom wxDropTarget::GetMatchingPair()
+wxDragResult wxDropTarget::GTKFigureOutSuggestedAction()
+{
+    if (!m_dragContext)
+        return wxDragError;
+
+    // GTK+ always supposes that we want to copy the data by default while we
+    // might want to move it, so examine not only suggested_action - which is
+    // only good if we don't have our own preferences - but also the actions
+    // field
+    wxDragResult suggested_action = wxDragNone;
+    const GdkDragAction actions = gdk_drag_context_get_actions(m_dragContext);
+    if (GetDefaultAction() == wxDragNone)
+    {
+        // use default action set by wxDropSource::DoDragDrop()
+        if ( (gs_flagsForDrag & wxDrag_DefaultMove) == wxDrag_DefaultMove &&
+            (actions & GDK_ACTION_MOVE))
+        {
+            // move is requested by the program and allowed by GTK+ - do it, even
+            // though suggested_action may be currently wxDragCopy
+            suggested_action = wxDragMove;
+        }
+        else // use whatever GTK+ says we should
+        {
+            suggested_action = ConvertFromGTK(gdk_drag_context_get_suggested_action(m_dragContext));
+
+#if 0
+            // RR: I don't understand the code below: if the drag comes from
+            //     a different app, the gs_flagsForDrag is invalid; if it
+            //     comes from the same wx app, then GTK+ hopefully won't
+            //     suggest something we didn't allow in the frist place
+            //     in DoDrop()
+            if ( (suggested_action == wxDragMove) && !(gs_flagsForDrag & wxDrag_AllowMove) )
+            {
+                // we're requested to move but we can't
+                suggested_action = wxDragCopy;
+            }
+#endif
+        }
+    }
+    else if (GetDefaultAction() == wxDragMove &&
+            (actions & GDK_ACTION_MOVE))
+    {
+
+        suggested_action = wxDragMove;
+    }
+    else
+    {
+        if (actions & GDK_ACTION_COPY)
+            suggested_action = wxDragCopy;
+        else if (actions & GDK_ACTION_MOVE)
+            suggested_action = wxDragMove;
+        else if (actions & GDK_ACTION_LINK)
+            suggested_action = wxDragLink;
+        else
+            suggested_action = wxDragNone;
+    }
+
+    return suggested_action;
+}
+
+wxDataFormat wxDropTarget::GetMatchingPair()
+{
+    return wxDataFormat( GTKGetMatchingPair() );
+}
+
+GdkAtom wxDropTarget::GTKGetMatchingPair(bool quiet)
 {
     if (!m_dataObject)
         return (GdkAtom) 0;
@@ -507,16 +505,17 @@ GdkAtom wxDropTarget::GetMatchingPair()
     if (!m_dragContext)
         return (GdkAtom) 0;
 
-    GList *child = m_dragContext->targets;
+    const GList* child = gdk_drag_context_list_targets(m_dragContext);
     while (child)
     {
         GdkAtom formatAtom = (GdkAtom)(child->data);
         wxDataFormat format( formatAtom );
 
-#ifdef __WXDEBUG__
-        wxLogTrace(TRACE_DND, wxT("Drop target: drag has format: %s"),
-                   format.GetId().c_str());
-#endif // Debug
+        if ( !quiet )
+        {
+            wxLogTrace(TRACE_DND, wxT("Drop target: drag has format: %s"),
+                       format.GetId().c_str());
+        }
 
         if (m_dataObject->IsSupportedFormat( format ))
             return formatAtom;
@@ -535,17 +534,19 @@ bool wxDropTarget::GetData()
     if (!m_dataObject)
         return false;
 
-    wxDataFormat dragFormat( m_dragData->target );
+    wxDataFormat dragFormat(gtk_selection_data_get_target(m_dragData));
 
     if (!m_dataObject->IsSupportedFormat( dragFormat ))
         return false;
 
-    m_dataObject->SetData( dragFormat, (size_t)m_dragData->length, (const void*)m_dragData->data );
+    m_dataObject->SetData(dragFormat,
+        (size_t)gtk_selection_data_get_length(m_dragData),
+        (const void*)gtk_selection_data_get_data(m_dragData));
 
     return true;
 }
 
-void wxDropTarget::UnregisterWidget( GtkWidget *widget )
+void wxDropTarget::GtkUnregisterWidget( GtkWidget *widget )
 {
     wxCHECK_RET( widget != NULL, wxT("unregister widget is NULL") );
 
@@ -561,7 +562,7 @@ void wxDropTarget::UnregisterWidget( GtkWidget *widget )
                                           (gpointer) target_drag_data_received, this);
 }
 
-void wxDropTarget::RegisterWidget( GtkWidget *widget )
+void wxDropTarget::GtkRegisterWidget( GtkWidget *widget )
 {
     wxCHECK_RET( widget != NULL, wxT("register widget is NULL") );
 
@@ -577,7 +578,7 @@ void wxDropTarget::RegisterWidget( GtkWidget *widget )
 
     gtk_drag_dest_set( widget,
                        (GtkDestDefaults) 0,         /* no default behaviour */
-                       (GtkTargetEntry*) NULL,      /* we don't supply any formats here */
+                       NULL,      /* we don't supply any formats here */
                        0,                           /* number of targets = 0 */
                        (GdkDragAction) 0 );         /* we don't supply any actions here */
 
@@ -601,47 +602,37 @@ void wxDropTarget::RegisterWidget( GtkWidget *widget )
 extern "C" {
 static void
 source_drag_data_get  (GtkWidget          *WXUNUSED(widget),
-                       GdkDragContext     *WXUNUSED(context),
+                       GdkDragContext     *context,
                        GtkSelectionData   *selection_data,
                        guint               WXUNUSED(info),
                        guint               WXUNUSED(time),
                        wxDropSource       *drop_source )
 {
-    if (g_isIdle) wxapp_install_idle_handler();
+    wxDataFormat format(gtk_selection_data_get_target(selection_data));
 
-    wxDataFormat format( selection_data->target );
-
-#ifdef __WXDEBUG__
     wxLogTrace(TRACE_DND, wxT("Drop source: format requested: %s"),
                format.GetId().c_str());
-#endif
-   
-    drop_source->m_retValue = wxDragCancel;
+
+    drop_source->m_retValue = wxDragError;
 
     wxDataObject *data = drop_source->GetDataObject();
 
     if (!data)
     {
-#ifdef __WXDEBUG__
         wxLogTrace(TRACE_DND, wxT("Drop source: no data object") );
-#endif
-       return;
+        return;
     }
 
     if (!data->IsSupportedFormat(format))
     {
-#ifdef __WXDEBUG__
         wxLogTrace(TRACE_DND, wxT("Drop source: unsupported format") );
-#endif
-       return;
+        return;
     }
 
     if (data->GetDataSize(format) == 0)
     {
-#ifdef __WXDEBUG__
         wxLogTrace(TRACE_DND, wxT("Drop source: empty data") );
-#endif
-       return;
+        return;
     }
 
     size_t size = data->GetDataSize(format);
@@ -656,53 +647,15 @@ source_drag_data_get  (GtkWidget          *WXUNUSED(widget),
         return;
     }
 
-#if wxUSE_THREADS
-    /* disable GUI threads */
-#endif
+    drop_source->m_retValue = ConvertFromGTK(gdk_drag_context_get_selected_action(context));
 
     gtk_selection_data_set( selection_data,
-                            selection_data->target,
+                            gtk_selection_data_get_target(selection_data),
                             8,   // 8-bit
                             d,
                             size );
 
-#if wxUSE_THREADS
-    /* enable GUI threads */
-#endif
-
     delete[] d;
-}
-}
-
-//----------------------------------------------------------------------------
-// "drag_data_delete"
-//----------------------------------------------------------------------------
-
-extern "C" {
-static void source_drag_data_delete( GtkWidget *WXUNUSED(widget),
-                                     GdkDragContext *WXUNUSED(context),
-                                     wxDropSource *WXUNUSED(drop_source) )
-{
-    if (g_isIdle)
-        wxapp_install_idle_handler();
-
-    // printf( "Drag source: drag_data_delete\n" );
-}
-}
-
-//----------------------------------------------------------------------------
-// "drag_begin"
-//----------------------------------------------------------------------------
-
-extern "C" {
-static void source_drag_begin( GtkWidget          *WXUNUSED(widget),
-                               GdkDragContext     *WXUNUSED(context),
-                               wxDropSource       *WXUNUSED(drop_source) )
-{
-    if (g_isIdle)
-        wxapp_install_idle_handler();
-
-    // printf( "Drag source: drag_begin.\n" );
 }
 }
 
@@ -715,10 +668,6 @@ static void source_drag_end( GtkWidget          *WXUNUSED(widget),
                              GdkDragContext     *WXUNUSED(context),
                              wxDropSource       *drop_source )
 {
-    if (g_isIdle) wxapp_install_idle_handler();
-
-    // printf( "Drag source: drag_end.\n" );
-
     drop_source->m_waiting = false;
 }
 }
@@ -731,9 +680,7 @@ extern "C" {
 static gint
 gtk_dnd_window_configure_callback( GtkWidget *WXUNUSED(widget), GdkEventConfigure *WXUNUSED(event), wxDropSource *source )
 {
-    // don't need to install idle handler, its done from "event" signal
-
-    source->GiveFeedback( ConvertFromGTK(source->m_dragContext->action) );
+    source->GiveFeedback(ConvertFromGTK(gdk_drag_context_get_selected_action(source->m_dragContext)));
 
     return 0;
 }
@@ -750,13 +697,13 @@ wxDropSource::wxDropSource(wxWindow *win,
 {
     m_waiting = true;
 
-    m_iconWindow = (GtkWidget*) NULL;
+    m_iconWindow = NULL;
 
     m_window = win;
     m_widget = win->m_widget;
     if (win->m_wxwindow) m_widget = win->m_wxwindow;
 
-    m_retValue = wxDragCancel;
+    m_retValue = wxDragNone;
 
     SetIcons(iconCopy, iconMove, iconNone);
 }
@@ -771,13 +718,13 @@ wxDropSource::wxDropSource(wxDataObject& data,
 
     SetData( data );
 
-    m_iconWindow = (GtkWidget*) NULL;
+    m_iconWindow = NULL;
 
     m_window = win;
     m_widget = win->m_widget;
     if (win->m_wxwindow) m_widget = win->m_wxwindow;
 
-    m_retValue = wxDragCancel;
+    m_retValue = wxDragNone;
 
     SetIcons(iconCopy, iconMove, iconNone);
 }
@@ -790,11 +737,11 @@ void wxDropSource::SetIcons(const wxIcon &iconCopy,
     m_iconMove = iconMove;
     m_iconNone = iconNone;
 
-    if ( !m_iconCopy.Ok() )
+    if ( !m_iconCopy.IsOk() )
         m_iconCopy = wxIcon(page_xpm);
-    if ( !m_iconMove.Ok() )
+    if ( !m_iconMove.IsOk() )
         m_iconMove = m_iconCopy;
-    if ( !m_iconNone.Ok() )
+    if ( !m_iconNone.IsOk() )
         m_iconNone = m_iconCopy;
 }
 
@@ -813,36 +760,56 @@ void wxDropSource::PrepareIcon( int action, GdkDragContext *context )
     else
         icon = &m_iconNone;
 
+#ifndef __WXGTK3__
     GdkBitmap *mask;
     if ( icon->GetMask() )
-        mask = icon->GetMask()->GetBitmap();
+        mask = *icon->GetMask();
     else
-        mask = (GdkBitmap *)NULL;
+        mask = NULL;
 
     GdkPixmap *pixmap = icon->GetPixmap();
 
-    gint width,height;
-    gdk_drawable_get_size (pixmap, &width, &height);
-
     GdkColormap *colormap = gtk_widget_get_colormap( m_widget );
     gtk_widget_push_colormap (colormap);
+#endif
 
     m_iconWindow = gtk_window_new (GTK_WINDOW_POPUP);
     gtk_widget_set_events (m_iconWindow, GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK);
-    gtk_widget_set_app_paintable (GTK_WIDGET (m_iconWindow), TRUE);
+    gtk_widget_set_app_paintable (m_iconWindow, TRUE);
 
+#ifdef __WXGTK3__
+    gtk_widget_set_visual(m_iconWindow, gtk_widget_get_visual(m_widget));
+#else
     gtk_widget_pop_colormap ();
+#endif
 
-    gtk_widget_set_size_request (m_iconWindow, width, height);
+    gtk_widget_set_size_request (m_iconWindow, icon->GetWidth(), icon->GetHeight());
     gtk_widget_realize (m_iconWindow);
 
     g_signal_connect (m_iconWindow, "configure_event",
                       G_CALLBACK (gtk_dnd_window_configure_callback), this);
 
-    gdk_window_set_back_pixmap (m_iconWindow->window, pixmap, FALSE);
+#ifdef __WXGTK3__
+    cairo_t* cr = gdk_cairo_create(gtk_widget_get_window(m_iconWindow));
+    icon->SetSourceSurface(cr, 0, 0);
+    cairo_pattern_t* pattern = cairo_get_source(cr);
+    gdk_window_set_background_pattern(gtk_widget_get_window(m_iconWindow), pattern);
+    cairo_destroy(cr);
+    cairo_surface_t* mask = NULL;
+    if (icon->GetMask())
+        mask = *icon->GetMask();
+    if (mask)
+    {
+        cairo_region_t* region = gdk_cairo_region_create_from_surface(mask);
+        gtk_widget_shape_combine_region(m_iconWindow, region);
+        cairo_region_destroy(region);
+    }
+#else
+    gdk_window_set_back_pixmap(gtk_widget_get_window(m_iconWindow), pixmap, false);
 
     if (mask)
         gtk_widget_shape_combine_mask (m_iconWindow, mask, 0, 0);
+#endif
 
     gtk_drag_set_icon_widget( context, m_iconWindow, 0, 0 );
 }
@@ -859,19 +826,17 @@ wxDragResult wxDropSource::DoDragDrop(int flags)
     // don't start dragging if no button is down
     if (g_lastButtonNumber == 0)
         return wxDragNone;
-        
+
     // we can only start a drag after a mouse event
     if (g_lastMouseEvent == NULL)
         return wxDragNone;
 
-    // disabled for now
-    g_blockEventsOnDrag = true;
-
-    RegisterWindow();
+    GTKConnectDragSignals();
+    wxON_BLOCK_EXIT_OBJ0(*this, wxDropSource::GTKDisconnectDragSignals);
 
     m_waiting = true;
 
-    GtkTargetList *target_list = gtk_target_list_new( (GtkTargetEntry*) NULL, 0 );
+    GtkTargetList *target_list = gtk_target_list_new( NULL, 0 );
 
     wxDataFormat *array = new wxDataFormat[ m_data->GetFormatCount() ];
     m_data->GetAllFormats( array );
@@ -879,94 +844,75 @@ wxDragResult wxDropSource::DoDragDrop(int flags)
     for (size_t i = 0; i < count; i++)
     {
         GdkAtom atom = array[i];
-#ifdef __WXDEBUG__
-        wxLogTrace(TRACE_DND, wxT("Drop source: Supported atom %s"), gdk_atom_name( atom ));
-#endif
-       gtk_target_list_add( target_list, atom, 0, 0 );
+        wxLogTrace(TRACE_DND, wxT("Drop source: Supported atom %s"),
+                   gdk_atom_name( atom ));
+        gtk_target_list_add( target_list, atom, 0, 0 );
     }
     delete[] array;
 
-    int action = GDK_ACTION_COPY;
+    int allowed_actions = GDK_ACTION_COPY;
     if ( flags & wxDrag_AllowMove )
-        action |= GDK_ACTION_MOVE;
+        allowed_actions |= GDK_ACTION_MOVE;
 
     // VZ: as we already use g_blockEventsOnDrag it shouldn't be that bad
     //     to use a global to pass the flags to the drop target but I'd
     //     surely prefer a better way to do it
     gs_flagsForDrag = flags;
 
+    m_retValue = wxDragCancel;
+
     GdkDragContext *context = gtk_drag_begin( m_widget,
                 target_list,
-                (GdkDragAction)action,
+                (GdkDragAction)allowed_actions,
                 g_lastButtonNumber,  // number of mouse button which started drag
                 (GdkEvent*) g_lastMouseEvent );
 
     if ( !context )
     {
         // this can happen e.g. if gdk_pointer_grab() failed
-        g_blockEventsOnDrag = false;
-
-        UnregisterWindow();
-
         return wxDragError;
     }
 
     m_dragContext = context;
 
-    PrepareIcon( action, context );
+    PrepareIcon( allowed_actions, context );
 
     while (m_waiting)
         gtk_main_iteration();
 
-    m_retValue = ConvertFromGTK(context->action);
-    if ( m_retValue == wxDragNone )
-         m_retValue = wxDragCancel;
-
-    g_blockEventsOnDrag = false;
-
-    UnregisterWindow();
+    g_signal_handlers_disconnect_by_func (m_iconWindow,
+                                          (gpointer) gtk_dnd_window_configure_callback, this);
 
     return m_retValue;
 }
 
-void wxDropSource::RegisterWindow()
+void wxDropSource::GTKConnectDragSignals()
 {
-    if (!m_widget) return;
+    if (!m_widget)
+        return;
+
+    g_blockEventsOnDrag = true;
 
     g_signal_connect (m_widget, "drag_data_get",
                       G_CALLBACK (source_drag_data_get), this);
-    g_signal_connect (m_widget, "drag_data_delete",
-                      G_CALLBACK (source_drag_data_delete), this);
-    g_signal_connect (m_widget, "drag_begin",
-                      G_CALLBACK (source_drag_begin), this);
     g_signal_connect (m_widget, "drag_end",
                       G_CALLBACK (source_drag_end), this);
 
 }
 
-void wxDropSource::UnregisterWindow()
+void wxDropSource::GTKDisconnectDragSignals()
 {
-    if (m_widget)
-    {
-        g_signal_handlers_disconnect_by_func (m_widget,
-                                              (gpointer) source_drag_data_get,
-                                              this);
-        g_signal_handlers_disconnect_by_func (m_widget,
-                                              (gpointer) source_drag_data_delete,
-                                              this);
-        g_signal_handlers_disconnect_by_func (m_widget,
-                                              (gpointer) source_drag_begin,
-                                              this);
-        g_signal_handlers_disconnect_by_func (m_widget,
-                                              (gpointer) source_drag_end,
-                                              this);
-    }
+    if (!m_widget)
+        return;
 
-    if (m_iconWindow)
-    {
-        g_signal_handlers_disconnect_by_func (m_iconWindow,
-                                              (gpointer) gtk_dnd_window_configure_callback, this);
-    }
+    g_blockEventsOnDrag = false;
+
+    g_signal_handlers_disconnect_by_func (m_widget,
+                                          (gpointer) source_drag_data_get,
+                                          this);
+    g_signal_handlers_disconnect_by_func (m_widget,
+                                          (gpointer) source_drag_end,
+                                          this);
 }
 
 #endif

@@ -3,7 +3,6 @@
 // Purpose:     XRC resource for wxGenericDirCtrl
 // Author:      Markus Greither
 // Created:     2002/01/20
-// RCS-ID:      $Id: xh_gdctl.cpp 44726 2007-03-10 17:23:26Z VZ $
 // Copyright:   (c) 2002 Markus Greither
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -35,6 +34,7 @@ wxGenericDirCtrlXmlHandler::wxGenericDirCtrlXmlHandler()
     XRC_ADD_STYLE(wxDIRCTRL_SELECT_FIRST);
     XRC_ADD_STYLE(wxDIRCTRL_SHOW_FILTERS);
     XRC_ADD_STYLE(wxDIRCTRL_EDIT_LABELS);
+    XRC_ADD_STYLE(wxDIRCTRL_MULTIPLE);
     AddWindowStyles();
 }
 

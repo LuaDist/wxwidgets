@@ -2,7 +2,6 @@
 // Name:        src/html/winpars.cpp
 // Purpose:     wxHtmlParser class (generic parser)
 // Author:      Vaclav Slavik
-// RCS-ID:      $Id: winpars.cpp 58846 2009-02-12 19:38:20Z VS $
 // Copyright:   (c) 1999 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -15,7 +14,7 @@
 
 #if wxUSE_HTML && wxUSE_STREAMS
 
-#ifndef WXPRECOMP
+#ifndef WX_PRECOMP
     #include "wx/intl.h"
     #include "wx/dc.h"
     #include "wx/log.h"
@@ -25,137 +24,14 @@
 #include "wx/html/htmldefs.h"
 #include "wx/html/winpars.h"
 #include "wx/html/htmlwin.h"
+#include "wx/html/styleparams.h"
 #include "wx/fontmap.h"
 #include "wx/uri.h"
-
-//-----------------------------------------------------------------------------
-// wxHtmlWordWithTabsCell
-//-----------------------------------------------------------------------------
-
-// NB: this is backported from wx-2.9 and moved to this file so that it
-//     stays private; trunk version is in htmlcell.h/cpp.
-
-
-// wxHtmlWordCell specialization for storing text fragments with embedded
-// '\t's; these differ from normal words in that the displayed text is
-// different from the text copied to clipboard
-class WXDLLIMPEXP_HTML wxHtmlWordWithTabsCell : public wxHtmlWordCell
-{
-public:
-    wxHtmlWordWithTabsCell(const wxString& word,
-                           const wxString& wordOrig,
-                           size_t linepos,
-                           const wxDC& dc)
-        : wxHtmlWordCell(word, dc),
-          m_wordOrig(wordOrig),
-          m_linepos(linepos)
-    {}
-
-    virtual wxString ConvertToText(wxHtmlSelection *sel) const;
-
-protected:
-    wxString GetPartAsText(int begin, int end) const;
-
-    wxString m_wordOrig;
-    size_t   m_linepos;
-};
-
-wxString wxHtmlWordWithTabsCell::ConvertToText(wxHtmlSelection *s) const
-{
-    if ( s && (this == s->GetFromCell() || this == s->GetToCell()) )
-    {
-        wxPoint priv = this == s->GetFromCell() ? s->GetFromPrivPos()
-                                                : s->GetToPrivPos();
-
-        // VZ: we may be called before we had a chance to re-render ourselves
-        //     and in this case GetFrom/ToPrivPos() is not set yet -- assume
-        //     that this only happens in case of a double/triple click (which
-        //     seems to be the case now) and so it makes sense to select the
-        //     entire contents of the cell in this case
-        //
-        // TODO: but this really needs to be fixed in some better way later...
-        if ( priv != wxDefaultPosition )
-        {
-            int part1 = priv.x;
-            int part2 = priv.y;
-            if ( part1 == part2 )
-                return wxEmptyString;
-            return GetPartAsText(part1, part2);
-        }
-        //else: return the whole word below
-    }
-
-    return m_wordOrig;
-}
-
-wxString wxHtmlWordWithTabsCell::GetPartAsText(int begin, int end) const
-{
-    // NB: The 'begin' and 'end' positions are in the _displayed_ text
-    //     (stored in m_Word) and not in the text with tabs that should
-    //     be copied to clipboard (m_wordOrig).
-    //
-    // NB: Because selection is performed on displayed text, it's possible
-    //     to select e.g. "half of TAB character" -- IOW, 'begin' and 'end'
-    //     may be in the middle of TAB character expansion into ' 's. In this
-    //     case, we copy the TAB character to clipboard once.
-
-    wxASSERT( begin < end );
-
-    const unsigned SPACES_PER_TAB = 8;
-
-    wxString sel;
-
-    int pos = 0;
-    wxString::const_iterator i = m_wordOrig.begin();
-
-    // find the beginning of text to copy:
-    for ( ; pos < begin; ++i )
-    {
-        if ( *i == '\t' )
-        {
-            pos += 8 - (m_linepos + pos) % SPACES_PER_TAB;
-            if ( pos >= begin )
-            {
-                sel += '\t';
-            }
-        }
-        else
-        {
-            ++pos;
-        }
-    }
-
-    // copy the content until we reach 'end':
-    for ( ; pos < end; ++i )
-    {
-        const wxChar c = *i;
-        sel += c;
-
-        if ( c == '\t' )
-            pos += 8 - (m_linepos + pos) % SPACES_PER_TAB;
-        else
-            ++pos;
-    }
-
-    return sel;
-}
 
 
 //-----------------------------------------------------------------------------
 // wxHtmlWinParser
 //-----------------------------------------------------------------------------
-
-struct wxHtmlWinParser_TextParsingState
-{
-    // current whitespace handling mode
-    wxHtmlWinParser::WhitespaceMode m_whitespaceMode;
-
-    wxHtmlWordCell *m_lastWordCell;
-
-    // current position on line, in num. of characters; used to properly
-    // expand TABs; only updated while inside <pre>
-    int m_posColumn;
-};
 
 IMPLEMENT_ABSTRACT_CLASS(wxHtmlWinParser, wxHtmlParser)
 
@@ -163,11 +39,6 @@ wxList wxHtmlWinParser::m_Modules;
 
 wxHtmlWinParser::wxHtmlWinParser(wxHtmlWindowInterface *wndIface)
 {
-    m_textParsingState = new wxHtmlWinParser_TextParsingState;
-    m_textParsingState->m_whitespaceMode = Whitespace_Normal;
-    m_textParsingState->m_lastWordCell = NULL;
-    m_textParsingState->m_posColumn = 0;
-
     m_tmpStrBuf = NULL;
     m_tmpStrBufSize = 0;
     m_windowInterface = wndIface;
@@ -176,10 +47,14 @@ wxHtmlWinParser::wxHtmlWinParser(wxHtmlWindowInterface *wndIface)
     m_CharHeight = m_CharWidth = 0;
     m_UseLink = false;
 #if !wxUSE_UNICODE
+    m_nbsp = 0;
     m_EncConv = NULL;
     m_InputEnc = wxFONTENCODING_ISO8859_1;
     m_OutputEnc = wxFONTENCODING_DEFAULT;
 #endif
+    m_whitespaceMode = Whitespace_Normal;
+    m_lastWordCell = NULL;
+    m_posColumn = 0;
 
     {
         int i, j, k, l, m;
@@ -226,8 +101,6 @@ wxHtmlWinParser::~wxHtmlWinParser()
     delete m_EncConv;
 #endif
     delete[] m_tmpStrBuf;
-
-    delete m_textParsingState;
 }
 
 void wxHtmlWinParser::AddModule(wxHtmlTagsModule *module)
@@ -329,20 +202,28 @@ void wxHtmlWinParser::InitParser(const wxString& source)
     m_FontBold = m_FontItalic = m_FontUnderlined = m_FontFixed = FALSE;
     m_FontSize = 3; //default one
     CreateCurrentFont();           // we're selecting default font into
-    m_DC->GetTextExtent( wxT("H"), &m_CharWidth, &m_CharHeight);
-                /* NOTE : we're not using GetCharWidth/Height() because
-                   of differences under X and win
-                 */
+
+    // we're not using GetCharWidth/Height() because of
+    // differences under X and win
+    wxCoord w,h;
+    m_DC->GetTextExtent( wxT("H"), &w, &h);
+    m_CharWidth = w;
+    m_CharHeight = h;
 
     m_UseLink = false;
     m_Link = wxHtmlLinkInfo( wxEmptyString );
     m_LinkColor.Set(0, 0, 0xFF);
     m_ActualColor.Set(0, 0, 0);
+    const wxColour windowColour = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW) ;
+    m_ActualBackgroundColor = m_windowInterface
+                            ? m_windowInterface->GetHTMLBackgroundColour()
+                            : windowColour;
+    m_ActualBackgroundMode = wxTRANSPARENT;
     m_Align = wxHTML_ALIGN_LEFT;
     m_ScriptMode = wxHTML_SCRIPT_NORMAL;
     m_ScriptBaseline = 0;
     m_tmpLastWasSpace = false;
-    m_textParsingState->m_lastWordCell = NULL;
+    m_lastWordCell = NULL;
 
     // open the toplevel container that contains everything else and that
     // is never closed (this makes parser's life easier):
@@ -362,16 +243,13 @@ void wxHtmlWinParser::InitParser(const wxString& source)
 #endif
 
     m_Container->InsertCell(new wxHtmlColourCell(m_ActualColor));
-    wxColour windowColour = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW) ;
 
     m_Container->InsertCell
                  (
                    new wxHtmlColourCell
                        (
-                         m_windowInterface
-                            ? m_windowInterface->GetHTMLBackgroundColour()
-                            : windowColour,
-                         wxHTML_CLR_BACKGROUND
+                         m_ActualBackgroundColor,
+                         m_ActualBackgroundMode == wxTRANSPARENT ? wxHTML_CLR_TRANSPARENT_BACKGROUND : wxHTML_CLR_BACKGROUND
                        )
                   );
 
@@ -469,27 +347,25 @@ wxFSFile *wxHtmlWinParser::OpenURL(wxHtmlURLType type,
     return GetFS()->OpenFile(myurl, flags);
 }
 
-void wxHtmlWinParser::SetWhitespaceMode(wxHtmlWinParser::WhitespaceMode mode)
-{
-    m_textParsingState->m_whitespaceMode = mode;
-}
+#define NBSP_UNICODE_VALUE  (wxChar(160))
+#if !wxUSE_UNICODE
+    #define CUR_NBSP_VALUE m_nbsp
+#else
+    #define CUR_NBSP_VALUE NBSP_UNICODE_VALUE
+#endif
 
-wxHtmlWinParser::WhitespaceMode wxHtmlWinParser::GetWhitespaceMode() const
+void wxHtmlWinParser::AddText(const wxString& txt)
 {
-    return m_textParsingState->m_whitespaceMode;
-}
+#if !wxUSE_UNICODE
+    if ( m_nbsp == 0 )
+        m_nbsp = GetEntitiesParser()->GetCharForCode(NBSP_UNICODE_VALUE);
+#endif
 
-void wxHtmlWinParser::AddText(const wxChar* txt)
-{
-    const wxChar nbsp = GetEntitiesParser()->GetCharForCode(160 /* nbsp */);
-
-    if ( m_textParsingState->m_whitespaceMode == Whitespace_Normal )
+    if ( m_whitespaceMode == Whitespace_Normal )
     {
-        size_t i = 0,
-               x,
-               lng = wxStrlen(txt);
         int templen = 0;
 
+        size_t lng = txt.length();
         if (lng+1 > m_tmpStrBufSize)
         {
             delete[] m_tmpStrBuf;
@@ -498,50 +374,61 @@ void wxHtmlWinParser::AddText(const wxChar* txt)
         }
         wxChar *temp = m_tmpStrBuf;
 
+        wxString::const_iterator i = txt.begin();
+        const wxString::const_iterator end = txt.end();
+
         if (m_tmpLastWasSpace)
         {
-            while ((i < lng) &&
-                   ((txt[i] == wxT('\n')) || (txt[i] == wxT('\r')) || (txt[i] == wxT(' ')) ||
-                    (txt[i] == wxT('\t')))) i++;
+            while ( (i < end) &&
+                    (*i == wxT('\n') || *i == wxT('\r') || *i == wxT(' ') ||
+                     *i == wxT('\t')) )
+            {
+                ++i;
+            }
         }
 
-        while (i < lng)
+        while (i < end)
         {
-            x = 0;
-            const wxChar d = temp[templen++] = txt[i];
+            size_t x = 0;
+            const wxChar d = temp[templen++] = *i;
             if ((d == wxT('\n')) || (d == wxT('\r')) || (d == wxT(' ')) || (d == wxT('\t')))
             {
-                i++, x++;
-                while ((i < lng) && ((txt[i] == wxT('\n')) || (txt[i] == wxT('\r')) ||
-                                     (txt[i] == wxT(' ')) || (txt[i] == wxT('\t')))) i++, x++;
+                ++i, ++x;
+                while ( (i < end) &&
+                        (*i == wxT('\n') || *i == wxT('\r') ||
+                         *i == wxT(' ') || *i == wxT('\t')) )
+                {
+                    ++i;
+                    ++x;
+                }
             }
-            else i++;
+            else
+            {
+                ++i;
+            }
 
             if (x)
             {
                 temp[templen-1] = wxT(' ');
-                FlushWordBuf(temp, templen, nbsp);
+                FlushWordBuf(temp, templen);
                 m_tmpLastWasSpace = true;
             }
         }
 
         if (templen && (templen > 1 || temp[0] != wxT(' ')))
         {
-            FlushWordBuf(temp, templen, nbsp);
+            FlushWordBuf(temp, templen);
             m_tmpLastWasSpace = false;
         }
     }
     else // m_whitespaceMode == Whitespace_Pre
     {
-        if ( wxStrchr(txt, nbsp) != NULL )
+        if ( txt.find(CUR_NBSP_VALUE) != wxString::npos )
         {
             // we need to substitute spaces for &nbsp; here just like we
             // did in the Whitespace_Normal branch above
             wxString txt2(txt);
-            wxChar nbsp_str[2];
-            nbsp_str[0] = nbsp;
-            nbsp_str[1] = 0;
-            txt2.Replace(nbsp_str, wxT(" "));
+            txt2.Replace(CUR_NBSP_VALUE, ' ');
             AddPreBlock(txt2);
         }
         else
@@ -554,13 +441,13 @@ void wxHtmlWinParser::AddText(const wxChar* txt)
     }
 }
 
-void wxHtmlWinParser::FlushWordBuf(wxChar *buf, int& len, wxChar nbsp)
+void wxHtmlWinParser::FlushWordBuf(wxChar *buf, int& len)
 {
     buf[len] = 0;
 
     for ( int i = 0; i < len; i++ )
     {
-        if ( buf[i] == nbsp )
+        if ( buf[i] == CUR_NBSP_VALUE )
             buf[i] = ' ';
     }
 
@@ -574,46 +461,39 @@ void wxHtmlWinParser::FlushWordBuf(wxChar *buf, int& len, wxChar nbsp)
     len = 0;
 }
 
-void wxHtmlWinParser::AddWord(const wxString& word)
+void wxHtmlWinParser::AddWord(wxHtmlWordCell *word)
 {
-    AddWord(new wxHtmlWordCell(word, *(GetDC())));
-}
+    ApplyStateToCell(word);
 
-void wxHtmlWinParser::AddWord(wxHtmlWordCell *c)
-{
-    ApplyStateToCell(c);
-
-    m_Container->InsertCell(c);
-    c->SetPreviousWord(m_textParsingState->m_lastWordCell);
-    m_textParsingState->m_lastWordCell = c;
+    m_Container->InsertCell(word);
+    word->SetPreviousWord(m_lastWordCell);
+    m_lastWordCell = word;
 }
 
 void wxHtmlWinParser::AddPreBlock(const wxString& text)
 {
-    if ( text.find(wxT('\t')) != wxString::npos )
+    if ( text.find('\t') != wxString::npos )
     {
         wxString text2;
         text2.reserve(text.length());
 
         const wxString::const_iterator end = text.end();
         wxString::const_iterator copyFrom = text.begin();
-        size_t posFrom = 0;
         size_t pos = 0;
-        int posColumn = m_textParsingState->m_posColumn;
+        int posColumn = m_posColumn;
         for ( wxString::const_iterator i = copyFrom; i != end; ++i, ++pos )
         {
-            if ( *i == wxT('\t') )
+            if ( *i == '\t' )
             {
                 if ( copyFrom != i )
                     text2.append(copyFrom, i);
 
                 const unsigned SPACES_PER_TAB = 8;
                 const size_t expandTo = SPACES_PER_TAB - posColumn % SPACES_PER_TAB;
-                text2.append(expandTo, wxT(' '));
+                text2.append(expandTo, ' ');
 
                 posColumn += expandTo;
                 copyFrom = i + 1;
-                posFrom = pos + 1;
             }
             else
             {
@@ -623,27 +503,24 @@ void wxHtmlWinParser::AddPreBlock(const wxString& text)
         if ( copyFrom != text.end() )
             text2.append(copyFrom, text.end());
 
-        AddWord(new wxHtmlWordWithTabsCell(text2, text,
-                                           m_textParsingState->m_posColumn,
-                                           *(GetDC())));
+        AddWord(new wxHtmlWordWithTabsCell(text2, text, m_posColumn, *(GetDC())));
 
-        m_textParsingState->m_posColumn = posColumn;
+        m_posColumn = posColumn;
     }
     else
     {
         // no special formatting needed
         AddWord(text);
-        m_textParsingState->m_posColumn += text.length();
+        m_posColumn += text.length();
     }
 }
-
 
 
 wxHtmlContainerCell* wxHtmlWinParser::OpenContainer()
 {
     m_Container = new wxHtmlContainerCell(m_Container);
     m_Container->SetAlignHor(m_Align);
-    m_textParsingState->m_posColumn = 0;
+    m_posColumn = 0;
     m_tmpLastWasSpace = true;
         /* to avoid space being first character in paragraph */
     return m_Container;
@@ -669,12 +546,50 @@ wxHtmlContainerCell* wxHtmlWinParser::CloseContainer()
 
 void wxHtmlWinParser::SetFontSize(int s)
 {
-    if (s < 1) s = 1;
-    else if (s > 7) s = 7;
+    if (s < 1)
+        s = 1;
+    else if (s > 7)
+        s = 7;
     m_FontSize = s;
 }
 
 
+void wxHtmlWinParser::SetDC(wxDC *dc, double pixel_scale, double font_scale)
+{
+    m_DC = dc;
+    m_PixelScale = pixel_scale;
+    m_FontScale = font_scale;
+}
+
+void wxHtmlWinParser::SetFontPointSize(int pt)
+{
+    if (pt <= m_FontsSizes[0])
+        m_FontSize = 1;
+    else if (pt >= m_FontsSizes[6])
+        m_FontSize = 7;
+    else
+    {
+        // Find the font closest to the given value with a simple linear search
+        // (binary search is not worth it here for so small number of elements)
+        for ( int n = 0; n < 6; n++ )
+        {
+            if ( (pt > m_FontsSizes[n]) && (pt <= m_FontsSizes[n + 1]) )
+            {
+                if ( (pt - m_FontsSizes[n]) >= (m_FontsSizes[n + 1] - pt) )
+                {
+                    // The actual size is closer to the next entry than to this
+                    // one, so use it.
+                    n++;
+                }
+
+                // Notice that m_FontSize starts from 1, hence +1 here.
+                m_FontSize = n + 1;
+
+                break;
+            }
+        }
+    }
+}
 
 wxFont* wxHtmlWinParser::CreateCurrentFont()
 {
@@ -697,15 +612,14 @@ wxFont* wxHtmlWinParser::CreateCurrentFont()
 #endif
                             ))
     {
-        delete *fontptr;
-        *fontptr = NULL;
+        wxDELETE(*fontptr);
     }
 
     if (*fontptr == NULL)
     {
         *faceptr = face;
         *fontptr = new wxFont(
-                       (int) (m_FontsSizes[fs] * m_PixelScale),
+                       (int) (m_FontsSizes[fs] * m_FontScale),
                        ff ? wxMODERN : wxSWISS,
                        fi ? wxITALIC : wxNORMAL,
                        fb ? wxBOLD : wxNORMAL,
@@ -731,8 +645,10 @@ void wxHtmlWinParser::SetLink(const wxHtmlLinkInfo& link)
 
 void wxHtmlWinParser::SetFontFace(const wxString& face)
 {
-    if (GetFontFixed()) m_FontFaceFixed = face;
-    else m_FontFaceNormal = face;
+    if (GetFontFixed())
+        m_FontFaceFixed = face;
+    else
+        m_FontFaceNormal = face;
 
 #if !wxUSE_UNICODE
     if (m_InputEnc != wxFONTENCODING_DEFAULT)
@@ -754,36 +670,43 @@ void wxHtmlWinParser::ApplyStateToCell(wxHtmlCell *cell)
 #if !wxUSE_UNICODE
 void wxHtmlWinParser::SetInputEncoding(wxFontEncoding enc)
 {
-    m_InputEnc = m_OutputEnc = wxFONTENCODING_DEFAULT;
-    if (m_EncConv)
-    {
-        delete m_EncConv;
-        m_EncConv = NULL;
-    }
+    // the character used for non-breakable space may change:
+    m_nbsp = 0;
 
-    if (enc == wxFONTENCODING_DEFAULT) return;
+    m_InputEnc = m_OutputEnc = wxFONTENCODING_DEFAULT;
+    wxDELETE(m_EncConv);
+
+    if (enc == wxFONTENCODING_DEFAULT)
+        return;
 
     wxFontEncoding altfix, altnorm;
     bool availfix, availnorm;
 
-    // exact match?
     availnorm = wxFontMapper::Get()->IsEncodingAvailable(enc, m_FontFaceNormal);
     availfix = wxFontMapper::Get()->IsEncodingAvailable(enc, m_FontFaceFixed);
-    if (availnorm && availfix)
-        m_OutputEnc = enc;
 
-    // alternatives?
+    if (availnorm && availfix)
+    {
+        // exact match?
+        m_OutputEnc = enc;
+    }
+
     else if (wxFontMapper::Get()->GetAltForEncoding(enc, &altnorm, m_FontFaceNormal, false) &&
              wxFontMapper::Get()->GetAltForEncoding(enc, &altfix, m_FontFaceFixed, false) &&
              altnorm == altfix)
+    {
+        // alternatives?
         m_OutputEnc = altnorm;
-
-    // at least normal face?
+    }
     else if (availnorm)
+    {
+        // at least normal face?
         m_OutputEnc = enc;
+    }
     else if (wxFontMapper::Get()->GetAltForEncoding(enc, &altnorm, m_FontFaceNormal, false))
+    {
         m_OutputEnc = altnorm;
-
+    }
     else
     {
 #ifndef __WXMAC__
@@ -796,11 +719,16 @@ void wxHtmlWinParser::SetInputEncoding(wxFontEncoding enc)
 
     m_InputEnc = enc;
     if (m_OutputEnc == wxFONTENCODING_DEFAULT)
+    {
         GetEntitiesParser()->SetEncoding(wxFONTENCODING_SYSTEM);
+    }
     else
+    {
         GetEntitiesParser()->SetEncoding(m_OutputEnc);
+    }
 
-    if (m_InputEnc == m_OutputEnc) return;
+    if (m_InputEnc == m_OutputEnc)
+        return;
 
     m_EncConv = new wxEncodingConverter();
     if (!m_EncConv->Init(m_InputEnc,
@@ -811,8 +739,7 @@ void wxHtmlWinParser::SetInputEncoding(wxFontEncoding enc)
         wxLogError(_("Failed to display HTML document in %s encoding"),
                    wxFontMapper::GetEncodingName(enc).c_str());
         m_InputEnc = m_OutputEnc = wxFONTENCODING_DEFAULT;
-        delete m_EncConv;
-        m_EncConv = NULL;
+        wxDELETE(m_EncConv);
     }
 }
 #endif
@@ -825,6 +752,112 @@ void wxHtmlWinParser::SetInputEncoding(wxFontEncoding enc)
 //-----------------------------------------------------------------------------
 
 IMPLEMENT_ABSTRACT_CLASS(wxHtmlWinTagHandler, wxHtmlTagHandler)
+
+void wxHtmlWinTagHandler::ApplyStyle(const wxHtmlStyleParams &styleParams)
+{
+    wxString str;
+
+    str = styleParams.GetParam(wxS("color"));
+    if ( !str.empty() )
+    {
+        wxColour clr;
+        if ( wxHtmlTag::ParseAsColour(str, &clr) )
+        {
+            m_WParser->SetActualColor(clr);
+            m_WParser->GetContainer()->InsertCell(new wxHtmlColourCell(clr));
+        }
+    }
+
+    str = styleParams.GetParam(wxS("background-color"));
+    if ( !str.empty() )
+    {
+        wxColour clr;
+        if ( wxHtmlTag::ParseAsColour(str, &clr) )
+        {
+            m_WParser->SetActualBackgroundColor(clr);
+            m_WParser->SetActualBackgroundMode(wxSOLID);
+            m_WParser->GetContainer()->InsertCell(new wxHtmlColourCell(clr, wxHTML_CLR_BACKGROUND));
+        }
+    }
+
+    str = styleParams.GetParam(wxS("font-size"));
+    if ( !str.empty() )
+    {
+        // Point size
+        int foundIndex = str.Find(wxS("pt"));
+        if (foundIndex != wxNOT_FOUND)
+        {
+            str.Truncate(foundIndex);
+
+            long sizeValue;
+            if (str.ToLong(&sizeValue) == true)
+            {
+                // Set point size
+                m_WParser->SetFontPointSize(sizeValue);
+                m_WParser->GetContainer()->InsertCell(
+                    new wxHtmlFontCell(m_WParser->CreateCurrentFont()));
+            }
+        }
+        // else: check for other ways of specifying size (TODO)
+    }
+
+    str = styleParams.GetParam(wxS("font-weight"));
+    if ( !str.empty() )
+    {
+        // Only bold and normal supported just now
+        if ( str == wxS("bold") )
+        {
+            m_WParser->SetFontBold(true);
+            m_WParser->GetContainer()->InsertCell(
+                new wxHtmlFontCell(m_WParser->CreateCurrentFont()));
+        }
+        else if ( str == wxS("normal") )
+        {
+            m_WParser->SetFontBold(false);
+            m_WParser->GetContainer()->InsertCell(
+                new wxHtmlFontCell(m_WParser->CreateCurrentFont()));
+        }
+    }
+
+    str = styleParams.GetParam(wxS("font-style"));
+    if ( !str.empty() )
+    {
+        // "oblique" and "italic" are more or less the same.
+        // "inherit" (using the parent font) is not supported.
+        if ( str == wxS("oblique") || str == wxS("italic") )
+        {
+            m_WParser->SetFontItalic(true);
+            m_WParser->GetContainer()->InsertCell(
+                new wxHtmlFontCell(m_WParser->CreateCurrentFont()));
+        }
+        else if ( str == wxS("normal") )
+        {
+            m_WParser->SetFontItalic(false);
+            m_WParser->GetContainer()->InsertCell(
+                new wxHtmlFontCell(m_WParser->CreateCurrentFont()));
+        }
+    }
+
+    str = styleParams.GetParam(wxS("text-decoration"));
+    if ( !str.empty() )
+    {
+        // Only underline is supported.
+        if ( str == wxS("underline") )
+        {
+            m_WParser->SetFontUnderlined(true);
+            m_WParser->GetContainer()->InsertCell(
+                new wxHtmlFontCell(m_WParser->CreateCurrentFont()));
+        }
+    }
+
+    str = styleParams.GetParam(wxS("font-family"));
+    if ( !str.empty() )
+    {
+        m_WParser->SetFontFace(str);
+        m_WParser->GetContainer()->InsertCell(
+            new wxHtmlFontCell(m_WParser->CreateCurrentFont()));
+    }
+}
 
 //-----------------------------------------------------------------------------
 // wxHtmlTagsModule

@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: button.cpp 50982 2008-01-01 20:38:33Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -34,8 +33,6 @@
 
 void wxButtonCallback (Widget w, XtPointer clientData, XtPointer ptr);
 
-IMPLEMENT_DYNAMIC_CLASS(wxButton, wxControl)
-
 #define MIN_WIDTH 78
 #define MIN_LARGE_HEIGHT 30
 
@@ -53,6 +50,7 @@ bool wxButton::Create(wxWindow *parent, wxWindowID id, const wxString& lbl,
 
     if( !CreateControl( parent, id, pos, size, style, validator, name ) )
         return false;
+    PreCreation();
 
     wxXmString text( GetLabelText(label) );
 
@@ -85,10 +83,9 @@ bool wxButton::Create(wxWindow *parent, wxWindowID id, const wxString& lbl,
     if( size.x != -1 ) best.x = size.x;
     if( size.y != -1 ) best.y = size.y;
 
+    PostCreation();
     AttachWidget (parent, m_mainWidget, (WXWidget) NULL,
                   pos.x, pos.y, best.x, best.y);
-
-    ChangeBackgroundColour();
 
     return true;
 }
@@ -121,11 +118,9 @@ void wxButton::SetDefaultShadowThicknessAndResize()
 }
 
 
-void wxButton::SetDefault()
+wxWindow *wxButton::SetDefault()
 {
-    wxTopLevelWindow *tlw = wxDynamicCast(wxGetTopLevelParent(this), wxTopLevelWindow);
-    if ( tlw )
-        tlw->SetDefaultItem(this);
+    wxWindow *oldDefault = wxButtonBase::SetDefault();
 
     // We initially do not set XmNdefaultShadowThickness, to have
     // small buttons.  Unfortunately, buttons are now mis-aligned. We
@@ -147,6 +142,8 @@ void wxButton::SetDefault()
     XtVaSetValues ((Widget) parent->GetMainWidget(),
                    XmNdefaultButton, (Widget) GetMainWidget(),
                    NULL);
+
+    return oldDefault;
 }
 
 static inline bool wxMotifLargeButtons()
@@ -244,7 +241,7 @@ void wxButtonCallback (Widget w, XtPointer clientData, XtPointer WXUNUSED(ptr))
         return;
 
     wxButton *item = (wxButton *) clientData;
-    wxCommandEvent event (wxEVT_COMMAND_BUTTON_CLICKED, item->GetId());
+    wxCommandEvent event (wxEVT_BUTTON, item->GetId());
     event.SetEventObject(item);
     item->ProcessCommand (event);
 }

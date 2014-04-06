@@ -4,7 +4,6 @@
 // Author:      Francesco Montorsi
 // Modified By:
 // Created:     8/10/2006
-// Id:          $Id: collpane.cpp 47274 2007-07-09 19:49:50Z RD $
 // Copyright:   (c) Francesco Montorsi
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -17,17 +16,25 @@
 // For compilers that support precompilation, includes "wx.h".
 #include "wx/wxprec.h"
 
-#if wxUSE_COLLPANE && defined(__WXGTK24__) && !defined(__WXUNIVERSAL__)
+#if wxUSE_COLLPANE && !defined(__WXUNIVERSAL__)
 
 #include "wx/collpane.h"
 #include "wx/toplevel.h"
 #include "wx/sizer.h"
 #include "wx/panel.h"
 
+#include <gtk/gtk.h>
 #include "wx/gtk/private.h"
-#include "wx/gtk/win_gtk.h"
+#include "wx/gtk/private/gtk2-compat.h"
 
-#include <gtk/gtkexpander.h>
+// the lines below duplicate the same definitions in collpaneg.cpp, if we have
+// another implementation of this class we should extract them to a common file
+
+const char wxCollapsiblePaneNameStr[] = "collapsiblePane";
+
+wxDEFINE_EVENT( wxEVT_COLLAPSIBLEPANE_CHANGED, wxCollapsiblePaneEvent );
+
+IMPLEMENT_DYNAMIC_CLASS(wxCollapsiblePaneEvent, wxCommandEvent)
 
 // ============================================================================
 // implementation
@@ -39,9 +46,10 @@
 
 extern "C" {
 
-static void gtk_collapsiblepane_expanded_callback (GObject    *object,
-                                                    GParamSpec *param_spec,
-                                                    wxCollapsiblePane *p)
+static void
+gtk_collapsiblepane_expanded_callback(GObject * WXUNUSED(object),
+                                      GParamSpec * WXUNUSED(param_spec),
+                                      wxCollapsiblePane *p)
 {
     // NB: unlike for the "activate" signal, when this callback is called, if
     //     we try to query the "collapsed" status through p->IsCollapsed(), we
@@ -88,16 +96,16 @@ static void gtk_collapsiblepane_expanded_callback (GObject    *object,
 
     // 1) need to update our size hints
     // NB: this function call won't actually do any long operation
-    //     (redraw/relayouting/resizing) so that it's flicker-free
+    //     (redraw/relayout/resize) so that it's flicker-free
     p->SetMinSize(sz);
 
     if (p->HasFlag(wxCP_NO_TLW_RESIZE))
     {
         // fire an event
         wxCollapsiblePaneEvent ev(p, p->GetId(), p->IsCollapsed());
-        p->GetEventHandler()->ProcessEvent(ev);
-    
-        // the user asked to explicitely handle the resizing itself...
+        p->HandleWindowEvent(ev);
+
+        // the user asked to explicitly handle the resizing itself...
         return;
     }
 
@@ -106,52 +114,25 @@ static void gtk_collapsiblepane_expanded_callback (GObject    *object,
     if ( top && top->GetSizer() )
     {
         // 2) recalculate minimal size of the top window
-        wxSize sz = top->GetSizer()->CalcMin();
+        sz = top->GetSizer()->CalcMin();
 
         if (top->m_mainWidget)
         {
-            // 3) MAGIC HACK: if you ever used GtkExpander in a GTK+ program you know
-            //    that this magic call is required to make it possible to shrink the
-            //    top level window in the expanded->collapsed transition.
-            //    This may be sometimes undesired but *is* necessary and if you look
-            //    carefully, all GTK+ programs using GtkExpander perform this trick
-            //    (e.g. the standard "open file" dialog of GTK+>=2.4 is not resizeable
-            //     when the expander is collapsed!)
+            // 3) MAGIC HACK: if you ever used GtkExpander in a GTK+ program
+            //    you know that this magic call is required to make it possible
+            //    to shrink the top level window in the expanded->collapsed
+            //    transition.  This may be sometimes undesired but *is*
+            //    necessary and if you look carefully, all GTK+ programs using
+            //    GtkExpander perform this trick (e.g. the standard "open file"
+            //    dialog of GTK+>=2.4 is not resizable when the expander is
+            //    collapsed!)
             gtk_window_set_resizable (GTK_WINDOW (top->m_widget), p->IsExpanded());
 
-            // 4) set size hints: note that this code has been taken and adapted
-            //    from src/gtk/toplevel.cpp
-            GdkGeometry geom;
+            // 4) set size hints
+            top->SetMinClientSize(sz);
 
-            geom.min_width = sz.x;
-            geom.min_height = sz.y;
-
-            gtk_window_set_geometry_hints( GTK_WINDOW(top->m_widget),
-                                           (GtkWidget*) NULL,
-                                           &geom,
-                                           GDK_HINT_MIN_SIZE );
-
-            // 5) set size: also this code has been adapted from src/gtk/toplevel.cpp
-            //    to do the size changes immediately and not delaying them in the idle
-            //    time
-            top->m_width = sz.x;
-            top->m_height = sz.y;
-
-            int client_x = top->m_miniEdge;
-            int client_y = top->m_miniEdge + top->m_miniTitle;
-            int client_w = top->m_width - 2*top->m_miniEdge;
-            int client_h = top->m_height - 2*top->m_miniEdge - top->m_miniTitle;
-            if (client_w < 0)
-                client_w = 0;
-            if (client_h < 0)
-                client_h = 0;
-
-            gtk_pizza_set_size( GTK_PIZZA(top->m_mainWidget),
-                                top->m_wxwindow,
-                                client_x, client_y, client_w, client_h );
-
-            gtk_widget_set_size_request( top->m_wxwindow, sz.x, sz.y );
-
+            // 5) set size
+            top->SetClientSize(sz);
         }
     }
 
@@ -164,28 +145,27 @@ static void gtk_collapsiblepane_expanded_callback (GObject    *object,
 
     // fire an event
     wxCollapsiblePaneEvent ev(p, p->GetId(), p->IsCollapsed());
-    p->GetEventHandler()->ProcessEvent(ev);
+    p->HandleWindowEvent(ev);
 }
 }
 
-static void
-gtk_collapsiblepane_insert_callback(wxWindowGTK* parent, wxWindowGTK* child)
+void wxCollapsiblePane::AddChildGTK(wxWindowGTK* child)
 {
-    // this callback should be used only once to insert the "pane" into the
+    // should be used only once to insert the "pane" into the
     // GtkExpander widget. wxGenericCollapsiblePane::DoAddChild() will check if
     // it has been called only once (and in any case we would get a warning
     // from the following call as GtkExpander is a GtkBin and can contain only
     // a single child!).
-    gtk_container_add (GTK_CONTAINER (parent->m_widget), child->m_widget);
+    gtk_container_add(GTK_CONTAINER(m_widget), child->m_widget);
 }
 
 //-----------------------------------------------------------------------------
 // wxCollapsiblePane
 //-----------------------------------------------------------------------------
 
-IMPLEMENT_DYNAMIC_CLASS(wxCollapsiblePane, wxGenericCollapsiblePane)
+IMPLEMENT_DYNAMIC_CLASS(wxCollapsiblePane, wxControl)
 
-BEGIN_EVENT_TABLE(wxCollapsiblePane, wxGenericCollapsiblePane)
+BEGIN_EVENT_TABLE(wxCollapsiblePane, wxCollapsiblePaneBase)
     EVT_SIZE(wxCollapsiblePane::OnSize)
 END_EVENT_TABLE()
 
@@ -198,12 +178,6 @@ bool wxCollapsiblePane::Create(wxWindow *parent,
                                const wxValidator& val,
                                const wxString& name)
 {
-    if (gtk_check_version(2,4,0))
-        return wxGenericCollapsiblePane::Create(parent, id, label,
-                                                pos, size, style, val, name);
-
-    m_needParent = true;
-    m_acceptsFocus = true;
     m_bIgnoreNextChange = false;
 
     if ( !PreCreation( parent, pos, size ) ||
@@ -215,6 +189,7 @@ bool wxCollapsiblePane::Create(wxWindow *parent,
 
     m_widget =
         gtk_expander_new_with_mnemonic(wxGTK_CONV(GTKConvertMnemonics(label)));
+    g_object_ref(m_widget);
 
     // see the gtk_collapsiblepane_expanded_callback comments to understand why
     // we connect to the "notify::expanded" signal instead of the more common
@@ -222,18 +197,18 @@ bool wxCollapsiblePane::Create(wxWindow *parent,
     g_signal_connect(m_widget, "notify::expanded",
                      G_CALLBACK(gtk_collapsiblepane_expanded_callback), this);
 
-    // before creating m_pPane, we need to makesure our own insert callback
-    // will be used
-    m_insertCallback = gtk_collapsiblepane_insert_callback;
-
     // this the real "pane"
     m_pPane = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize,
-                           wxTAB_TRAVERSAL|wxNO_BORDER);
+                          wxTAB_TRAVERSAL|wxNO_BORDER, wxS("wxCollapsiblePanePane"));
 
-    gtk_widget_show( GTK_WIDGET(m_widget) );
     m_parent->DoAddChild( this );
 
     PostCreation(size);
+
+    // we should blend into our parent background
+    const wxColour bg = parent->GetBackgroundColour();
+    SetBackgroundColour(bg);
+    m_pPane->SetBackgroundColour(bg);
 
     // remember the size of this control when it's collapsed
     m_szCollapsed = GetBestSize();
@@ -243,60 +218,44 @@ bool wxCollapsiblePane::Create(wxWindow *parent,
 
 wxSize wxCollapsiblePane::DoGetBestSize() const
 {
-    if (!gtk_check_version(2,4,0))
-    {
-        wxASSERT_MSG( m_widget, wxT("DoGetBestSize called before creation") );
+    wxASSERT_MSG( m_widget, wxT("DoGetBestSize called before creation") );
 
-        GtkRequisition req;
-        req.width = 2;
-        req.height = 2;
-        (* GTK_WIDGET_CLASS( GTK_OBJECT_GET_CLASS(m_widget) )->size_request )
-                (m_widget, &req );
+    GtkRequisition req;
+#ifdef __WXGTK3__
+    gtk_widget_get_preferred_size(m_widget, NULL, &req);
+#else
+    GTK_WIDGET_GET_CLASS(m_widget)->size_request(m_widget, &req);
+#endif
 
-        // notice that we do not cache our best size here as it changes
-        // all times the user expands/hide our pane
-        return wxSize(req.width, req.height);
-    }
-
-    return wxGenericCollapsiblePane::DoGetBestSize();
+    // notice that we do not cache our best size here as it changes
+    // all times the user expands/hide our pane
+    return wxSize(req.width, req.height);
 }
 
 void wxCollapsiblePane::Collapse(bool collapse)
 {
-    if (!gtk_check_version(2,4,0))
-    {
-        // optimization
-        if (IsCollapsed() == collapse)
-            return;
+    // optimization
+    if (IsCollapsed() == collapse)
+        return;
 
-        // do not send event in next signal handler call
-        m_bIgnoreNextChange = true;
-        gtk_expander_set_expanded(GTK_EXPANDER(m_widget), !collapse);
-    }
-    else
-        wxGenericCollapsiblePane::Collapse(collapse);
+    // do not send event in next signal handler call
+    m_bIgnoreNextChange = true;
+    gtk_expander_set_expanded(GTK_EXPANDER(m_widget), !collapse);
 }
 
 bool wxCollapsiblePane::IsCollapsed() const
 {
-    if (!gtk_check_version(2,4,0))
-        return !gtk_expander_get_expanded(GTK_EXPANDER(m_widget));
-
-    return wxGenericCollapsiblePane::IsCollapsed();
+    return !gtk_expander_get_expanded(GTK_EXPANDER(m_widget));
 }
 
 void wxCollapsiblePane::SetLabel(const wxString &str)
 {
-    if (!gtk_check_version(2,4,0))
-    {
-        gtk_expander_set_label(GTK_EXPANDER(m_widget), wxGTK_CONV(str));
+    gtk_expander_set_label(GTK_EXPANDER(m_widget),
+                           wxGTK_CONV(GTKConvertMnemonics(str)));
 
-        // FIXME: we need to update our collapsed width in some way but using GetBestSize()
-        // we may get the size of the control with the pane size summed up if we are expanded!
-        //m_szCollapsed.x = GetBestSize().x;
-    }
-    else
-        wxGenericCollapsiblePane::SetLabel(str);
+    // FIXME: we need to update our collapsed width in some way but using GetBestSize()
+    // we may get the size of the control with the pane size summed up if we are expanded!
+    //m_szCollapsed.x = GetBestSize().x;
 }
 
 void wxCollapsiblePane::OnSize(wxSizeEvent &ev)
@@ -311,13 +270,23 @@ void wxCollapsiblePane::OnSize(wxSizeEvent &ev)
 #endif
 
     // here we need to resize the pane window otherwise, even if the GtkExpander container
-    // is expanded or shrinked, the pane window won't be updated!
+    // is expanded or shrunk, the pane window won't be updated!
     m_pPane->SetSize(ev.GetSize().x, ev.GetSize().y - m_szCollapsed.y);
 
-    // we need to explicitely call m_pPane->Layout() or else it won't correctly relayout
+    // we need to explicitly call m_pPane->Layout() or else it won't correctly relayout
     // (even if SetAutoLayout(true) has been called on it!)
     m_pPane->Layout();
 }
 
-#endif // wxUSE_COLLPANE && defined(__WXGTK24__) && !defined(__WXUNIVERSAL__)
+
+GdkWindow *wxCollapsiblePane::GTKGetWindow(wxArrayGdkWindows& windows) const
+{
+    GtkWidget *label = gtk_expander_get_label_widget( GTK_EXPANDER(m_widget) );
+    windows.Add(gtk_widget_get_window(label));
+    windows.Add(gtk_widget_get_window(m_widget));
+
+    return NULL;
+}
+
+#endif // wxUSE_COLLPANE && !defined(__WXUNIVERSAL__)
 

@@ -3,7 +3,6 @@
 // Purpose:     implements wxGenericAboutBox() function
 // Author:      Vadim Zeitlin
 // Created:     2006-10-08
-// RCS-ID:      $Id: aboutdlgg.cpp 58761 2009-02-08 14:55:44Z VZ $
 // Copyright:   (c) 2006 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -51,7 +50,7 @@ static wxString AllAsString(const wxArrayString& a)
     s.reserve(20*count);
     for ( size_t n = 0; n < count; n++ )
     {
-        s << a[n] << (n == count - 1 ? _T("\n") : _T(", "));
+        s << a[n] << (n == count - 1 ? wxT("\n") : wxT(", "));
     }
 
     return s;
@@ -65,19 +64,19 @@ wxString wxAboutDialogInfo::GetDescriptionAndCredits() const
 {
     wxString s = GetDescription();
     if ( !s.empty() )
-        s << _T('\n');
+        s << wxT('\n');
 
     if ( HasDevelopers() )
-        s << _T('\n') << _("Developed by ") << AllAsString(GetDevelopers());
+        s << wxT('\n') << _("Developed by ") << AllAsString(GetDevelopers());
 
     if ( HasDocWriters() )
-        s << _T('\n') << _("Documentation by ") << AllAsString(GetDocWriters());
+        s << wxT('\n') << _("Documentation by ") << AllAsString(GetDocWriters());
 
     if ( HasArtists() )
-        s << _T('\n') << _("Graphics art by ") << AllAsString(GetArtists());
+        s << wxT('\n') << _("Graphics art by ") << AllAsString(GetArtists());
 
     if ( HasTranslators() )
-        s << _T('\n') << _("Translations by ") << AllAsString(GetTranslators());
+        s << wxT('\n') << _("Translations by ") << AllAsString(GetTranslators());
 
     return s;
 }
@@ -85,7 +84,7 @@ wxString wxAboutDialogInfo::GetDescriptionAndCredits() const
 wxIcon wxAboutDialogInfo::GetIcon() const
 {
     wxIcon icon = m_icon;
-    if ( !icon.Ok() && wxTheApp )
+    if ( !icon.IsOk() && wxTheApp )
     {
         const wxTopLevelWindow * const
             tlw = wxDynamicCast(wxTheApp->GetTopWindow(), wxTopLevelWindow);
@@ -102,28 +101,50 @@ wxString wxAboutDialogInfo::GetCopyrightToDisplay() const
 
 #if wxUSE_UNICODE
     const wxString copyrightSign = wxString::FromUTF8("\xc2\xa9");
-    ret.Replace(_T("(c)"), copyrightSign);
-    ret.Replace(_T("(C)"), copyrightSign);
+    ret.Replace("(c)", copyrightSign);
+    ret.Replace("(C)", copyrightSign);
 #endif // wxUSE_UNICODE
 
     return ret;
+}
+
+void wxAboutDialogInfo::SetVersion(const wxString& version,
+                                   const wxString& longVersion)
+{
+    if ( version.empty() )
+    {
+        m_version.clear();
+
+        wxASSERT_MSG( longVersion.empty(),
+                      "long version should be empty if version is");
+
+        m_longVersion.clear();
+    }
+    else // setting valid version
+    {
+        m_version = version;
+
+        if ( longVersion.empty() )
+            m_longVersion = _("Version ") + m_version;
+        else
+            m_longVersion = longVersion;
+    }
 }
 
 // ----------------------------------------------------------------------------
 // wxGenericAboutDialog
 // ----------------------------------------------------------------------------
 
-bool wxGenericAboutDialog::Create(const wxAboutDialogInfo& info)
+bool wxGenericAboutDialog::Create(const wxAboutDialogInfo& info, wxWindow* parent)
 {
-    // TODO: should we use main frame as parent by default here?
-    if ( !wxDialog::Create(NULL, wxID_ANY, _("About ") + info.GetName(),
+    if ( !wxDialog::Create(parent, wxID_ANY, wxString::Format(_("About %s"), info.GetName()),
                            wxDefaultPosition, wxDefaultSize, wxRESIZE_BORDER|wxDEFAULT_DIALOG_STYLE) )
         return false;
 
     m_sizerText = new wxBoxSizer(wxVERTICAL);
     wxString nameAndVersion = info.GetName();
     if ( info.HasVersion() )
-        nameAndVersion << _T(' ') << info.GetVersion();
+        nameAndVersion << wxT(' ') << info.GetVersion();
     wxStaticText *label = new wxStaticText(this, wxID_ANY, nameAndVersion);
     wxFont fontBig(*wxNORMAL_FONT);
     fontBig.SetPointSize(fontBig.GetPointSize() + 2);
@@ -174,7 +195,7 @@ bool wxGenericAboutDialog::Create(const wxAboutDialogInfo& info)
     wxSizer *sizerIconAndText = new wxBoxSizer(wxHORIZONTAL);
 #if wxUSE_STATBMP
     wxIcon icon = info.GetIcon();
-    if ( icon.Ok() )
+    if ( icon.IsOk() )
     {
         sizerIconAndText->Add(new wxStaticBitmap(this, wxID_ANY, icon),
                                 wxSizerFlags().Border(wxRIGHT));
@@ -185,23 +206,33 @@ bool wxGenericAboutDialog::Create(const wxAboutDialogInfo& info)
     wxSizer *sizerTop = new wxBoxSizer(wxVERTICAL);
     sizerTop->Add(sizerIconAndText, wxSizerFlags(1).Expand().Border());
 
+// Mac typically doesn't use OK buttons just for dismissing dialogs.
+#if !defined(__WXMAC__)
     wxSizer *sizerBtns = CreateButtonSizer(wxOK);
     if ( sizerBtns )
     {
         sizerTop->Add(sizerBtns, wxSizerFlags().Expand().Border());
     }
+#endif
 
     SetSizerAndFit(sizerTop);
 
-    CentreOnScreen();
+    CentreOnParent();
+
+#if !wxUSE_MODAL_ABOUT_DIALOG
+    Connect(wxEVT_CLOSE_WINDOW,
+            wxCloseEventHandler(wxGenericAboutDialog::OnCloseWindow));
+    Connect(wxID_OK, wxEVT_BUTTON,
+            wxCommandEventHandler(wxGenericAboutDialog::OnOK));
+#endif // !wxUSE_MODAL_ABOUT_DIALOG
 
     return true;
 }
 
 void wxGenericAboutDialog::AddControl(wxWindow *win, const wxSizerFlags& flags)
 {
-    wxCHECK_RET( m_sizerText, _T("can only be called after Create()") );
-    wxASSERT_MSG( win, _T("can't add NULL window to about dialog") );
+    wxCHECK_RET( m_sizerText, wxT("can only be called after Create()") );
+    wxASSERT_MSG( win, wxT("can't add NULL window to about dialog") );
 
     m_sizerText->Add(win, flags);
 }
@@ -217,11 +248,13 @@ void wxGenericAboutDialog::AddText(const wxString& text)
         AddControl(new wxStaticText(this, wxID_ANY, text));
 }
 
+#if wxUSE_COLLPANE
 void wxGenericAboutDialog::AddCollapsiblePane(const wxString& title,
                                               const wxString& text)
 {
     wxCollapsiblePane *pane = new wxCollapsiblePane(this, wxID_ANY, title);
-    wxStaticText *txt = new wxStaticText(pane->GetPane(), wxID_ANY, text,
+    wxWindow * const paneContents = pane->GetPane();
+    wxStaticText *txt = new wxStaticText(paneContents, wxID_ANY, text,
                                          wxDefaultPosition, wxDefaultSize,
                                          wxALIGN_CENTRE);
 
@@ -229,27 +262,58 @@ void wxGenericAboutDialog::AddCollapsiblePane(const wxString& title,
     static const int maxWidth = wxGetDisplaySize().x/3;
     txt->Wrap(maxWidth);
 
+
+    // we need a sizer to make this text expand to fill the entire pane area
+    wxSizer * const sizerPane = new wxBoxSizer(wxHORIZONTAL);
+    sizerPane->Add(txt, wxSizerFlags(1).Expand());
+    paneContents->SetSizer(sizerPane);
+
     // NB: all the wxCollapsiblePanes must be added with a null proportion value
     m_sizerText->Add(pane, wxSizerFlags(0).Expand().Border(wxBOTTOM));
 }
+#endif
+
+#if !wxUSE_MODAL_ABOUT_DIALOG
+
+void wxGenericAboutDialog::OnCloseWindow(wxCloseEvent& event)
+{
+    Destroy();
+
+    event.Skip();
+}
+
+void wxGenericAboutDialog::OnOK(wxCommandEvent& WXUNUSED(event))
+{
+    // By default a modeless dialog would be just hidden, destroy this one
+    // instead.
+    Destroy();
+}
+
+#endif // !wxUSE_MODAL_ABOUT_DIALOG
 
 // ----------------------------------------------------------------------------
 // public functions
 // ----------------------------------------------------------------------------
 
-void wxGenericAboutBox(const wxAboutDialogInfo& info)
+void wxGenericAboutBox(const wxAboutDialogInfo& info, wxWindow* parent)
 {
-    wxGenericAboutDialog dlg(info);
+#if wxUSE_MODAL_ABOUT_DIALOG
+    wxGenericAboutDialog dlg(info, parent);
     dlg.ShowModal();
+#else
+    wxGenericAboutDialog* dlg = new wxGenericAboutDialog(info, parent);
+    dlg->Show();
+#endif
 }
 
 // currently wxAboutBox is implemented natively only under these platforms, for
 // the others we provide a generic fallback here
-#if !defined(__WXMSW__) && !defined(__WXMAC__) && !defined(__WXGTK26__)
+#if !defined(__WXMSW__) && !defined(__WXMAC__) && \
+        (!defined(__WXGTK20__) || defined(__WXUNIVERSAL__))
 
-void wxAboutBox(const wxAboutDialogInfo& info)
+void wxAboutBox(const wxAboutDialogInfo& info, wxWindow* parent)
 {
-    wxGenericAboutBox(info);
+    wxGenericAboutBox(info, parent);
 }
 
 #endif // platforms without native about dialog

@@ -1,10 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Name:        univ/theme.cpp
+// Name:        src/univ/theme.cpp
 // Purpose:     implementation of wxTheme
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     06.08.00
-// RCS-ID:      $Id: theme.cpp 42455 2006-10-26 15:33:10Z VS $
 // Copyright:   (c) 2000 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -39,16 +38,16 @@
 // implementation
 // ============================================================================
 
-wxThemeInfo *wxTheme::ms_allThemes = (wxThemeInfo *)NULL;
-wxTheme *wxTheme::ms_theme = (wxTheme *)NULL;
+wxThemeInfo *wxTheme::ms_allThemes = NULL;
+wxTheme *wxTheme::ms_theme = NULL;
 
 // ----------------------------------------------------------------------------
 // "dynamic" theme creation
 // ----------------------------------------------------------------------------
 
 wxThemeInfo::wxThemeInfo(Constructor c,
-                         const wxChar *n,
-                         const wxChar *d)
+                         const wxString& n,
+                         const wxString& d)
            : name(n), desc(d), ctor(c)
 {
     // insert us (in the head of) the linked list
@@ -70,7 +69,7 @@ wxThemeInfo::wxThemeInfo(Constructor c,
         info = info->next;
     }
 
-    return (wxTheme *)NULL;
+    return NULL;
 }
 
 // ----------------------------------------------------------------------------
@@ -88,7 +87,7 @@ wxThemeInfo::wxThemeInfo(Constructor c,
     wxString nameDefTheme;
 
     // use the environment variable first
-    const wxChar *p = wxGetenv(_T("WXTHEME"));
+    const wxChar *p = wxGetenv(wxT("WXTHEME"));
     if ( p )
     {
         nameDefTheme = p;
@@ -152,7 +151,7 @@ wxTheme::~wxTheme()
 // wxDelegateTheme
 // ----------------------------------------------------------------------------
 
-wxDelegateTheme::wxDelegateTheme(const wxChar *theme)
+wxDelegateTheme::wxDelegateTheme(const wxString& theme)
 {
     m_themeName = theme;
     m_theme = NULL;

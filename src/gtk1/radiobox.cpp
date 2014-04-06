@@ -2,7 +2,6 @@
 // Name:        src/gtk1/radiobox.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: radiobox.cpp 45050 2007-03-25 02:03:27Z VZ $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -53,11 +52,11 @@ static void gtk_radiobutton_clicked_callback( GtkToggleButton *button, wxRadioBo
 
     if (!button->active) return;
 
-    wxCommandEvent event( wxEVT_COMMAND_RADIOBOX_SELECTED, rb->GetId() );
+    wxCommandEvent event( wxEVT_RADIOBOX, rb->GetId() );
     event.SetInt( rb->GetSelection() );
     event.SetString( rb->GetStringSelection() );
     event.SetEventObject( rb );
-    rb->GetEventHandler()->ProcessEvent(event);
+    rb->HandleWindowEvent(event);
 }
 }
 
@@ -115,7 +114,7 @@ static gint gtk_radiobox_keypress_callback( GtkWidget *widget, GdkEventKey *gdk_
 }
 
 extern "C" {
-static gint gtk_radiobutton_focus_in( GtkWidget *widget,
+static gint gtk_radiobutton_focus_in( GtkWidget *WXUNUSED(widget),
                                       GdkEvent *WXUNUSED(event),
                                       wxRadioBox *win )
 {
@@ -133,7 +132,7 @@ static gint gtk_radiobutton_focus_in( GtkWidget *widget,
 
         // never stop the signal emission, it seems to break the kbd handling
         // inside the radiobox
-        (void)win->GetEventHandler()->ProcessEvent( event );
+        (void)win->HandleWindowEvent( event );
     }
 
     return FALSE;
@@ -141,14 +140,14 @@ static gint gtk_radiobutton_focus_in( GtkWidget *widget,
 }
 
 extern "C" {
-static gint gtk_radiobutton_focus_out( GtkWidget *widget,
+static gint gtk_radiobutton_focus_out( GtkWidget *WXUNUSED(widget),
                                        GdkEvent *WXUNUSED(event),
                                        wxRadioBox *win )
 {
-  //    wxASSERT_MSG( win->m_hasFocus, _T("got focus out without any focus in?") );
+  //    wxASSERT_MSG( win->m_hasFocus, wxT("got focus out without any focus in?") );
   // Replace with a warning, else we dump core a lot!
   //  if (!win->m_hasFocus)
-  //      wxLogWarning(_T("Radiobox got focus out without any focus in.") );
+  //      wxLogWarning(wxT("Radiobox got focus out without any focus in.") );
 
     // we might have lost the focus, but may be not - it may have just gone to
     // another button in the same radiobox, so we'll check for it in the next
@@ -216,7 +215,7 @@ bool wxRadioBox::Create( wxWindow *parent, wxWindowID id, const wxString& title,
     unsigned int num_of_cols = GetColumnCount();
     unsigned int num_of_rows = GetRowCount();
 
-    GtkRadioButton *m_radio = (GtkRadioButton*) NULL;
+    GtkRadioButton *m_radio = NULL;
 
     GtkWidget *table = gtk_table_new( num_of_rows, num_of_cols, FALSE );
     gtk_table_set_col_spacings( GTK_TABLE(table), 1 );
@@ -225,7 +224,7 @@ bool wxRadioBox::Create( wxWindow *parent, wxWindowID id, const wxString& title,
     gtk_container_add( GTK_CONTAINER(m_widget), table );
 
     wxString label;
-    GSList *radio_button_group = (GSList *) NULL;
+    GSList *radio_button_group = NULL;
     for (int i = 0; i < n; i++)
     {
         if ( i != 0 )
@@ -551,7 +550,7 @@ void wxRadioBox::ApplyToolTip( GtkTooltips *tips, const wxChar *tip )
     while (node)
     {
         GtkWidget *widget = GTK_WIDGET( node->GetData() );
-        gtk_tooltips_set_tip( tips, widget, wxConvCurrent->cWX2MB(tip), (gchar*) NULL );
+        gtk_tooltips_set_tip( tips, widget, wxConvCurrent->cWX2MB(tip), NULL );
         node = node->GetNext();
     }
 }
@@ -586,7 +585,7 @@ void wxRadioBox::OnInternalIdle()
         wxFocusEvent event( wxEVT_KILL_FOCUS, GetId() );
         event.SetEventObject( this );
 
-        (void)GetEventHandler()->ProcessEvent( event );
+        (void)HandleWindowEvent( event );
     }
 
     if (g_delayedFocus == this)

@@ -4,7 +4,6 @@
 // Author:      Chris Breeze
 // Modified by:
 // Created:     21/07/97
-// RCS-ID:      $Id: card.cpp 39615 2006-06-07 13:26:00Z ABX $
 // Copyright:   (c) 1993-1998 Chris Breeze
 // Licence:     wxWindows licence
 //---------------------------------------------------------------------------
@@ -60,17 +59,17 @@ Card::Card(int value, WayUp way_up) :
     if (!m_symbolBmap)
     {
         m_symbolBmap = new wxBitmap(symbols_xpm);
-        if (!m_symbolBmap->Ok())
+        if (!m_symbolBmap->IsOk())
         {
-            ::wxMessageBox(_T("Failed to load bitmap CardSymbols"), _T("Error"));
+            ::wxMessageBox(wxT("Failed to load bitmap CardSymbols"), wxT("Error"));
         }
     }
     if (!m_pictureBmap)
     {
         m_pictureBmap = new wxBitmap(Pictures);
-        if (!m_pictureBmap->Ok())
+        if (!m_pictureBmap->IsOk())
         {
-            ::wxMessageBox(_T("Failed to load bitmap CardPictures"), _T("Error"));
+            ::wxMessageBox(wxT("Failed to load bitmap CardPictures"), wxT("Error"));
         }
     }
 

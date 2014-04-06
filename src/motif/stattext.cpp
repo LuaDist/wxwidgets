@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: stattext.cpp 50982 2008-01-01 20:38:33Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -26,8 +25,6 @@
 
 #include "wx/motif/private.h"
 
-IMPLEMENT_DYNAMIC_CLASS(wxStaticText, wxControl)
-
 bool wxStaticText::Create(wxWindow *parent, wxWindowID id,
            const wxString& label,
            const wxPoint& pos,
@@ -38,19 +35,19 @@ bool wxStaticText::Create(wxWindow *parent, wxWindowID id,
     if( !CreateControl( parent, id, pos, size, style,
                         wxDefaultValidator, name ) )
         return false;
+    m_labelWidget = (WXWidget) 0;
+    PreCreation();
 
     Widget parentWidget = (Widget) parent->GetClientWidget();
 
     Widget borderWidget =
         (Widget) wxCreateBorderWidget( (WXWidget)parentWidget, style );
-    wxXmString text( GetLabelText( label ) );
 
     m_labelWidget =
-        XtVaCreateManagedWidget (wxConstCast(name.c_str(), char),
+        XtVaCreateManagedWidget (name.mb_str(),
             xmLabelWidgetClass,
             borderWidget ? borderWidget : parentWidget,
             wxFont::GetFontTag(), m_font.GetFontTypeC(XtDisplay(parentWidget)),
-            XmNlabelString, text(),
             XmNalignment, ((style & wxALIGN_RIGHT)  ? XmALIGNMENT_END :
                           ((style & wxALIGN_CENTRE) ? XmALIGNMENT_CENTER :
                                                       XmALIGNMENT_BEGINNING)),
@@ -59,17 +56,41 @@ bool wxStaticText::Create(wxWindow *parent, wxWindowID id,
 
     m_mainWidget = borderWidget ? borderWidget : m_labelWidget;
 
-    AttachWidget (parent, m_mainWidget, (WXWidget) NULL,
-                  pos.x, pos.y, size.x, size.y);
+    SetLabel(label);
 
-    ChangeBackgroundColour ();
+    wxSize best = GetBestSize();
+    if( size.x != -1 ) best.x = size.x;
+    if( size.y != -1 ) best.y = size.y;
+
+    PostCreation();
+    AttachWidget (parent, m_mainWidget, (WXWidget) NULL,
+                  pos.x, pos.y, best.x, best.y);
 
     return true;
 }
 
 void wxStaticText::SetLabel(const wxString& label)
 {
-    wxXmString label_str(GetLabelText(label));
+    m_labelOrig = label;       // save original label
+
+    // Motif does not support ellipsized labels natively
+    DoSetLabel(GetEllipsizedLabel());
+}
+
+// for wxST_ELLIPSIZE_* support:
+
+wxString wxStaticText::DoGetLabel() const
+{
+    XmString label = NULL;
+    XtVaGetValues((Widget)m_labelWidget, XmNlabelString, &label, NULL);
+
+    return wxXmStringToString(label);
+}
+
+void wxStaticText::DoSetLabel(const wxString& str)
+{
+    // build our own cleaned label
+    wxXmString label_str(RemoveMnemonics(str));
 
     // This variable means we don't need so many casts later.
     Widget widget = (Widget) m_labelWidget;
@@ -78,6 +99,19 @@ void wxStaticText::SetLabel(const wxString& label)
             XmNlabelString, label_str(),
             XmNlabelType, XmSTRING,
             NULL);
+}
+
+/*
+   FIXME: UpdateLabel() should be called on size events to allow correct
+          dynamic ellipsizing of the label
+*/
+
+wxSize wxStaticText::DoGetBestSize() const
+{
+    int w, h;
+    GetTextExtent(GetLabelText(), &w, &h, NULL, NULL, NULL);
+
+    return wxSize(w, h);
 }
 
 #endif // wxUSE_STATTEXT

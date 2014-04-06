@@ -4,7 +4,6 @@
 // Author:      AUTHOR
 // Modified by:
 // Created:     ??/??/98
-// RCS-ID:      $Id: palette.cpp 38791 2006-04-18 09:56:17Z ABX $
 // Copyright:   (c) AUTHOR
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -103,6 +102,16 @@ bool wxPalette::Create( int n,
     delete [] pualTable;
     return true;
 } // end of wxPalette::Create
+
+wxGDIRefData *wxPalette::CreateGDIRefData() const
+{
+    return new wxPaletteRefData;
+}
+
+wxGDIRefData *wxPalette::CloneGDIRefData(const wxGDIRefData *data) const
+{
+    return new wxPaletteRefData(*static_cast<const wxPaletteRefData *>(data));
+}
 
 int wxPalette::GetPixel( unsigned char cRed,
                          unsigned char cGreen,

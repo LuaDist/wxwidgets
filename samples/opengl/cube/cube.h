@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: cube.h 33105 2005-03-27 18:08:08Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -14,91 +13,80 @@
 
 #include "wx/glcanvas.h"
 
-// Define a new application type
-class MyApp: public wxApp
+// the rendering context used by all GL canvases
+class TestGLContext : public wxGLContext
 {
 public:
-    bool OnInit();
+    TestGLContext(wxGLCanvas *canvas);
+
+    // render the cube showing it at given angles
+    void DrawRotatedCube(float xangle, float yangle);
+
+private:
+    // textures for the cube faces
+    GLuint m_textures[6];
+};
+
+// Define a new application type
+class MyApp : public wxApp
+{
+public:
+    MyApp() { m_glContext = NULL; m_glStereoContext = NULL; }
+
+    // Returns the shared context used by all frames and sets it as current for
+    // the given canvas.
+    TestGLContext& GetContext(wxGLCanvas *canvas, bool useStereo);
+
+    // virtual wxApp methods
+    virtual bool OnInit();
+    virtual int OnExit();
+
+private:
+    // the GL context we use for all our mono rendering windows
+    TestGLContext *m_glContext;
+    // the GL context we use for all our stereo rendering windows
+    TestGLContext *m_glStereoContext;
 };
 
 // Define a new frame type
-class TestGLCanvas;
-
-class MyFrame: public wxFrame
+class MyFrame : public wxFrame
 {
 public:
-    static MyFrame *Create(MyFrame *parentFrame, bool isCloneWindow = false);
-
-    void OnExit(wxCommandEvent& event);
-    void OnNewWindow(wxCommandEvent& event);
-    void OnDefRotateLeftKey(wxCommandEvent& event);
-    void OnDefRotateRightKey(wxCommandEvent& event);
+    MyFrame(bool stereoWindow = false);
 
 private:
-
-    MyFrame(wxWindow *parent, const wxString& title, const wxPoint& pos,
-            const wxSize& size, long style = wxDEFAULT_FRAME_STYLE);
-
-
-    TestGLCanvas *m_canvas;
+    void OnClose(wxCommandEvent& event);
+    void OnNewWindow(wxCommandEvent& event);
+    void OnNewStereoWindow(wxCommandEvent& event);
 
     DECLARE_EVENT_TABLE()
 };
 
-#if wxUSE_GLCANVAS
-
-class TestGLCanvas: public wxGLCanvas
+class TestGLCanvas : public wxGLCanvas
 {
-    friend class MyFrame;
 public:
-    TestGLCanvas( wxWindow *parent, wxWindowID id = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize,
-        long style = 0, const wxString& name = _T("TestGLCanvas") );
-
-    TestGLCanvas( wxWindow *parent, const TestGLCanvas *other,
-        wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize, long style = 0,
-        const wxString& name = _T("TestGLCanvas") );
-
-    ~TestGLCanvas();
-
-    void OnPaint(wxPaintEvent& event);
-    void OnSize(wxSizeEvent& event);
-    void OnEraseBackground(wxEraseEvent& event);
-    void OnKeyDown(wxKeyEvent& event);
-    void OnKeyUp(wxKeyEvent& event);
-    void OnEnterWindow(wxMouseEvent& event);
-
-    void Render();
-    void InitGL();
-    void Rotate(GLfloat deg);
-    static GLfloat CalcRotateSpeed(unsigned long acceltime);
-    static GLfloat CalcRotateAngle( unsigned long lasttime,
-        unsigned long acceltime );
-    void Action( long code, unsigned long lasttime,
-        unsigned long acceltime );
+    TestGLCanvas(wxWindow *parent, int *attribList = NULL);
 
 private:
-    bool   m_init;
-    GLuint m_gllist;
-    long   m_rleft;
-    long   m_rright;
+    void OnPaint(wxPaintEvent& event);
+    void Spin(float xSpin, float ySpin);
+    void OnKeyDown(wxKeyEvent& event);
+    void OnSpinTimer(wxTimerEvent& WXUNUSED(event));
 
-    static unsigned long  m_secbase;
-    static int            m_TimeInitialized;
-    static unsigned long  m_xsynct;
-    static unsigned long  m_gsynct;
+    // angles of rotation around x- and y- axis
+    float m_xangle,
+          m_yangle;
 
-    long           m_Key;
-    unsigned long  m_StartTime;
-    unsigned long  m_LastTime;
-    unsigned long  m_LastRedraw;
+    wxTimer m_spinTimer;
+    bool m_useStereo,
+         m_stereoWarningAlreadyDisplayed;
 
-DECLARE_EVENT_TABLE()
+    DECLARE_EVENT_TABLE()
 };
 
-#endif // #if wxUSE_GLCANVAS
+enum
+{
+    NEW_STEREO_WINDOW = wxID_HIGHEST + 1
+};
 
-#endif // #ifndef _WX_CUBE_H_
-
+#endif // _WX_CUBE_H_

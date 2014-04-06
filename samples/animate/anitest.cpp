@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by: Francesco Montorsi
 // Created:     02/07/2001
-// RCS-ID:      $Id: anitest.cpp 43476 2006-11-17 18:15:44Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -28,13 +27,15 @@
     #include "wx/wx.h"
 #endif
 
-#ifndef __WXMSW__
-    #include "sample.xpm"
+#ifndef wxHAS_IMAGES_IN_RESOURCES
+    #include "../sample.xpm"
 #endif
 
 #include "wx/aboutdlg.h"
 #include "wx/artprov.h"
 #include "wx/colordlg.h"
+#include "wx/wfstream.h"
+
 #include "anitest.h"
 
 #if !wxUSE_ANIMATIONCTRL
@@ -90,55 +91,15 @@ END_EVENT_TABLE()
 // Initialise this in OnInit, not statically
 bool MyApp::OnInit()
 {
+    if ( !wxApp::OnInit() )
+        return false;
+
     // Create the main frame window
 
-    MyFrame* frame = new MyFrame((wxFrame *)NULL, wxID_ANY, _T("Animation Demo"),
+    MyFrame* frame = new MyFrame((wxFrame *)NULL, wxID_ANY, wxT("Animation Demo"),
                                  wxDefaultPosition, wxSize(500, 400),
                                  wxDEFAULT_FRAME_STYLE);
-
-    // Give it an icon
-    frame->SetIcon(wxICON(sample));
-
-    // Make a menubar
-    wxMenu *file_menu = new wxMenu;
-
-#if wxUSE_FILEDLG
-    file_menu->Append(wxID_OPEN, _T("&Open Animation...\tCtrl+O"), _T("Loads an animation"));
-#endif // wxUSE_FILEDLG
-    file_menu->Append(wxID_EXIT);
-
-    wxMenu *play_menu = new wxMenu;
-    play_menu->Append(ID_PLAY, _T("Play\tCtrl+P"), _T("Play the animation"));
-    play_menu->Append(wxID_STOP, _T("Stop\tCtrl+P"), _T("Stop the animation"));
-    play_menu->AppendSeparator();
-    play_menu->Append(ID_SET_NULL_ANIMATION, _T("Set null animation"),
-                      _T("Sets the empty animation in the control"));
-    play_menu->AppendCheckItem(ID_SET_INACTIVE_BITMAP, _T("Set inactive bitmap"),
-                               _T("Sets an inactive bitmap for the control"));
-    play_menu->AppendCheckItem(ID_SET_NO_AUTO_RESIZE, _T("Set no autoresize"),
-                               _T("Tells the control not to resize automatically"));
-    play_menu->Append(ID_SET_BGCOLOR, _T("Set background colour..."),
-                      _T("Sets the background colour of the control"));
-
-    wxMenu *help_menu = new wxMenu;
-    help_menu->Append(wxID_ABOUT);
-
-    wxMenuBar *menu_bar = new wxMenuBar;
-
-    menu_bar->Append(file_menu, _T("&File"));
-    menu_bar->Append(play_menu, _T("&Animation"));
-    menu_bar->Append(help_menu, _T("&Help"));
-
-    // Associate the menu bar with the frame
-    frame->SetMenuBar(menu_bar);
-
-#if wxUSE_STATUSBAR
-    frame->CreateStatusBar();
-#endif // wxUSE_STATUSBAR
-
     frame->Show(true);
-
-    SetTopWindow(frame);
 
     return true;
 }
@@ -146,8 +107,6 @@ bool MyApp::OnInit()
 // ---------------------------------------------------------------------------
 // MyFrame
 // ---------------------------------------------------------------------------
-
-#include "wx/wfstream.h"
 
 // Define my frame constructor
 MyFrame::MyFrame(wxWindow *parent,
@@ -159,6 +118,45 @@ MyFrame::MyFrame(wxWindow *parent,
        : wxFrame(parent, id, title, pos, size,
                           style | wxNO_FULL_REPAINT_ON_RESIZE)
 {
+    SetIcon(wxICON(sample));
+
+    // Make a menubar
+    wxMenu *file_menu = new wxMenu;
+
+#if wxUSE_FILEDLG
+    file_menu->Append(wxID_OPEN, wxT("&Open Animation...\tCtrl+O"), wxT("Loads an animation"));
+#endif // wxUSE_FILEDLG
+    file_menu->Append(wxID_EXIT);
+
+    wxMenu *play_menu = new wxMenu;
+    play_menu->Append(ID_PLAY, wxT("Play\tCtrl+P"), wxT("Play the animation"));
+    play_menu->Append(wxID_STOP, wxT("Stop\tCtrl+S"), wxT("Stop the animation"));
+    play_menu->AppendSeparator();
+    play_menu->Append(ID_SET_NULL_ANIMATION, wxT("Set null animation"),
+                      wxT("Sets the empty animation in the control"));
+    play_menu->AppendCheckItem(ID_SET_INACTIVE_BITMAP, wxT("Set inactive bitmap"),
+                               wxT("Sets an inactive bitmap for the control"));
+    play_menu->AppendCheckItem(ID_SET_NO_AUTO_RESIZE, wxT("Set no autoresize"),
+                               wxT("Tells the control not to resize automatically"));
+    play_menu->Append(ID_SET_BGCOLOR, wxT("Set background colour..."),
+                      wxT("Sets the background colour of the control"));
+
+    wxMenu *help_menu = new wxMenu;
+    help_menu->Append(wxID_ABOUT);
+
+    wxMenuBar *menu_bar = new wxMenuBar;
+
+    menu_bar->Append(file_menu, wxT("&File"));
+    menu_bar->Append(play_menu, wxT("&Animation"));
+    menu_bar->Append(help_menu, wxT("&Help"));
+
+    // Associate the menu bar with this frame
+    SetMenuBar(menu_bar);
+
+#if wxUSE_STATUSBAR
+    CreateStatusBar();
+#endif // wxUSE_STATUSBAR
+
     // use a wxBoxSizer otherwise wxFrame will automatically
     // resize the m_animationCtrl to fill its client area on
     // user resizes
@@ -181,7 +179,9 @@ MyFrame::~MyFrame()
 void MyFrame::OnPlay(wxCommandEvent& WXUNUSED(event))
 {
     if (!m_animationCtrl->Play())
+    {
         wxLogError(wxT("Invalid animation"));
+    }
 }
 
 void MyFrame::OnStop(wxCommandEvent& WXUNUSED(event))
@@ -255,11 +255,11 @@ void MyFrame::OnAbout(wxCommandEvent& WXUNUSED(event) )
     wxAboutDialogInfo info;
     info.SetName(_("wxAnimationCtrl and wxAnimation sample"));
     info.SetDescription(_("This sample program demonstrates the usage of wxAnimationCtrl"));
-    info.SetCopyright(_T("(C) 2006 Julian Smart"));
+    info.SetCopyright(wxT("(C) 2006 Julian Smart"));
 
-    info.AddDeveloper(_T("Julian Smart"));
-    info.AddDeveloper(_T("Guillermo Rodriguez Garcia"));
-    info.AddDeveloper(_T("Francesco Montorsi"));
+    info.AddDeveloper(wxT("Julian Smart"));
+    info.AddDeveloper(wxT("Guillermo Rodriguez Garcia"));
+    info.AddDeveloper(wxT("Francesco Montorsi"));
 
     wxAboutBox(info);
 }
@@ -267,7 +267,7 @@ void MyFrame::OnAbout(wxCommandEvent& WXUNUSED(event) )
 #if wxUSE_FILEDLG
 void MyFrame::OnOpen(wxCommandEvent& WXUNUSED(event))
 {
-    wxFileDialog dialog(this, _T("Please choose an animation"),
+    wxFileDialog dialog(this, wxT("Please choose an animation"),
                         wxEmptyString, wxEmptyString, wxT("*.gif;*.ani"), wxFD_OPEN);
     if (dialog.ShowModal() == wxID_OK)
     {
@@ -278,7 +278,7 @@ void MyFrame::OnOpen(wxCommandEvent& WXUNUSED(event))
         if (m_animationCtrl->LoadFile(filename))
             m_animationCtrl->Play();
         else
-            wxMessageBox(_T("Sorry, this animation is not a valid format for wxAnimation."));
+            wxMessageBox(wxT("Sorry, this animation is not a valid format for wxAnimation."));
 #else
     #if 0
         wxAnimation temp;
@@ -292,7 +292,7 @@ void MyFrame::OnOpen(wxCommandEvent& WXUNUSED(event))
         m_animationCtrl->Play();
     #else
         wxFileInputStream stream(filename);
-        if (!stream.Ok())
+        if (!stream.IsOk())
         {
             wxLogError(wxT("Sorry, this animation is not a valid format for wxAnimation."));
             return;

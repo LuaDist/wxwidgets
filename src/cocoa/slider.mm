@@ -5,10 +5,9 @@
 //              Mark Oxenham
 // Modified by:
 // Created:     2003/06/19
-// RCS-ID:      $Id: slider.mm 48590 2007-09-06 16:47:01Z DE $
 // Copyright:   (c) 2003 David Elliott
 //              (c) 2007 Software 2000 Ltd.
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #include "wx/wxprec.h"
@@ -26,8 +25,7 @@
 #import <AppKit/NSEvent.h>
 #import <AppKit/NSWindow.h>
 
-IMPLEMENT_DYNAMIC_CLASS(wxSlider, wxControl)
-    BEGIN_EVENT_TABLE(wxSlider, wxSliderBase)
+BEGIN_EVENT_TABLE(wxSlider, wxSliderBase)
 END_EVENT_TABLE()
 WX_IMPLEMENT_COCOA_OWNER(wxSlider,NSSlider,NSControl,NSView)
 
@@ -88,8 +86,7 @@ bool wxSlider::Create(wxWindow *parent, wxWindowID winid,
     // minValue > maxValue not handled, tickMarks set to 0
     if ( style & wxSL_AUTOTICKS )
         tickMarks = ((maxValue - minValue >= 0) ? (maxValue - minValue) : 0);
-    // arg2 needed a value, doesnt do anything
-    SetTickFreq(tickMarks,1);
+    SetTickFreq(tickMarks);
 
     return true;
 }
@@ -99,24 +96,19 @@ wxSlider::~wxSlider()
     DisassociateNSSlider(GetNSSlider());
 }
 
-// NOTE: We don't derive from wxCocoaNSSlider in 2.8 due to ABI
-
 void wxSlider::AssociateNSSlider(WX_NSSlider theSlider)
 {
+    wxCocoaNSSlider::AssociateNSSlider(theSlider);
     // Set the target/action.. we don't really need to unset these
     [theSlider setTarget:wxCocoaNSControl::sm_cocoaTarget];
     [theSlider setAction:@selector(wxNSControlAction:)];
-}
-
-void wxSlider::DisassociateNSSlider(WX_NSSlider theSlider)
-{
 }
 
 void wxSlider::ProcessEventType(wxEventType commandType)
 {
     wxScrollEvent event(commandType, GetId(), GetValue(), HasFlag(wxSL_VERTICAL)?wxVERTICAL:wxHORIZONTAL);
     event.SetEventObject(this);
-    GetEventHandler()->ProcessEvent(event);
+    HandleWindowEvent(event);
 }
 
 static inline wxEventType wxSliderEventTypeForKeyFromEvent(NSEvent *theEvent)
@@ -135,7 +127,8 @@ static inline wxEventType wxSliderEventTypeForKeyFromEvent(NSEvent *theEvent)
             case NSPageDownFunctionKey:     return wxEVT_SCROLL_TOP;
         }
     }
-    return wxEVT_NULL;
+    // Overload wxEVT_ANY to mean we can't determine the event type.
+    return wxEVT_ANY;
 }
 
 void wxSlider::CocoaTarget_action()
@@ -159,7 +152,7 @@ void wxSlider::CocoaTarget_action()
     else
         // Don't generate an event.
         return;
-    if(sliderEventType != wxEVT_NULL)
+    if(sliderEventType != wxEVT_ANY)
         ProcessEventType(sliderEventType);
 }
 
@@ -211,7 +204,7 @@ int wxSlider::GetMax() const
     return [GetNSSlider() maxValue];
 }
 
-void wxSlider::SetTickFreq(int n, int pos)
+void wxSlider::DoSetTickFreq(int n)
 {
     const int numTicks = (n > 0) ? ((GetMax() - GetMin()) / n) + 1 : 0;
     [GetNSSlider() setNumberOfTickMarks:numTicks];

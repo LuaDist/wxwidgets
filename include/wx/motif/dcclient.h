@@ -1,10 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
 // Name:        wx/motif/dcclient.h
-// Purpose:     wxClientDC, wxPaintDC and wxWindowDC classes
+// Purpose:     wxClientDCImpl, wxPaintDCImpl and wxWindowDCImpl classes
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: dcclient.h 41640 2006-10-05 19:34:25Z MBN $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -12,31 +11,21 @@
 #ifndef _WX_DCCLIENT_H_
 #define _WX_DCCLIENT_H_
 
-#include "wx/dc.h"
+#include "wx/motif/dc.h"
 
-// ----------------------------------------------------------------------------
-// fwd declarations
-// ----------------------------------------------------------------------------
-
-class WXDLLEXPORT wxWindowDC;
-class WXDLLEXPORT wxWindow;
-
-// Under Windows, wxClientDC, wxPaintDC and wxWindowDC are implemented
-// differently. On many platforms, however, they will be the same.
+class WXDLLIMPEXP_FWD_CORE wxWindow;
 
 //-----------------------------------------------------------------------------
-// wxWindowDC
+// wxWindowDCImpl
 //-----------------------------------------------------------------------------
 
-class WXDLLEXPORT wxWindowDC : public wxDC
+class WXDLLIMPEXP_CORE wxWindowDCImpl : public wxMotifDCImpl
 {
-    DECLARE_DYNAMIC_CLASS(wxWindowDC)
-
 public:
-    wxWindowDC();
-    wxWindowDC( wxWindow *win );
+    wxWindowDCImpl(wxDC *owner);
+    wxWindowDCImpl(wxDC *owner, wxWindow *win);
 
-    virtual ~wxWindowDC();
+    virtual ~wxWindowDCImpl();
 
     // TODO this function is Motif-only for now - should it go into base class?
     void Clear(const wxRect& rect);
@@ -52,7 +41,7 @@ public:
     virtual void SetBackground(const wxBrush& brush);
     virtual void SetBackgroundMode(int mode);
     virtual void SetPalette(const wxPalette& palette);
-    virtual void SetLogicalFunction( int function );
+    virtual void SetLogicalFunction( wxRasterOperationMode function );
 
     virtual void SetTextForeground(const wxColour& colour);
     virtual void SetTextBackground(const wxColour& colour);
@@ -63,7 +52,7 @@ public:
         wxCoord *x, wxCoord *y,
         wxCoord *descent = NULL,
         wxCoord *externalLeading = NULL,
-        wxFont *theFont = NULL) const;
+        const wxFont *theFont = NULL) const;
 
     virtual bool CanDrawBitmap() const;
     virtual bool CanGetTextExtent() const;
@@ -99,7 +88,7 @@ protected:
     void SetForegroundPixelWithLogicalFunction(WXPixel pixel);
 
     virtual bool DoFloodFill(wxCoord x, wxCoord y, const wxColour& col,
-        int style = wxFLOOD_SURFACE);
+                             wxFloodFillStyle style = wxFLOOD_SURFACE);
 
     virtual bool DoGetPixel(wxCoord x, wxCoord y, wxColour *col) const;
 
@@ -125,17 +114,17 @@ protected:
 
     virtual bool DoBlit(wxCoord xdest, wxCoord ydest, wxCoord width, wxCoord height,
         wxDC *source, wxCoord xsrc, wxCoord ysrc,
-        int rop = wxCOPY, bool useMask = false, wxCoord xsrcMask = -1, wxCoord ysrcMask = -1);
+        wxRasterOperationMode rop = wxCOPY, bool useMask = false, wxCoord xsrcMask = -1, wxCoord ysrcMask = -1);
 
-    virtual void DoSetClippingRegionAsRegion(const wxRegion& region);
     virtual void DoSetClippingRegion(wxCoord x, wxCoord y,
         wxCoord width, wxCoord height);
+    virtual void DoSetDeviceClippingRegion(const wxRegion& region);
 
-    virtual void DoDrawLines(int n, wxPoint points[],
+    virtual void DoDrawLines(int n, const wxPoint points[],
         wxCoord xoffset, wxCoord yoffset);
-    virtual void DoDrawPolygon(int n, wxPoint points[],
+    virtual void DoDrawPolygon(int n, const wxPoint points[],
         wxCoord xoffset, wxCoord yoffset,
-        int fillStyle = wxODDEVEN_RULE);
+        wxPolygonFillMode fillStyle = wxODDEVEN_RULE);
 
     void DoGetSize( int *width, int *height ) const;
 
@@ -164,26 +153,29 @@ protected:
     int          m_currentStyle ;
     int          m_currentFill ;
     int          m_autoSetting ; // See comment in dcclient.cpp
+
+    DECLARE_DYNAMIC_CLASS(wxWindowDCImpl)
 };
 
-class WXDLLEXPORT wxPaintDC: public wxWindowDC
+class WXDLLIMPEXP_CORE wxPaintDCImpl: public wxWindowDCImpl
 {
-    DECLARE_DYNAMIC_CLASS(wxPaintDC)
-
 public:
-    wxPaintDC() { }
-    wxPaintDC(wxWindow* win);
+    wxPaintDCImpl(wxDC *owner) : wxWindowDCImpl(owner) { }
+    wxPaintDCImpl(wxDC *owner, wxWindow* win);
 
-    virtual ~wxPaintDC();
+    virtual ~wxPaintDCImpl();
+
+    DECLARE_DYNAMIC_CLASS(wxPaintDCImpl)
 };
 
-class WXDLLEXPORT wxClientDC: public wxWindowDC
+class WXDLLIMPEXP_CORE wxClientDCImpl: public wxWindowDCImpl
 {
-    DECLARE_DYNAMIC_CLASS(wxClientDC)
-
 public:
-    wxClientDC() { }
-    wxClientDC(wxWindow* win) : wxWindowDC(win) { }
+    wxClientDCImpl(wxDC *owner) : wxWindowDCImpl(owner) { }
+    wxClientDCImpl(wxDC *owner, wxWindow* win)
+        : wxWindowDCImpl(owner, win) { }
+
+    DECLARE_DYNAMIC_CLASS(wxClientDCImpl)
 };
 
 #endif // _WX_DCCLIENT_H_

@@ -2,7 +2,6 @@
 // Name:        derivdlg.cpp
 // Purpose:     XML resources sample: A derived dialog
 // Author:      Robert O'Connor (rob@medicalmnemonics.com), Vaclav Slavik
-// RCS-ID:      $Id: derivdlg.cpp 35650 2005-09-23 12:56:45Z MR $
 // Copyright:   (c) Robert O'Connor and Vaclav Slavik
 // Licence:     wxWindows licence
 //-----------------------------------------------------------------------------

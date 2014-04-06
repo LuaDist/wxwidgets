@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     09/17/99
-// RCS-ID:      $Id: utils.cpp 54228 2008-06-15 11:22:52Z VZ $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -50,8 +49,8 @@ extern "C"
     #include <netbios.h>
 #endif
 
-static const wxChar WX_SECTION[] = _T("wxWidgets");
-static const wxChar eHOSTNAME[]  = _T("HostName");
+static const wxChar WX_SECTION[] = wxT("wxWidgets");
+static const wxChar eHOSTNAME[]  = wxT("HostName");
 
 // For the following functions we SHOULD fill in support
 // for Windows-NT (which I don't know) as I assume it begin
@@ -81,10 +80,10 @@ bool wxGetHostName( wxChar* zBuf, int nMaxSize )
     strcpy(zBuf, zServer);
 #else
     wxChar*        zSysname;
-    const wxChar*  zDefaultHost = _T("noname");
+    const wxChar*  zDefaultHost = wxT("noname");
 
-    if ((zSysname = wxGetenv(_T("SYSTEM_NAME"))) == NULL &&
-	(zSysname = wxGetenv(_T("HOSTNAME"))) == NULL)
+    if ((zSysname = wxGetenv(wxT("SYSTEM_NAME"))) == NULL &&
+            (zSysname = wxGetenv(wxT("HOSTNAME"))) == NULL)
     {
         ::PrfQueryProfileString( HINI_PROFILE
                                 ,(PSZ)WX_SECTION
@@ -93,13 +92,12 @@ bool wxGetHostName( wxChar* zBuf, int nMaxSize )
                                 ,(void*)zBuf
                                 ,(ULONG)nMaxSize - 1
                                );
+        zBuf[nMaxSize] = wxT('\0');
     }
     else
     {
-        wxStrncpy(zBuf, zSysname, nMaxSize - 1);
+        wxStrlcpy(zBuf, zSysname, nMaxSize);
     }
-
-    zBuf[nMaxSize] = _T('\0');
 #endif
 
     return *zBuf ? true : false;
@@ -121,7 +119,7 @@ bool wxGetUserName( wxChar* zBuf, int nMaxSize )
 #ifdef USE_NET_API
     wxGetUserId( zBuf, nMaxSize );
 #else
-    wxStrncpy(zBuf, _T("Unknown User"), nMaxSize);
+    wxStrlcpy(zBuf, wxT("Unknown User"), nMaxSize);
 #endif
     return true;
 }
@@ -139,7 +137,7 @@ int wxKill(long         lPid,
 //
 bool wxShell( const wxString& rCommand )
 {
-    wxChar*     zShell = _T("CMD.EXE");
+    wxChar*     zShell = wxT("CMD.EXE");
     wxString    sInputs;
     STARTDATA   SData = {0};
     PSZ         PgmTitle = "Command Shell";
@@ -156,8 +154,8 @@ bool wxShell( const wxString& rCommand )
     SData.PgmTitle = PgmTitle;
     SData.PgmName  = (char*)zShell;
 
-    sInputs = _T("/C ") + rCommand;
-    SData.PgmInputs     = (BYTE*)sInputs.c_str();
+    sInputs = wxT("/C ") + rCommand;
+    SData.PgmInputs     = (BYTE*)sInputs.wx_str();
     SData.TermQ         = 0;
     SData.Environment   = 0;
     SData.InheritOpt    = SSF_INHERTOPT_SHELL;
@@ -226,7 +224,7 @@ unsigned long wxGetProcessId()
 bool wxGetEnv(const wxString& var, wxString *value)
 {
     // wxGetenv is defined as getenv()
-    wxChar *p = wxGetenv(var);
+    wxChar *p = wxGetenv((const wxChar *)var);
     if ( !p )
         return false;
 
@@ -238,7 +236,7 @@ bool wxGetEnv(const wxString& var, wxString *value)
     return true;
 }
 
-bool wxSetEnv(const wxString& variable, const wxChar *value)
+static bool wxDoSetEnv(const wxString& variable, const char *value)
 {
 #if defined(HAVE_SETENV)
     if ( !value )
@@ -246,16 +244,14 @@ bool wxSetEnv(const wxString& variable, const wxChar *value)
 #ifdef HAVE_UNSETENV
         return unsetenv(variable.mb_str()) == 0;
 #else
-        value = _T(""); // mustn't pass NULL to setenv()
+        value = wxT(""); // mustn't pass NULL to setenv()
 #endif
     }
-    return setenv(variable.mb_str(),
-                  wxString(value).mb_str(),
-                  1 /* overwrite */) == 0;
+    return setenv(variable.mb_str(), value, 1 /* overwrite */) == 0;
 #elif defined(HAVE_PUTENV)
     wxString s = variable;
     if ( value )
-        s << _T('=') << value;
+        s << wxT('=') << value;
 
     // transform to ANSI
     const char *p = s.mb_str();
@@ -270,6 +266,16 @@ bool wxSetEnv(const wxString& variable, const wxChar *value)
     wxUnusedVar(value);
     return false;
 #endif
+}
+
+bool wxSetEnv(const wxString& variable, const wxString& value)
+{
+    return wxDoSetEnv(variable, value.mb_str());
+}
+
+bool wxUnsetEnv(const wxString& variable)
+{
+    return wxDoSetEnv(variable, NULL);
 }
 
 void wxMilliSleep(
@@ -299,15 +305,9 @@ void wxFlushEvents()
 //  wxYield();
 }
 
-// Emit a beeeeeep
-void wxBell()
-{
-    DosBeep(1000,1000); // 1kHz during 1 sec.
-}
-
 wxString wxGetOsDescription()
 {
-    wxString strVer(_T("OS/2"));
+    wxString strVer(wxT("OS/2"));
     ULONG ulSysInfo = 0;
 
     if (::DosQuerySysInfo( QSV_VERSION_MINOR,
@@ -317,7 +317,7 @@ wxString wxGetOsDescription()
                          ) == 0L )
     {
         wxString ver;
-        ver.Printf( _T(" ver. %d.%d"),
+        ver.Printf( wxT(" ver. %d.%d"),
                     int(ulSysInfo / 10),
                     int(ulSysInfo % 10)
                   );
@@ -394,59 +394,45 @@ const wxChar* wxGetHomeDir(
     return rStrDir.c_str();
 }
 
-// Hack for OS/2
-#if wxUSE_UNICODE
-const wxMB2WXbuf wxGetUserHome( const wxString &rUser )
-#else // just for binary compatibility -- there is no 'const' here
-wxChar* wxGetUserHome ( const wxString &rUser )
-#endif
+wxString wxGetUserHome ( const wxString &rUser )
 {
     wxChar*    zHome;
-    wxString   sUser1(rUser);
+    wxString   sUser(rUser);
 
-    wxChar *wxBuffer = new wxChar[256];
+    wxString home;
+
 #ifndef __EMX__
-    if (!sUser1.empty())
+    if (!sUser.empty())
     {
-        wxChar                      zTmp[64];
+        const wxString currentUser = wxGetUserId();
 
-        if (wxGetUserId( zTmp
-                        ,sizeof(zTmp)/sizeof(char)
-                       ))
+        // Guests belong in the temp dir
+        if ( currentUser == "annonymous" )
         {
-            // Guests belong in the temp dir
-            if (wxStricmp(zTmp, _T("annonymous")) == 0)
-            {
-                if ((zHome = wxGetenv(_T("TMP"))) != NULL    ||
-                    (zHome = wxGetenv(_T("TMPDIR"))) != NULL ||
-                    (zHome = wxGetenv(_T("TEMP"))) != NULL)
-                    delete[] wxBuffer;
-                    return *zHome ? zHome : (wxChar*)_T("\\");
-            }
-            if (wxStricmp(zTmp, WXSTRINGCAST sUser1) == 0)
-                sUser1 = wxEmptyString;
+            zHome = wxGetenv(wxT("TMP"));
+            if ( !zHome )
+                zHome = wxGetenv(wxT("TMPDIR"));
+            if ( !zHome )
+                zHome = wxGetenv(wxT("TEMP"));
+
+            if ( zHome && *zHome )
+                return zHome;
         }
+
+        if ( sUser == currentUser )
+            sUser.clear();
     }
 #endif
-    if (sUser1.empty())
+    if (sUser.empty())
     {
-        if ((zHome = wxGetenv(_T("HOME"))) != NULL)
+        if ((zHome = wxGetenv(wxT("HOME"))) != NULL)
         {
-            wxStrcpy(wxBuffer, zHome);
-            wxUnix2DosFilename(wxBuffer);
-#if wxUSE_UNICODE
-            wxWCharBuffer retBuffer (wxBuffer);
-            delete[] wxBuffer;
-            return retBuffer;
-#else
-            wxStrcpy(zHome, wxBuffer);
-            delete[] wxBuffer;
-            return zHome;
-#endif
+            home = zHome;
+            home.Replace("/", "\\");
         }
     }
-    delete[] wxBuffer;
-    return (wxChar*)wxEmptyString; // No home known!
+
+    return home;
 }
 
 bool wxGetDiskSpace(const wxString& path,
@@ -466,7 +452,7 @@ bool wxGetDiskSpace(const wxString& path,
     if (wxDirExists(fn.GetFullPath()) == false)
         return false;
 
-    disknum = 1 + wxToupper(fn.GetVolume().GetChar(0)) - _T('A');
+    disknum = wxToupper(fn.GetVolume().GetChar(0)) - wxT('A') + 1;
 
     rc = ::DosQueryFSInfo(disknum,             // 1 = A, 2 = B, 3 = C, ...
                           FSIL_ALLOC,          // allocation info
@@ -481,7 +467,7 @@ bool wxGetDiskSpace(const wxString& path,
         {
            // to try to avoid 32-bit overflow, let's not multiply right away
             // (num of alloc units)
-            *pTotal = fsaBuf.cUnit;  
+            *pTotal = fsaBuf.cUnit;
             // * (num of sectors per alloc unit) * (num of bytes per sector)
             (*pTotal) *= fsaBuf.cSectorUnit * fsaBuf.cbSector;
         }
@@ -493,7 +479,7 @@ bool wxGetDiskSpace(const wxString& path,
         return true;
     }
 }
- 
+
 wxString wxPMErrorToStr(ERRORID vError)
 {
     wxString sError;
@@ -649,12 +635,3 @@ wxString wxPMErrorToStr(ERRORID vError)
     }
     return sError;
 } // end of wxPMErrorToStr
-
-// replacement for implementation in unix/utilsunx.cpp,
-// to be used by all X11 based ports.
-struct wxEndProcessData;
-
-void wxHandleProcessTermination(wxEndProcessData *WXUNUSED(proc_data))
-{
-    // For now, just do nothing. To be filled in as needed.
-}

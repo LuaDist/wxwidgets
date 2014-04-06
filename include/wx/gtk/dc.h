@@ -2,78 +2,128 @@
 // Name:        wx/gtk/dc.h
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: dc.h 41965 2006-10-12 06:23:52Z RD $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
-#ifndef __GTKDCH__
-#define __GTKDCH__
+#ifndef _WX_GTKDC_H_
+#define _WX_GTKDC_H_
 
-//-----------------------------------------------------------------------------
-// constants
-//-----------------------------------------------------------------------------
+#ifdef __WXGTK3__
 
-#ifndef MM_TEXT
-#define MM_TEXT         0
-#define MM_ISOTROPIC    1
-#define MM_ANISOTROPIC  2
-#define MM_LOMETRIC     3
-#define MM_HIMETRIC     4
-#define MM_TWIPS        5
-#define MM_POINTS       6
-#define MM_METRIC       7
+#include "wx/dcgraph.h"
+
+class wxGTKCairoDCImpl: public wxGCDCImpl
+{
+    typedef wxGCDCImpl base_type;
+public:
+    wxGTKCairoDCImpl(wxDC* owner);
+    wxGTKCairoDCImpl(wxDC* owner, int);
+    wxGTKCairoDCImpl(wxDC* owner, wxWindow* window);
+
+    virtual void DoDrawBitmap(const wxBitmap& bitmap, int x, int y, bool useMask);
+    virtual void DoDrawIcon(const wxIcon& icon, int x, int y);
+#if wxUSE_IMAGE
+    virtual bool DoFloodFill(int x, int y, const wxColour& col, wxFloodFillStyle style);
 #endif
+    virtual wxBitmap DoGetAsBitmap(const wxRect* subrect) const;
+    virtual bool DoGetPixel(int x, int y, wxColour* col) const;
+    virtual void DoGetSize(int* width, int* height) const;
+    virtual bool DoStretchBlit(int xdest, int ydest, int dstWidth, int dstHeight, wxDC* source, int xsrc, int ysrc, int srcWidth, int srcHeight, wxRasterOperationMode rop, bool useMask, int xsrcMask, int ysrcMask);
+    virtual void* GetCairoContext() const;
 
-//-----------------------------------------------------------------------------
-// coordinates transformations
+protected:
+    int m_width, m_height;
+
+    wxDECLARE_NO_COPY_CLASS(wxGTKCairoDCImpl);
+};
 //-----------------------------------------------------------------------------
 
-inline wxCoord wxDCBase::DeviceToLogicalX(wxCoord x) const
+class wxWindowDCImpl: public wxGTKCairoDCImpl
 {
-    return wxRound((x - m_deviceOriginX) / m_scaleX) * m_signX + m_logicalOriginX;
-}
-inline wxCoord wxDCBase::DeviceToLogicalY(wxCoord y) const
+    typedef wxGTKCairoDCImpl base_type;
+public:
+    wxWindowDCImpl(wxWindowDC* owner, wxWindow* window);
+
+    wxDECLARE_NO_COPY_CLASS(wxWindowDCImpl);
+};
+//-----------------------------------------------------------------------------
+
+class wxClientDCImpl: public wxGTKCairoDCImpl
 {
-    return wxRound((y - m_deviceOriginY) / m_scaleY) * m_signY + m_logicalOriginY;
-}
-inline wxCoord wxDCBase::DeviceToLogicalXRel(wxCoord x) const
+    typedef wxGTKCairoDCImpl base_type;
+public:
+    wxClientDCImpl(wxClientDC* owner, wxWindow* window);
+
+    wxDECLARE_NO_COPY_CLASS(wxClientDCImpl);
+};
+//-----------------------------------------------------------------------------
+
+class wxPaintDCImpl: public wxGTKCairoDCImpl
 {
-    return wxRound(x / m_scaleX);
-}
-inline wxCoord wxDCBase::DeviceToLogicalYRel(wxCoord y) const
+    typedef wxGTKCairoDCImpl base_type;
+public:
+    wxPaintDCImpl(wxPaintDC* owner, wxWindow* window);
+
+    wxDECLARE_NO_COPY_CLASS(wxPaintDCImpl);
+};
+//-----------------------------------------------------------------------------
+
+class wxScreenDCImpl: public wxGTKCairoDCImpl
 {
-    return wxRound(y / m_scaleY);
-}
-inline wxCoord wxDCBase::LogicalToDeviceX(wxCoord x) const
+    typedef wxGTKCairoDCImpl base_type;
+public:
+    wxScreenDCImpl(wxScreenDC* owner);
+
+    wxDECLARE_NO_COPY_CLASS(wxScreenDCImpl);
+};
+//-----------------------------------------------------------------------------
+
+class wxMemoryDCImpl: public wxGTKCairoDCImpl
 {
-    return wxRound((x - m_logicalOriginX) * m_scaleX) * m_signX + m_deviceOriginX;
-}
-inline wxCoord wxDCBase::LogicalToDeviceY(wxCoord y) const
+    typedef wxGTKCairoDCImpl base_type;
+public:
+    wxMemoryDCImpl(wxMemoryDC* owner);
+    wxMemoryDCImpl(wxMemoryDC* owner, wxBitmap& bitmap);
+    wxMemoryDCImpl(wxMemoryDC* owner, wxDC* dc);
+    virtual wxBitmap DoGetAsBitmap(const wxRect* subrect) const;
+    virtual void DoSelect(const wxBitmap& bitmap);
+    virtual const wxBitmap& GetSelectedBitmap() const;
+    virtual wxBitmap& GetSelectedBitmap();
+
+private:
+    void Setup();
+    wxBitmap m_bitmap;
+
+    wxDECLARE_NO_COPY_CLASS(wxMemoryDCImpl);
+};
+//-----------------------------------------------------------------------------
+
+class WXDLLIMPEXP_CORE wxGTKCairoDC: public wxDC
 {
-    return wxRound((y - m_logicalOriginY) * m_scaleY) * m_signY + m_deviceOriginY;
-}
-inline wxCoord wxDCBase::LogicalToDeviceXRel(wxCoord x) const
-{
-    return wxRound(x * m_scaleX);
-}
-inline wxCoord wxDCBase::LogicalToDeviceYRel(wxCoord y) const
-{
-    return wxRound(y * m_scaleY);
-}
+    typedef wxDC base_type;
+public:
+    wxGTKCairoDC(cairo_t* cr);
+
+    wxDECLARE_NO_COPY_CLASS(wxGTKCairoDC);
+};
+
+#else
+
+#include "wx/dc.h"
 
 //-----------------------------------------------------------------------------
 // wxDC
 //-----------------------------------------------------------------------------
 
-class WXDLLIMPEXP_CORE wxDC : public wxDCBase
+class WXDLLIMPEXP_CORE wxGTKDCImpl : public wxDCImpl
 {
 public:
-    wxDC();
-    virtual ~wxDC() { }
+    wxGTKDCImpl( wxDC *owner );
+    virtual ~wxGTKDCImpl();
 
 #if wxUSE_PALETTE
-    void SetColourMap( const wxPalette& palette ) { SetPalette(palette); };
+    void SetColourMap( const wxPalette& palette ) { SetPalette(palette); }
 #endif // wxUSE_PALETTE
 
     // Resolution in pixels per logical inch
@@ -84,81 +134,22 @@ public:
     virtual void StartPage() { }
     virtual void EndPage() { }
 
-    virtual void SetMapMode( int mode );
-    virtual void SetUserScale( double x, double y );
-    virtual void SetLogicalScale( double x, double y );
-    virtual void SetLogicalOrigin( wxCoord x, wxCoord y );
-    virtual void SetDeviceOrigin( wxCoord x, wxCoord y );
-
-    virtual void SetAxisOrientation( bool xLeftRight, bool yBottomUp );
-
-    virtual void ComputeScaleAndOrigin();
-
     virtual GdkWindow* GetGDKWindow() const { return NULL; }
-    virtual wxBitmap GetSelectedBitmap() const { return wxNullBitmap; }        
-
-protected:
-    // implementation
-    // --------------
-
-    wxCoord XDEV2LOG(wxCoord x) const
-    {
-        return DeviceToLogicalX(x);
-    }
-    wxCoord XDEV2LOGREL(wxCoord x) const
-    {
-        return DeviceToLogicalXRel(x);
-    }
-    wxCoord YDEV2LOG(wxCoord y) const
-    {
-        return DeviceToLogicalY(y);
-    }
-    wxCoord YDEV2LOGREL(wxCoord y) const
-    {
-        return DeviceToLogicalYRel(y);
-    }
-    wxCoord XLOG2DEV(wxCoord x) const
-    {
-        return LogicalToDeviceX(x);
-    }
-    wxCoord XLOG2DEVREL(wxCoord x) const
-    {
-        return LogicalToDeviceXRel(x);
-    }
-    wxCoord YLOG2DEV(wxCoord y) const
-    {
-        return LogicalToDeviceY(y);
-    }
-    wxCoord YLOG2DEVREL(wxCoord y) const
-    {
-        return LogicalToDeviceYRel(y);
-    }
-
+    virtual void* GetHandle() const { return GetGDKWindow(); }
+    
     // base class pure virtuals implemented here
     virtual void DoSetClippingRegion(wxCoord x, wxCoord y, wxCoord width, wxCoord height);
     virtual void DoGetSizeMM(int* width, int* height) const;
 
-public:
-    // GTK-specific member variables
-
-    // not sure what for, but what is a mm on a screen you don't know the size
-    // of?
-    double       m_mm_to_pix_x,
-                 m_mm_to_pix_y;
-
-    bool         m_needComputeScaleX,
-                 m_needComputeScaleY; // not yet used
-
-
-private:
-    DECLARE_ABSTRACT_CLASS(wxDC)
+    DECLARE_ABSTRACT_CLASS(wxGTKDCImpl)
 };
 
-// this must be defined when wxDC::Blit() honours the DC origian and needed to
+// this must be defined when wxDC::Blit() honours the DC origin and needed to
 // allow wxUniv code in univ/winuniv.cpp to work with versions of wxGTK
 // 2.3.[23]
 #ifndef wxHAS_WORKING_GTK_DC_BLIT
     #define wxHAS_WORKING_GTK_DC_BLIT
 #endif
 
-#endif // __GTKDCH__
+#endif
+#endif // _WX_GTKDC_H_

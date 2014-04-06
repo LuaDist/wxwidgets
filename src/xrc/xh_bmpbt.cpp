@@ -3,7 +3,6 @@
 // Purpose:     XRC resource for bitmap buttons
 // Author:      Brian Gavin
 // Created:     2000/09/09
-// RCS-ID:      $Id: xh_bmpbt.cpp 44510 2007-02-16 08:16:37Z JS $
 // Copyright:   (c) 2000 Brian Gavin
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

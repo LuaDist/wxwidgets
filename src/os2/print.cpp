@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/14/99
-// RCS-ID:      $Id: print.cpp 38857 2006-04-20 07:31:44Z ABX $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -62,9 +61,6 @@ bool wxOS2Printer::Setup(wxWindow *WXUNUSED(parent))
 // TODO:
 /*
     wxPrintDialog dialog(parent, & m_printData);
-#if WXWIN_COMPATIBILITY_2_4
-    dialog.GetPrintData().SetSetupDialog(true);
-#endif
     return (dialog.ShowModal() == wxID_OK);
 */
     return false;

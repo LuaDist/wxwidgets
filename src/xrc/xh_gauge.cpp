@@ -3,7 +3,6 @@
 // Purpose:     XRC resource for wxGauge
 // Author:      Bob Mitchell
 // Created:     2000/03/21
-// RCS-ID:      $Id: xh_gauge.cpp 39607 2006-06-06 22:02:01Z ABX $
 // Copyright:   (c) 2000 Bob Mitchell and Verant Interactive
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -22,6 +21,8 @@
 #ifndef WX_PRECOMP
     #include "wx/gauge.h"
 #endif
+
+static const long DEFAULT_RANGE = 100;
 
 IMPLEMENT_DYNAMIC_CLASS(wxGaugeXmlHandler, wxXmlResourceHandler)
 
@@ -43,7 +44,7 @@ wxObject *wxGaugeXmlHandler::DoCreateResource()
 
     control->Create(m_parentAsWindow,
                     GetID(),
-                    GetLong(wxT("range"), wxGAUGE_DEFAULT_RANGE),
+                    GetLong(wxT("range"), DEFAULT_RANGE),
                     GetPosition(), GetSize(),
                     GetStyle(),
                     wxDefaultValidator,

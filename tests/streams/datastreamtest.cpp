@@ -3,7 +3,6 @@
 // Purpose:     wxDataXXXStream Unit Test
 // Author:      Ryan Norton
 // Created:     2004-08-14
-// RCS-ID:      $Id: datastreamtest.cpp 37497 2006-02-11 16:51:34Z VZ $
 // Copyright:   (c) 2004 Ryan Norton
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -47,7 +46,23 @@ private:
         CPPUNIT_TEST( Int64RW );
 #endif
         CPPUNIT_TEST( NaNRW );
+        CPPUNIT_TEST( PseudoTest_UseBigEndian );
+        CPPUNIT_TEST( FloatRW );
+        CPPUNIT_TEST( DoubleRW );
+        // Only test standard IEEE 754 formats if we're using IEEE extended
+        // format by default, otherwise the tests above already covered them.
+#if wxUSE_APPLE_IEEE
+        CPPUNIT_TEST( PseudoTest_UseIEEE754 );
+        CPPUNIT_TEST( FloatRW );
+        CPPUNIT_TEST( DoubleRW );
+        // Also retest little endian version with standard formats.
+        CPPUNIT_TEST( PseudoTest_UseLittleEndian );
+        CPPUNIT_TEST( FloatRW );
+        CPPUNIT_TEST( DoubleRW );
+#endif // wxUSE_APPLE_IEEE
     CPPUNIT_TEST_SUITE_END();
+
+    wxFloat64 TestFloatRW(wxFloat64 fValue);
 
     void FloatRW();
     void DoubleRW();
@@ -59,39 +74,64 @@ private:
 #endif
     void NaNRW();
 
+    void PseudoTest_UseBigEndian() { ms_useBigEndianFormat = true; }
+    void PseudoTest_UseLittleEndian() { ms_useBigEndianFormat = false; }
+#if wxUSE_APPLE_IEEE
+    void PseudoTest_UseIEEE754() { ms_useIEEE754 = true; }
+#endif // wxUSE_APPLE_IEEE
+
+    static bool ms_useBigEndianFormat;
+#if wxUSE_APPLE_IEEE
+    static bool ms_useIEEE754;
+#endif // wxUSE_APPLE_IEEE
+
     DECLARE_NO_COPY_CLASS(DataStreamTestCase)
 };
 
 // register in the unnamed registry so that these tests are run by default
 CPPUNIT_TEST_SUITE_REGISTRATION( DataStreamTestCase );
 
-// also include in it's own registry so that these tests can be run alone
+// also include in its own registry so that these tests can be run alone
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( DataStreamTestCase, "DataStreamTestCase" );
+
+bool DataStreamTestCase::ms_useBigEndianFormat = false;
+#if wxUSE_APPLE_IEEE
+bool DataStreamTestCase::ms_useIEEE754 = false;
+#endif // wxUSE_APPLE_IEEE
 
 DataStreamTestCase::DataStreamTestCase()
 {
 }
 
-static
-wxFloat64 TestFloatRW(wxFloat64 fValue)
+wxFloat64 DataStreamTestCase::TestFloatRW(wxFloat64 fValue)
 {
-    wxFileOutputStream* pFileOutput = new wxFileOutputStream( _T("mytext.dat") );
-    wxDataOutputStream* pDataOutput = new wxDataOutputStream( *pFileOutput );
+    {
+        wxFileOutputStream pFileOutput( wxT("mytext.dat") );
+        wxDataOutputStream pDataOutput( pFileOutput );
+        if ( ms_useBigEndianFormat )
+            pDataOutput.BigEndianOrdered(true);
 
-    *pDataOutput << fValue;
+#if wxUSE_APPLE_IEEE
+        if ( ms_useIEEE754 )
+            pDataOutput.UseBasicPrecisions();
+#endif // wxUSE_APPLE_IEEE
 
-    delete pDataOutput;
-    delete pFileOutput;
+        pDataOutput << fValue;
+    }
 
-    wxFileInputStream* pFileInput = new wxFileInputStream( _T("mytext.dat") );
-    wxDataInputStream* pDataInput = new wxDataInputStream( *pFileInput );
+    wxFileInputStream pFileInput( wxT("mytext.dat") );
+    wxDataInputStream pDataInput( pFileInput );
+    if ( ms_useBigEndianFormat )
+        pDataInput.BigEndianOrdered(true);
+
+#if wxUSE_APPLE_IEEE
+    if ( ms_useIEEE754 )
+        pDataInput.UseBasicPrecisions();
+#endif // wxUSE_APPLE_IEEE
 
     wxFloat64 fInFloat;
 
-    *pDataInput >> fInFloat;
-
-    delete pDataInput;
-    delete pFileInput;
+    pDataInput >> fInFloat;
 
     return fInFloat;
 }
@@ -115,14 +155,14 @@ private:
         ValueArray InValues(Size);
 
         {
-            wxFileOutputStream FileOutput( _T("mytext.dat") );
+            wxFileOutputStream FileOutput( wxT("mytext.dat") );
             wxDataOutputStream DataOutput( FileOutput );
 
             (DataOutput.*pfnWriter)(Values, Size);
         }
 
         {
-            wxFileInputStream FileInput( _T("mytext.dat") );
+            wxFileInputStream FileInput( wxT("mytext.dat") );
             wxDataInputStream DataInput( FileInput );
 
             (DataInput.*pfnReader)(&*InValues.begin(), InValues.size());
@@ -153,7 +193,8 @@ public:
         ProcessData(&*Values.begin(), Values.size(), pfnWriter, pfnReader);
     }
 
-    bool Ok(void) const {
+    bool IsOk() const
+    {
         return m_ok;
     }
 };
@@ -165,14 +206,14 @@ T TestRW(const T &Value)
     T InValue;
 
     {
-        wxFileOutputStream FileOutput( _T("mytext.dat") );
+        wxFileOutputStream FileOutput( wxT("mytext.dat") );
         wxDataOutputStream DataOutput( FileOutput );
 
         DataOutput << Value;
     }
 
     {
-        wxFileInputStream FileInput( _T("mytext.dat") );
+        wxFileInputStream FileInput( wxT("mytext.dat") );
         wxDataInputStream DataInput( FileInput );
 
         DataInput >> InValue;
@@ -214,8 +255,8 @@ void DataStreamTestCase::LongLongRW()
 
     CPPUNIT_ASSERT( TestRW(wxLongLong(0x12345678l)) == wxLongLong(0x12345678l) );
     CPPUNIT_ASSERT( TestRW(wxLongLong(0x12345678l, 0xabcdef01l)) == wxLongLong(0x12345678l, 0xabcdef01l) );
-    CPPUNIT_ASSERT( TestMultiRW<wxLongLong>(ValuesLL, &wxDataOutputStream::WriteLL, &wxDataInputStream::ReadLL).Ok() );
-    CPPUNIT_ASSERT( TestMultiRW<wxULongLong>(ValuesULL, &wxDataOutputStream::WriteLL, &wxDataInputStream::ReadLL).Ok() );
+    CPPUNIT_ASSERT( TestMultiRW<wxLongLong>(ValuesLL, &wxDataOutputStream::WriteLL, &wxDataInputStream::ReadLL).IsOk() );
+    CPPUNIT_ASSERT( TestMultiRW<wxULongLong>(ValuesULL, &wxDataOutputStream::WriteLL, &wxDataInputStream::ReadLL).IsOk() );
 }
 #endif
 
@@ -238,8 +279,8 @@ void DataStreamTestCase::Int64RW()
 
     CPPUNIT_ASSERT( TestRW(wxUint64(0x12345678l)) == wxUint64(0x12345678l) );
     CPPUNIT_ASSERT( TestRW((wxUint64(0x12345678l) << 32) + wxUint64(0xabcdef01l)) == (wxUint64(0x12345678l) << 32) + wxUint64(0xabcdef01l) );
-    CPPUNIT_ASSERT( TestMultiRW<wxInt64>(ValuesI64, &wxDataOutputStream::Write64, &wxDataInputStream::Read64).Ok() );
-    CPPUNIT_ASSERT( TestMultiRW<wxUint64>(ValuesUI64, &wxDataOutputStream::Write64, &wxDataInputStream::Read64).Ok() );
+    CPPUNIT_ASSERT( TestMultiRW<wxInt64>(ValuesI64, &wxDataOutputStream::Write64, &wxDataInputStream::Read64).IsOk() );
+    CPPUNIT_ASSERT( TestMultiRW<wxUint64>(ValuesUI64, &wxDataOutputStream::Write64, &wxDataInputStream::Read64).IsOk() );
 }
 #endif
 

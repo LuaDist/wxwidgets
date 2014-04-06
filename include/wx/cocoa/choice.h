@@ -4,7 +4,6 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2003/03/16
-// RCS-ID:      $Id: choice.h 38319 2006-03-23 22:05:23Z VZ $
 // Copyright:   (c) 2003 David Elliott
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -15,12 +14,12 @@
 //#include "wx/cocoa/NSPopUpButton.h"
 #include "wx/cocoa/NSMenu.h"
 
-class WXDLLIMPEXP_BASE wxSortedArrayString;
+class WXDLLIMPEXP_FWD_BASE wxSortedArrayString;
 
 // ========================================================================
 // wxChoice
 // ========================================================================
-class WXDLLEXPORT wxChoice: public wxChoiceBase /*, protected wxCocoaNSPopUpButton */, protected wxCocoaNSMenu
+class WXDLLIMPEXP_CORE wxChoice: public wxChoiceBase /*, protected wxCocoaNSPopUpButton */, protected wxCocoaNSMenu
 {
     DECLARE_DYNAMIC_CLASS(wxChoice)
     DECLARE_EVENT_TABLE()
@@ -80,19 +79,18 @@ protected:
 // Implementation
 // ------------------------------------------------------------------------
 public:
-    virtual void Clear();
-    virtual void Delete(unsigned int n);
+    virtual void DoClear();
     virtual unsigned int GetCount() const;
     virtual wxString GetString(unsigned int) const;
     virtual void SetString(unsigned int pos, const wxString&);
     virtual int FindString(const wxString& s, bool bCase = false) const;
     virtual int GetSelection() const;
-    virtual int DoAppend(const wxString&);
-    virtual int DoInsert(const wxString&, unsigned int pos);
+    virtual int DoInsertItems(const wxArrayStringsAdapter& items,
+                              unsigned int pos,
+                              void **clientData, wxClientDataType type);
+    virtual void DoDeleteOneItem(unsigned int pos);
     virtual void DoSetItemClientData(unsigned int, void*);
     virtual void* DoGetItemClientData(unsigned int) const;
-    virtual void DoSetItemClientObject(unsigned int, wxClientData*);
-    virtual wxClientData* DoGetItemClientObject(unsigned int) const;
     virtual void SetSelection(int pos);
 protected:
     wxSortedArrayString *m_sortedStrings;

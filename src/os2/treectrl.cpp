@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by: Vadim Zeitlin to be less MSW-specific on 10.10.98
 // Created:     1997
-// RCS-ID:      $Id: treectrl.cpp 41198 2006-09-13 17:12:25Z VS $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -80,11 +79,7 @@ public:
     wxTreeItemInternalData() {}
     ~wxTreeItemInternalData()
     {
-        if(m_pAttr)
-        {
-            delete m_pAttr;
-            m_pAttr = NULL;
-        }
+        wxDELETE(m_pAttr);
     }
 
     wxTreeItemAttr*                 m_pAttr;
@@ -182,7 +177,7 @@ private:
                  );
 
     const wxTreeCtrl*               m_pTree;
-    DECLARE_NO_COPY_CLASS(wxTreeTraversal)
+    wxDECLARE_NO_COPY_CLASS(wxTreeTraversal);
 }; // end of CLASS wxTreeTraversal
 
 //
@@ -258,8 +253,6 @@ private:
 // wxWin macros
 // ----------------------------------------------------------------------------
 
-IMPLEMENT_DYNAMIC_CLASS(wxTreeCtrl, wxControl)
-
 // ----------------------------------------------------------------------------
 // constants
 // ----------------------------------------------------------------------------
@@ -287,8 +280,8 @@ static /* const */ wxEventType gs_expandEvents[IDX_WHAT_MAX][IDX_HOW_MAX];
    but logically it's a const table with the following entries:
 =
 {
-    { wxEVT_COMMAND_TREE_ITEM_COLLAPSED, wxEVT_COMMAND_TREE_ITEM_COLLAPSING },
-    { wxEVT_COMMAND_TREE_ITEM_EXPANDED,  wxEVT_COMMAND_TREE_ITEM_EXPANDING  }
+    { wxEVT_TREE_ITEM_COLLAPSED, wxEVT_TREE_ITEM_COLLAPSING },
+    { wxEVT_TREE_ITEM_EXPANDED,  wxEVT_TREE_ITEM_EXPANDING  }
 };
 */
 
@@ -355,10 +348,10 @@ void wxTreeCtrl::Init ()
     // Initialize the global array of events now as it can't be done statically
     // with the wxEVT_XXX values being allocated during run-time only
     //
-    gs_expandEvents[IDX_COLLAPSE][IDX_DONE]  = wxEVT_COMMAND_TREE_ITEM_COLLAPSED;
-    gs_expandEvents[IDX_COLLAPSE][IDX_DOING] = wxEVT_COMMAND_TREE_ITEM_COLLAPSING;
-    gs_expandEvents[IDX_EXPAND][IDX_DONE]    = wxEVT_COMMAND_TREE_ITEM_EXPANDED;
-    gs_expandEvents[IDX_EXPAND][IDX_DOING]   = wxEVT_COMMAND_TREE_ITEM_EXPANDING;
+    gs_expandEvents[IDX_COLLAPSE][IDX_DONE]  = wxEVT_TREE_ITEM_COLLAPSED;
+    gs_expandEvents[IDX_COLLAPSE][IDX_DOING] = wxEVT_TREE_ITEM_COLLAPSING;
+    gs_expandEvents[IDX_EXPAND][IDX_DONE]    = wxEVT_TREE_ITEM_EXPANDED;
+    gs_expandEvents[IDX_EXPAND][IDX_DOING]   = wxEVT_TREE_ITEM_EXPANDING;
 } // end of wxTreeCtrl::Init
 
 bool wxTreeCtrl::Create (
@@ -544,30 +537,6 @@ wxImageList* wxTreeCtrl::GetImageList () const
 {
     return m_pImageListNormal;
 } // end of wxTreeCtrl::GetImageList
-
-#if WXWIN_COMPATIBILITY_2_4
-
-wxImageList* wxTreeCtrl::GetImageList(int nVal) const
-{
-    return GetImageList();
-}
-
-void wxTreeCtrl::SetImageList(wxImageList* pImageList, int nVal)
-{
-    SetImageList(pImageList);
-}
-
-int wxTreeCtrl::GetItemSelectedImage(const wxTreeItemId& rItem) const
-{
-    return GetItemImage(rItem, wxTreeItemIcon_Selected);
-}
-
-void wxTreeCtrl::SetItemSelectedImage(const wxTreeItemId& rItem, int nImage)
-{
-    SetItemImage(rItem, nImage, wxTreeItemIcon_Selected);
-}
-
-#endif // WXWIN_COMPATIBILITY_2_4
 
 wxImageList* wxTreeCtrl::GetStateImageList () const
 {
@@ -1503,28 +1472,6 @@ wxTreeItemId wxTreeCtrl::DoInsertItem (
     return wxTreeItemId((long)pRecord->m_ulItemId);
 }
 
-#if WXWIN_COMPATIBILITY_2_4
-
-// for compatibility only
-wxTreeItemId wxTreeCtrl::InsertItem (
-  const wxTreeItemId&               rParent
-, const wxString&                   rsText
-, int                               nImage
-, int                               nSelImage
-, long                              lInsertAfter
-)
-{
-    return DoInsertItem( rParent
-                        ,wxTreeItemId(lInsertAfter)
-                        ,rsText
-                        ,nImage
-                        ,nSelImage
-                        ,NULL
-                       );
-} // end of wxTreeCtrl::InsertItem
-
-#endif // WXWIN_COMPATIBILITY_2_4
-
 wxTreeItemId wxTreeCtrl::AddRoot (
   const wxString&                   rsText
 , int                               nImage
@@ -1637,7 +1584,7 @@ void wxTreeCtrl::Delete (
         delete (wxTreeItemAttr *)m_vAttrs.Delete((long)rItem.m_pItem);
     }
     vEvent.SetEventType(vEventType);
-    GetEventHandler()->ProcessEvent(vEvent);
+    HandleWindowEvent(vEvent);
 } // end of wxTreeCtrl::Delete
 
 // delete all children (but don't delete the item itself)
@@ -1764,20 +1711,6 @@ void wxTreeCtrl::Toggle (
              ,wxTREE_EXPAND_TOGGLE
             );
 } // end of wxTreeCtrl::Toggle
-
-#if WXWIN_COMPATIBILITY_2_4
-
-void wxTreeCtrl::ExpandItem (
-  const wxTreeItemId&               rItem
-, int                               nAction
-)
-{
-    DoExpand( rItem
-             ,nAction
-            );
-} // end of wxTreeCtrl::ExpandItem
-
-#endif // WXWIN_COMPATIBILITY_2_4
 
 void wxTreeCtrl::Unselect ()
 {
@@ -2016,7 +1949,7 @@ bool wxTreeCtrl::OS2Command (
 {
     if (uCmd == CN_ENDEDIT)
     {
-        wxCommandEvent              vEvent( wxEVT_COMMAND_TEXT_UPDATED
+        wxCommandEvent              vEvent( wxEVT_TEXT
                                            ,wId
                                           );
 
@@ -2068,7 +2001,7 @@ MRESULT wxTreeCtrl::OS2WindowProc (
                     {
                         PMYRECORD       pRecord = (PMYRECORD)pDragInit->pRecord;
 
-                        vEventType = wxEVT_COMMAND_TREE_BEGIN_DRAG;
+                        vEventType = wxEVT_TREE_BEGIN_DRAG;
                         vEvent.m_item        = pRecord->m_ulItemId;
                         vEvent.m_pointDrag.x = pDragInit->x;
                         vEvent.m_pointDrag.y = pDragInit->y;
@@ -2081,7 +2014,7 @@ MRESULT wxTreeCtrl::OS2WindowProc (
                     {
                         PMYRECORD       pRecord = (PMYRECORD)pEditData->pRecord;
 
-                        vEventType = wxEVT_COMMAND_TREE_BEGIN_LABEL_EDIT;
+                        vEventType = wxEVT_TREE_BEGIN_LABEL_EDIT;
                         vEvent.m_item = pRecord->m_ulItemId;
                         vEvent.m_label = pRecord->m_vRecord.pszTree;
                         vEvent.m_editCancelled = false;
@@ -2094,7 +2027,7 @@ MRESULT wxTreeCtrl::OS2WindowProc (
                     {
                         PMYRECORD       pRecord = (PMYRECORD)pEditData->pRecord;
 
-                        vEventType = wxEVT_COMMAND_TREE_END_LABEL_EDIT;
+                        vEventType = wxEVT_TREE_END_LABEL_EDIT;
                         vEvent.m_item = pRecord->m_ulItemId;
                         vEvent.m_label = pRecord->m_vRecord.pszTree;
                         if (pRecord->m_vRecord.pszTree == NULL)
@@ -2118,7 +2051,7 @@ MRESULT wxTreeCtrl::OS2WindowProc (
                     break;
             }
             vEvent.SetEventType(vEventType);
-            bProcessed = GetEventHandler()->ProcessEvent(vEvent);
+            bProcessed = HandleWindowEvent(vEvent);
             break;
     }
     if (!bProcessed)

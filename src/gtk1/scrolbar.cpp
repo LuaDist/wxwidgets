@@ -2,7 +2,6 @@
 // Name:        src/gtk1/scrolbar.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: scrolbar.cpp 39745 2006-06-15 17:58:49Z ABX $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -70,16 +69,16 @@ static void gtk_scrollbar_callback( GtkAdjustment *adjust,
     {
         wxScrollEvent event( g_currentUpDownEvent, win->GetId(), value, orient );
         event.SetEventObject( win );
-        win->GetEventHandler()->ProcessEvent( event );
+        win->HandleWindowEvent( event );
     }
 
     // throw other event (wxEVT_SCROLL_THUMBTRACK)
     wxScrollEvent event( command, win->GetId(), value, orient );
     event.SetEventObject( win );
-    win->GetEventHandler()->ProcessEvent( event );
+    win->HandleWindowEvent( event );
 
 /*
-    wxCommandEvent cevent( wxEVT_COMMAND_SCROLLBAR_UPDATED, win->GetId() );
+    wxCommandEvent cevent( wxEVT_SCROLLBAR, win->GetId() );
     cevent.SetEventObject( win );
     win->ProcessEvent( cevent );
 */
@@ -149,7 +148,7 @@ gtk_scrollbar_button_release_callback( GtkRange *WXUNUSED(widget),
 
         wxScrollEvent event( command, win->GetId(), value, orient );
         event.SetEventObject( win );
-        win->GetEventHandler()->ProcessEvent( event );
+        win->HandleWindowEvent( event );
     }
 
     win->m_isScrolling = false;
@@ -164,8 +163,6 @@ gtk_scrollbar_button_release_callback( GtkRange *WXUNUSED(widget),
 //-----------------------------------------------------------------------------
 // wxScrollBar
 //-----------------------------------------------------------------------------
-
-IMPLEMENT_DYNAMIC_CLASS(wxScrollBar,wxControl)
 
 wxScrollBar::~wxScrollBar()
 {
@@ -188,9 +185,9 @@ bool wxScrollBar::Create(wxWindow *parent, wxWindowID id,
     m_oldPos = 0.0;
 
     if ((style & wxSB_VERTICAL) == wxSB_VERTICAL)
-        m_widget = gtk_vscrollbar_new( (GtkAdjustment *) NULL );
+        m_widget = gtk_vscrollbar_new( NULL );
     else
-        m_widget = gtk_hscrollbar_new( (GtkAdjustment *) NULL );
+        m_widget = gtk_hscrollbar_new( NULL );
 
     m_adjust = gtk_range_get_adjustment( GTK_RANGE(m_widget) );
 

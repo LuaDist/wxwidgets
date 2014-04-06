@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: utils.cpp 50982 2008-01-01 20:38:33Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -30,6 +29,8 @@
 
 #include "wx/apptrait.h"
 #include "wx/evtloop.h"
+#include "wx/private/eventloopsourcesmanager.h"
+#include "wx/motif/private/timer.h"
 
 #include <string.h>
 
@@ -41,16 +42,10 @@
 #pragma message disable nosimpint
 #endif
 
-#include "wx/unix/execute.h"
-
 #include <Xm/Xm.h>
 #include <Xm/Frame.h>
 
 #include "wx/motif/private.h"
-
-#if wxUSE_RESOURCES
-#include "X11/Xresource.h"
-#endif
 
 #include "X11/Xutil.h"
 
@@ -58,21 +53,6 @@
 #pragma message enable nosimpint
 #endif
 
-// ----------------------------------------------------------------------------
-// private functions
-// ----------------------------------------------------------------------------
-
-// Yuck this is really BOTH site and platform dependent
-// so we should use some other strategy!
-#ifdef sun
-    #define DEFAULT_XRESOURCE_DIR "/usr/openwin/lib/app-defaults"
-#else
-    #define DEFAULT_XRESOURCE_DIR "/usr/lib/X11/app-defaults"
-#endif
-
-#if wxUSE_RESOURCES
-static char *GetIniFile (char *dest, const char *filename);
-#endif
 
 // ============================================================================
 // implementation
@@ -97,47 +77,104 @@ void wxFlushEvents(WXDisplay* wxdisplay)
     }
 }
 
-// ----------------------------------------------------------------------------
-// wxExecute stuff
-// ----------------------------------------------------------------------------
+#if wxUSE_EVENTLOOP_SOURCE
 
-static void xt_notify_end_process(XtPointer data, int *WXUNUSED(fid),
-                                  XtInputId *id)
+extern "C"
 {
-    wxEndProcessData *proc_data = (wxEndProcessData *)data;
 
-    wxHandleProcessTermination(proc_data);
+static
+void
+wxMotifInputHandler(XtPointer data,
+                    int* WXUNUSED(fd),
+                    XtInputId* WXUNUSED(inputId))
+{
+    wxEventLoopSourceHandler * const
+        handler = static_cast<wxEventLoopSourceHandler *>(data);
 
-    // VZ: I think they should be the same...
-    wxASSERT( (int)*id == proc_data->tag );
-
-    XtRemoveInput(*id);
+    handler->OnReadWaiting();
 }
 
-int wxAddProcessCallback(wxEndProcessData *proc_data, int fd)
+}
+
+// This class exists just to call XtRemoveInput() in its dtor, the real work of
+// dispatching events on the file descriptor to the handler is done by
+// wxMotifInputHandler callback above.
+class wxMotifEventLoopSource : public wxEventLoopSource
 {
-    XtInputId id = XtAppAddInput((XtAppContext) wxTheApp->GetAppContext(),
+public:
+    wxMotifEventLoopSource(XtInputId inputId,
+                           wxEventLoopSourceHandler *handler,
+                           int flags)
+        : wxEventLoopSource(handler, flags),
+          m_inputId(inputId)
+    {
+    }
+
+    virtual ~wxMotifEventLoopSource()
+    {
+        XtRemoveInput(m_inputId);
+    }
+
+private:
+    const XtInputId m_inputId;
+
+    wxDECLARE_NO_COPY_CLASS(wxMotifEventLoopSource);
+};
+
+class wxMotifEventLoopSourcesManager : public wxEventLoopSourcesManagerBase
+{
+public:
+    wxEventLoopSource *
+    AddSourceForFD(int fd, wxEventLoopSourceHandler* handler, int flags)
+    {
+        wxCHECK_MSG( wxTheApp, NULL, "Must create wxTheApp first" );
+
+        // The XtInputXXXMask values cannot be combined (hence "Mask" is a
+        // complete misnomer), and supporting those would make the code more
+        // complicated and we don't need them for now.
+        wxCHECK_MSG( !(flags & (wxEVENT_SOURCE_OUTPUT |
+                                wxEVENT_SOURCE_EXCEPTION)),
+                     NULL,
+                     "Monitoring FDs for output/errors not supported" );
+
+        wxCHECK_MSG( flags & wxEVENT_SOURCE_INPUT,
+                     NULL,
+                     "Should be monitoring for input" );
+
+        XtInputId inputId = XtAppAddInput
+                            (
+                                 (XtAppContext) wxTheApp->GetAppContext(),
                                  fd,
-                                 (XtPointer *) XtInputReadMask,
-                                 (XtInputCallbackProc) xt_notify_end_process,
-                                 (XtPointer) proc_data);
+                                 (XtPointer) XtInputReadMask,
+                                 wxMotifInputHandler,
+                                 handler
+                            );
+        if ( inputId < 0 )
+            return 0;
 
-    return (int)id;
+        return new wxMotifEventLoopSource(inputId, handler, flags);
+    }
+};
+
+wxEventLoopSourcesManagerBase* wxGUIAppTraits::GetEventLoopSourcesManager()
+{
+    static wxMotifEventLoopSourcesManager s_eventLoopSourcesManager;
+
+    return &s_eventLoopSourcesManager;
 }
+
+#endif // wxUSE_EVENTLOOP_SOURCE
 
 // ----------------------------------------------------------------------------
 // misc
 // ----------------------------------------------------------------------------
 
 // Emit a beeeeeep
-#ifndef __EMX__
-// on OS/2, we use the wxBell from wxBase library (src/os2/utils.cpp)
 void wxBell()
 {
     // Use current setting for the bell
     XBell (wxGlobalDisplay(), 0);
 }
-#endif
 
 wxPortId wxGUIAppTraits::GetToolkitVersion(int *verMaj, int *verMin) const
 {
@@ -150,349 +187,15 @@ wxPortId wxGUIAppTraits::GetToolkitVersion(int *verMaj, int *verMin) const
     return wxPORT_MOTIF;
 }
 
-
-// ----------------------------------------------------------------------------
-// Reading and writing resources (eg WIN.INI, .Xdefaults)
-// ----------------------------------------------------------------------------
-
-#if wxUSE_RESOURCES
-
-// Read $HOME for what it says is home, if not
-// read $USER or $LOGNAME for user name else determine
-// the Real User, then determine the Real home dir.
-static char * GetIniFile (char *dest, const char *filename)
+wxEventLoopBase* wxGUIAppTraits::CreateEventLoop()
 {
-    char *home = NULL;
-    if (filename && wxIsAbsolutePath(filename))
-    {
-        strcpy(dest, filename);
-    }
-    else if ((home = wxGetUserHome()) != NULL)
-    {
-        strcpy(dest, home);
-        if (dest[strlen(dest) - 1] != '/')
-            strcat (dest, "/");
-        if (filename == NULL)
-        {
-            if ((filename = getenv ("XENVIRONMENT")) == NULL)
-                filename = ".Xdefaults";
-        }
-        else if (*filename != '.')
-            strcat (dest, ".");
-        strcat (dest, filename);
-    } else
-    {
-        dest[0] = '\0';
-    }
-    return dest;
+    return new wxEventLoop;
 }
 
-static char *GetResourcePath(char *buf, const char *name, bool create = false)
+wxTimerImpl* wxGUIAppTraits::CreateTimerImpl(wxTimer* timer)
 {
-    if (create && wxFileExists (name) ) {
-        strcpy(buf, name);
-        return buf; // Exists so ...
-    }
-
-    if (*name == '/')
-        strcpy(buf, name);
-    else {
-        // Put in standard place for resource files if not absolute
-        strcpy (buf, DEFAULT_XRESOURCE_DIR);
-        strcat (buf, "/");
-        strcat (buf, wxFileNameFromPath (name).c_str());
-    }
-
-    if (create) {
-        // Touch the file to create it
-        FILE *fd = fopen (buf, "w");
-        if (fd) fclose (fd);
-    }
-    return buf;
+    return new wxMotifTimerImpl(timer);
 }
-
-/*
-* We have a cache for writing different resource files,
-* which will only get flushed when we call wxFlushResources().
-* Build up a list of resource databases waiting to be written.
-*
-*/
-
-wxList wxResourceCache (wxKEY_STRING);
-
-void
-wxFlushResources (void)
-{
-    char nameBuffer[512];
-
-    wxNode *node = wxResourceCache.First ();
-    while (node)
-    {
-        const char *file = node->GetKeyString();
-        // If file doesn't exist, create it first.
-        (void)GetResourcePath(nameBuffer, file, true);
-
-        XrmDatabase database = (XrmDatabase) node->Data ();
-        XrmPutFileDatabase (database, nameBuffer);
-        XrmDestroyDatabase (database);
-        wxNode *next = node->Next ();
-        delete node;
-        node = next;
-    }
-}
-
-static XrmDatabase wxResourceDatabase = 0;
-
-void wxXMergeDatabases (wxApp * theApp, Display * display);
-
-bool wxWriteResource(const wxString& section, const wxString& entry, const wxString& value, const wxString& file)
-{
-    char buffer[500];
-
-    (void) GetIniFile (buffer, file);
-
-    XrmDatabase database;
-    wxNode *node = wxResourceCache.Find (buffer);
-    if (node)
-        database = (XrmDatabase) node->Data ();
-    else
-    {
-        database = XrmGetFileDatabase (buffer);
-        wxResourceCache.Append (buffer, (wxObject *) database);
-    }
-
-    char resName[300];
-    strcpy (resName, section.c_str());
-    strcat (resName, ".");
-    strcat (resName, entry.c_str());
-
-    XrmPutStringResource (&database, resName, value);
-    return true;
-}
-
-bool wxWriteResource(const wxString& section, const wxString& entry, float value, const wxString& file)
-{
-    char buf[50];
-    sprintf(buf, "%.4f", value);
-    return wxWriteResource(section, entry, buf, file);
-}
-
-bool wxWriteResource(const wxString& section, const wxString& entry, long value, const wxString& file)
-{
-    char buf[50];
-    sprintf(buf, "%ld", value);
-    return wxWriteResource(section, entry, buf, file);
-}
-
-bool wxWriteResource(const wxString& section, const wxString& entry, int value, const wxString& file)
-{
-    char buf[50];
-    sprintf(buf, "%d", value);
-    return wxWriteResource(section, entry, buf, file);
-}
-
-bool wxGetResource(const wxString& section, const wxString& entry, char **value, const wxString& file)
-{
-    if (!wxResourceDatabase)
-    {
-        Display *display = wxGlobalDisplay();
-        wxXMergeDatabases (wxTheApp, display);
-    }
-
-    XrmDatabase database;
-
-    if (!file.empty())
-    {
-        char buffer[500];
-
-        // Is this right? Trying to get it to look in the user's
-        // home directory instead of current directory -- JACS
-        (void) GetIniFile (buffer, file);
-
-        wxNode *node = wxResourceCache.Find (buffer);
-        if (node)
-            database = (XrmDatabase) node->Data ();
-        else
-        {
-            database = XrmGetFileDatabase (buffer);
-            wxResourceCache.Append (buffer, (wxObject *) database);
-        }
-    }
-    else
-        database = wxResourceDatabase;
-
-    XrmValue xvalue;
-    char *str_type[20];
-    char buf[150];
-    strcpy (buf, section);
-    strcat (buf, ".");
-    strcat (buf, entry);
-
-    Bool success = XrmGetResource (database, buf, "*", str_type,
-        &xvalue);
-    // Try different combinations of upper/lower case, just in case...
-    if (!success)
-    {
-        buf[0] = (isupper (buf[0]) ? tolower (buf[0]) : toupper (buf[0]));
-        success = XrmGetResource (database, buf, "*", str_type,
-            &xvalue);
-    }
-    if (success)
-    {
-        if (*value)
-            delete[] *value;
-
-        *value = new char[xvalue.size + 1];
-        strncpy (*value, xvalue.addr, (int) xvalue.size);
-        return true;
-    }
-    return false;
-}
-
-bool wxGetResource(const wxString& section, const wxString& entry, float *value, const wxString& file)
-{
-    char *s = NULL;
-    bool succ = wxGetResource(section, entry, (char **)&s, file);
-    if (succ)
-    {
-        *value = (float)strtod(s, NULL);
-        delete[] s;
-        return true;
-    }
-    else return false;
-}
-
-bool wxGetResource(const wxString& section, const wxString& entry, long *value, const wxString& file)
-{
-    char *s = NULL;
-    bool succ = wxGetResource(section, entry, (char **)&s, file);
-    if (succ)
-    {
-        *value = strtol(s, NULL, 10);
-        delete[] s;
-        return true;
-    }
-    else return false;
-}
-
-bool wxGetResource(const wxString& section, const wxString& entry, int *value, const wxString& file)
-{
-    char *s = NULL;
-    bool succ = wxGetResource(section, entry, (char **)&s, file);
-    if (succ)
-    {
-        // Handle True, False here
-        // True, Yes, Enables, Set or  Activated
-        if (*s == 'T' || *s == 'Y' || *s == 'E' || *s == 'S' || *s == 'A')
-            *value = true;
-        // False, No, Disabled, Reset, Cleared, Deactivated
-        else if (*s == 'F' || *s == 'N' || *s == 'D' || *s == 'R' || *s == 'C')
-            *value = false;
-        // Handle as Integer
-        else
-            *value = (int) strtol (s, NULL, 10);
-        delete[] s;
-        return true;
-    }
-    else
-        return false;
-}
-
-void wxXMergeDatabases (wxApp * theApp, Display * display)
-{
-    XrmDatabase homeDB, serverDB, applicationDB;
-    char filenamebuf[1024];
-
-    char *filename = &filenamebuf[0];
-    char *environment;
-    wxString classname = theApp->GetClassName();
-    char name[256];
-    (void) strcpy (name, "/usr/lib/X11/app-defaults/");
-    (void) strcat (name, classname.c_str());
-
-    /* Get application defaults file, if any */
-    applicationDB = XrmGetFileDatabase (name);
-    (void) XrmMergeDatabases (applicationDB, &wxResourceDatabase);
-
-    /* Merge server defaults, created by xrdb, loaded as a property of the root
-    * window when the server initializes and loaded into the display
-    * structure on XOpenDisplay;
-    * if not defined, use .Xdefaults
-    */
-
-    if (XResourceManagerString (display) != NULL)
-    {
-        serverDB = XrmGetStringDatabase (XResourceManagerString (display));
-    }
-    else
-    {
-        (void) GetIniFile (filename, NULL);
-        serverDB = XrmGetFileDatabase (filename);
-    }
-    XrmMergeDatabases (serverDB, &wxResourceDatabase);
-
-    /* Open XENVIRONMENT file, or if not defined, the .Xdefaults,
-    * and merge into existing database
-    */
-
-    if ((environment = getenv ("XENVIRONMENT")) == NULL)
-    {
-        size_t len;
-        environment = GetIniFile (filename, NULL);
-        len = strlen (environment);
-        wxString hostname = wxGetHostName();
-        if ( !hostname.empty() )
-            strncat(environment, hostname, 1024 - len);
-    }
-    homeDB = XrmGetFileDatabase (environment);
-    XrmMergeDatabases (homeDB, &wxResourceDatabase);
-}
-
-#if 0
-
-/*
-* Not yet used but may be useful.
-*
-*/
-void
-wxSetDefaultResources (const Widget w, const char **resourceSpec, const char *name)
-{
-    int i;
-    Display *dpy = XtDisplay (w);    // Retrieve the display pointer
-
-    XrmDatabase rdb = NULL;    // A resource data base
-
-    // Create an empty resource database
-    rdb = XrmGetStringDatabase ("");
-
-    // Add the Component resources, prepending the name of the component
-
-    i = 0;
-    while (resourceSpec[i] != NULL)
-    {
-        char buf[1000];
-
-        sprintf (buf, "*%s%s", name, resourceSpec[i++]);
-        XrmPutLineResource (&rdb, buf);
-    }
-
-    // Merge them into the Xt database, with lowest precendence
-
-    if (rdb)
-    {
-#if (XlibSpecificationRelease>=5)
-        XrmDatabase db = XtDatabase (dpy);
-        XrmCombineDatabase (rdb, &db, False);
-#else
-        XrmMergeDatabases (dpy->db, &rdb);
-        dpy->db = rdb;
-#endif
-    }
-}
-#endif
-// 0
-
-#endif // wxUSE_RESOURCES
 
 // ----------------------------------------------------------------------------
 // display info
@@ -722,12 +425,11 @@ void wxAllocColor(Display *d,Colormap cmp,XColor *xc)
 {
     if (!XAllocColor(d,cmp,xc))
     {
-        //          cout << "wxAllocColor : Warning : Can not allocate color, attempt find nearest !\n";
+        //          cout << "wxAllocColor : Warning : cannot allocate color, attempt find nearest !\n";
         wxAllocNearestColor(d,cmp,xc);
     }
 }
 
-#ifdef __WXDEBUG__
 wxString wxGetXEventName(XEvent& event)
 {
 #if wxUSE_NANOX
@@ -753,7 +455,6 @@ wxString wxGetXEventName(XEvent& event)
     return str;
 #endif
 }
-#endif
 
 // ----------------------------------------------------------------------------
 // accelerators
@@ -871,6 +572,9 @@ XmString wxFindAcceleratorText (const char *s)
 // Change a widget's foreground and background colours.
 void wxDoChangeForegroundColour(WXWidget widget, wxColour& foregroundColour)
 {
+    if (!foregroundColour.IsOk())
+        return;
+
     // When should we specify the foreground, if it's calculated
     // by wxComputeColours?
     // Solution: say we start with the default (computed) foreground colour.
@@ -887,8 +591,11 @@ void wxDoChangeForegroundColour(WXWidget widget, wxColour& foregroundColour)
 
 void wxDoChangeBackgroundColour(WXWidget widget, const wxColour& backgroundColour, bool changeArmColour)
 {
+    if (!backgroundColour.IsOk())
+        return;
+
     wxComputeColours (XtDisplay((Widget) widget), & backgroundColour,
-        (wxColour*) NULL);
+        NULL);
 
     XtVaSetValues ((Widget) widget,
         XmNbackground, g_itemColors[wxBACK_INDEX].pixel,
@@ -929,11 +636,6 @@ wxString wxXmStringToString( const XmString& xmString )
     }
 
     return wxEmptyString;
-}
-
-XmString wxStringToXmString( const wxString& str )
-{
-    return XmStringCreateLtoR((char *)str.c_str(), XmSTRING_DEFAULT_CHARSET);
 }
 
 XmString wxStringToXmString( const char* str )
@@ -986,7 +688,7 @@ WXWidget wxCreateBorderWidget( WXWidget parent, long style )
                                     NULL
                                    );
     }
-    else if (style & wxSUNKEN_BORDER)
+    else if ((style & wxSUNKEN_BORDER) || (style & wxBORDER_THEME))
     {
         borderWidget = XtVaCreateManagedWidget
                                    (

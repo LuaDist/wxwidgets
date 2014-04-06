@@ -8,7 +8,6 @@
 //              3) Fixed ShowPage() bug on displaying bitmaps
 //              Robert Vazan (sizers)
 // Created:     15.08.99
-// RCS-ID:      $Id: wizard.cpp 63262 2010-01-25 18:47:47Z JS $
 // Copyright:   (c) 1999 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -41,7 +40,9 @@
 
 #include "wx/statline.h"
 
+#include "wx/scrolwin.h"
 #include "wx/wizard.h"
+#include "wx/dcmemory.h"
 
 // ----------------------------------------------------------------------------
 // wxWizardSizer
@@ -79,12 +80,13 @@ private:
 // event tables and such
 // ----------------------------------------------------------------------------
 
-DEFINE_EVENT_TYPE(wxEVT_WIZARD_PAGE_CHANGED)
-DEFINE_EVENT_TYPE(wxEVT_WIZARD_PAGE_CHANGING)
-DEFINE_EVENT_TYPE(wxEVT_WIZARD_CANCEL)
-DEFINE_EVENT_TYPE(wxEVT_WIZARD_FINISHED)
-DEFINE_EVENT_TYPE(wxEVT_WIZARD_HELP)
-DEFINE_EVENT_TYPE(wxEVT_WIZARD_PAGE_SHOWN)
+wxDEFINE_EVENT( wxEVT_WIZARD_PAGE_CHANGED, wxWizardEvent );
+wxDEFINE_EVENT( wxEVT_WIZARD_PAGE_CHANGING, wxWizardEvent );
+wxDEFINE_EVENT( wxEVT_WIZARD_BEFORE_PAGE_CHANGED, wxWizardEvent );
+wxDEFINE_EVENT( wxEVT_WIZARD_CANCEL, wxWizardEvent );
+wxDEFINE_EVENT( wxEVT_WIZARD_FINISHED, wxWizardEvent );
+wxDEFINE_EVENT( wxEVT_WIZARD_HELP, wxWizardEvent );
+wxDEFINE_EVENT( wxEVT_WIZARD_PAGE_SHOWN, wxWizardEvent );
 
 BEGIN_EVENT_TABLE(wxWizard, wxDialog)
     EVT_BUTTON(wxID_CANCEL, wxWizard::OnCancel)
@@ -126,30 +128,16 @@ void wxWizardPage::Init()
 }
 
 wxWizardPage::wxWizardPage(wxWizard *parent,
-                           const wxBitmap& bitmap,
-                           const wxChar *resource)
+                           const wxBitmap& bitmap)
 {
-    Create(parent, bitmap, resource);
+    Create(parent, bitmap);
 }
 
 bool wxWizardPage::Create(wxWizard *parent,
-                          const wxBitmap& bitmap,
-                          const wxChar *resource)
+                          const wxBitmap& bitmap)
 {
     if ( !wxPanel::Create(parent, wxID_ANY) )
         return false;
-
-    if ( resource != NULL )
-    {
-#if wxUSE_WX_RESOURCES
-#if 0
-       if ( !LoadFromResource(this, resource) )
-        {
-            wxFAIL_MSG(wxT("wxWizardPage LoadFromResource failed!!!!"));
-        }
-#endif
-#endif // wxUSE_RESOURCES
-    }
 
     m_bitmap = bitmap;
 
@@ -227,11 +215,6 @@ wxSize wxWizardSizer::CalcMin()
 
 wxSize wxWizardSizer::GetMaxChildSize()
 {
-#if !defined(__WXDEBUG__)
-    if ( m_childSize.IsFullySpecified() )
-        return m_childSize;
-#endif
-
     wxSize maxOfMin;
 
     for ( wxSizerItemList::compatibility_iterator childNode = m_children.GetFirst();
@@ -242,18 +225,6 @@ wxSize wxWizardSizer::GetMaxChildSize()
         maxOfMin.IncTo(child->CalcMin());
         maxOfMin.IncTo(SiblingSize(child));
     }
-
-#ifdef __WXDEBUG__
-    if ( m_childSize.IsFullySpecified() && m_childSize != maxOfMin )
-    {
-        wxFAIL_MSG( _T("Size changed in wxWizard::GetPageAreaSizer()")
-                    _T("after RunWizard().\n")
-                    _T("Did you forget to call GetSizer()->Fit(this) ")
-                    _T("for some page?")) ;
-
-        return m_childSize;
-    }
-#endif // __WXDEBUG__
 
     if ( m_owner->m_started )
     {
@@ -299,7 +270,7 @@ wxSize wxWizardSizer::SiblingSize(wxSizerItem *child)
 void wxWizard::Init()
 {
     m_posWizard = wxDefaultPosition;
-    m_page = (wxWizardPage *)NULL;
+    m_page = NULL;
     m_btnPrev = m_btnNext = NULL;
     m_statbmp = NULL;
     m_sizerBmpAndPage = NULL;
@@ -308,6 +279,9 @@ void wxWizard::Init()
     m_started = false;
     m_wasModal = false;
     m_usingSizer = false;
+    m_bitmapBackgroundColour = *wxWHITE;
+    m_bitmapPlacement = 0;
+    m_bitmapMinimumWidth = 115;
 }
 
 bool wxWizard::Create(wxWindow *parent,
@@ -342,7 +316,7 @@ void wxWizard::AddBitmapRow(wxBoxSizer *mainColumn)
     mainColumn->Add(
         m_sizerBmpAndPage,
         1, // Vertically stretchable
-        wxEXPAND // Horizonal stretching, no border
+        wxEXPAND // Horizontal stretching, no border
     );
     mainColumn->Add(0,5,
         0, // No vertical stretching
@@ -350,9 +324,13 @@ void wxWizard::AddBitmapRow(wxBoxSizer *mainColumn)
     );
 
 #if wxUSE_STATBMP
-    if ( m_bitmap.Ok() )
+    if ( m_bitmap.IsOk() )
     {
-        m_statbmp = new wxStaticBitmap(this, wxID_ANY, m_bitmap);
+        wxSize bitmapSize(wxDefaultSize);
+        if (GetBitmapPlacement())
+            bitmapSize.x = GetMinimumBitmapWidth();
+
+        m_statbmp = new wxStaticBitmap(this, wxID_ANY, m_bitmap, wxDefaultPosition, bitmapSize);
         m_sizerBmpAndPage->Add(
             m_statbmp,
             0, // No horizontal stretching
@@ -392,15 +370,8 @@ void wxWizard::AddStaticLine(wxBoxSizer *mainColumn)
 void wxWizard::AddBackNextPair(wxBoxSizer *buttonRow)
 {
     wxASSERT_MSG( m_btnNext && m_btnPrev,
-                  _T("You must create the buttons before calling ")
-                  _T("wxWizard::AddBackNextPair") );
-
-    // margin between Back and Next buttons
-#ifdef __WXMAC__
-    static const int BACKNEXT_MARGIN = 10;
-#else
-    static const int BACKNEXT_MARGIN = 0;
-#endif
+                  wxT("You must create the buttons before calling ")
+                  wxT("wxWizard::AddBackNextPair") );
 
     wxBoxSizer *backNextPair = new wxBoxSizer(wxHORIZONTAL);
     buttonRow->Add(
@@ -411,7 +382,7 @@ void wxWizard::AddBackNextPair(wxBoxSizer *buttonRow)
     );
 
     backNextPair->Add(m_btnPrev);
-    backNextPair->Add(BACKNEXT_MARGIN,0,
+    backNextPair->Add(10, 0,
         0, // No horizontal stretching
         wxEXPAND // No border, (mostly useless) vertical stretching
     );
@@ -425,7 +396,7 @@ void wxWizard::AddButtonRow(wxBoxSizer *mainColumn)
     // to activate the 'next' button first (create the next button before the back button).
     // The reason is: The user will repeatedly enter information in the wizard pages and then wants to
     // press 'next'. If a user uses mostly the keyboard, he would have to skip the 'back' button
-    // everytime. This is annoying. There is a second reason: RETURN acts as TAB. If the 'next'
+    // every time. This is annoying. There is a second reason: RETURN acts as TAB. If the 'next'
     // button comes first in the TAB order, the user can enter information very fast using the RETURN
     // key to TAB to the next entry field and page. This would not be possible, if the 'back' button
     // was created before the 'next' button.
@@ -454,7 +425,7 @@ void wxWizard::AddButtonRow(wxBoxSizer *mainColumn)
     wxButton *btnHelp=0;
 #ifdef __WXMAC__
     if (GetExtraStyle() & wxWIZARD_EX_HELPBUTTON)
-        btnHelp=new wxButton(this, wxID_HELP, _("&Help"), wxDefaultPosition, wxDefaultSize, buttonStyle);
+        btnHelp=new wxButton(this, wxID_HELP, wxEmptyString, wxDefaultPosition, wxDefaultSize, buttonStyle);
 #endif
 
     m_btnNext = new wxButton(this, wxID_FORWARD, _("&Next >"));
@@ -561,10 +532,6 @@ bool wxWizard::ShowPage(wxWizardPage *page, bool goingForward)
     }
 
 
-    // we'll use this to decide whether we have to change the label of this
-    // button or not (initially the label is "Next")
-    bool btnLabelWasNext = true;
-
     // remember the old bitmap (if any) to compare with the new one later
     wxBitmap bmpPrev;
 
@@ -583,19 +550,14 @@ bool wxWizard::ShowPage(wxWizardPage *page, bool goingForward)
 
         m_page->Hide();
 
-        btnLabelWasNext = HasNextPage(m_page);
-
         bmpPrev = m_page->GetBitmap();
 
         if ( !m_usingSizer )
             m_sizerBmpAndPage->Detach(m_page);
     }
 
-    // set the new page
-    m_page = page;
-
     // is this the end?
-    if ( !m_page )
+    if ( !page )
     {
         // terminate successfully
         if ( IsModal() )
@@ -610,11 +572,17 @@ bool wxWizard::ShowPage(wxWizardPage *page, bool goingForward)
 
         // and notify the user code (this is especially useful for modeless
         // wizards)
-        wxWizardEvent event(wxEVT_WIZARD_FINISHED, GetId(), false, 0);
+        wxWizardEvent event(wxEVT_WIZARD_FINISHED, GetId(), false, m_page);
         (void)GetEventHandler()->ProcessEvent(event);
+
+        m_page = NULL;
 
         return true;
     }
+
+    // notice that we change m_page only here so that wxEVT_WIZARD_FINISHED
+    // event above could still use the correct (i.e. old) value of m_page
+    m_page = page;
 
     // position and show the new page
     (void)m_page->TransferDataToWindow();
@@ -632,17 +600,21 @@ bool wxWizard::ShowPage(wxWizardPage *page, bool goingForward)
 
 #if wxUSE_STATBMP
     // update the bitmap if:it changed
+    wxBitmap bmp;
     if ( m_statbmp )
     {
-        wxBitmap bmp = m_page->GetBitmap();
-        if ( !bmp.Ok() )
+        bmp = m_page->GetBitmap();
+        if ( !bmp.IsOk() )
             bmp = m_bitmap;
 
-        if ( !bmpPrev.Ok() )
+        if ( !bmpPrev.IsOk() )
             bmpPrev = m_bitmap;
 
-        if ( !bmp.IsSameAs(bmpPrev) )
-            m_statbmp->SetBitmap(bmp);
+        if (!GetBitmapPlacement())
+        {
+            if ( !bmp.IsSameAs(bmpPrev) )
+                m_statbmp->SetBitmap(bmp);
+        }
     }
 #endif // wxUSE_STATBMP
 
@@ -650,12 +622,10 @@ bool wxWizard::ShowPage(wxWizardPage *page, bool goingForward)
     // and update the buttons state
     m_btnPrev->Enable(HasPrevPage(m_page));
 
-    bool hasNext = HasNextPage(m_page);
-    if ( btnLabelWasNext != hasNext )
-    {
-        m_btnNext->SetLabel(hasNext ? _("&Next >") : _("&Finish"));
-    }
-    // nothing to do: the label was already correct
+    const bool hasNext = HasNextPage(m_page);
+    const wxString label = hasNext ? _("&Next >") : _("&Finish");
+    if ( label != m_btnNext->GetLabel() )
+        m_btnNext->SetLabel(label);
 
     m_btnNext->SetDefault();
 
@@ -675,12 +645,18 @@ bool wxWizard::ShowPage(wxWizardPage *page, bool goingForward)
     {
         m_started = true;
 
-        if ( wxSystemSettings::GetScreenType() > wxSYS_SCREEN_PDA )
-        {
-            GetSizer()->SetSizeHints(this);
-            if ( m_posWizard == wxDefaultPosition )
-                CentreOnScreen();
-        }
+        DoWizardLayout();
+    }
+
+    if (GetBitmapPlacement() && m_statbmp)
+    {
+        ResizeBitmap(bmp);
+
+        if ( !bmp.IsSameAs(bmpPrev) )
+            m_statbmp->SetBitmap(bmp);
+
+        if (m_usingSizer)
+            m_sizerPage->RecalcSizes();
     }
 
     wxWizardEvent pageShownEvent(wxEVT_WIZARD_PAGE_SHOWN, GetId(),
@@ -688,6 +664,23 @@ bool wxWizard::ShowPage(wxWizardPage *page, bool goingForward)
     m_page->GetEventHandler()->ProcessEvent(pageShownEvent);
 
     return true;
+}
+
+/// Do fit, and adjust to screen size if necessary
+void wxWizard::DoWizardLayout()
+{
+    if ( wxSystemSettings::GetScreenType() > wxSYS_SCREEN_PDA )
+    {
+        if (CanDoLayoutAdaptation())
+            DoLayoutAdaptation();
+        else
+            GetSizer()->SetSizeHints(this);
+
+        if ( m_posWizard == wxDefaultPosition )
+            CentreOnScreen();
+    }
+
+    SetLayoutAdaptationDone(true);
 }
 
 bool wxWizard::RunWizard(wxWizardPage *firstPage)
@@ -786,10 +779,10 @@ void wxWizard::OnBackOrNext(wxCommandEvent& event)
                   (event.GetEventObject() == m_btnPrev),
                   wxT("unknown button") );
 
-    wxCHECK_RET( m_page, _T("should have a valid current page") );
+    wxCHECK_RET( m_page, wxT("should have a valid current page") );
 
     // ask the current page first: notice that we do it before calling
-    // GetNext/Prev() because the data transfered from the controls of the page
+    // GetNext/Prev() because the data transferred from the controls of the page
     // may change the value returned by these methods
     if ( !m_page->Validate() || !m_page->TransferDataFromWindow() )
     {
@@ -798,6 +791,13 @@ void wxWizard::OnBackOrNext(wxCommandEvent& event)
     }
 
     bool forward = event.GetEventObject() == m_btnNext;
+
+    // Give the application a chance to set state which may influence GetNext()/GetPrev()
+    wxWizardEvent eventPreChanged(wxEVT_WIZARD_BEFORE_PAGE_CHANGED, GetId(), forward, m_page);
+    (void)m_page->GetEventHandler()->ProcessEvent(eventPreChanged);
+
+    if (!eventPreChanged.IsAllowed())
+        return;
 
     wxWizardPage *page;
     if ( forward )
@@ -877,6 +877,133 @@ wxWizardEvent::wxWizardEvent(wxEventType type, int id, bool direction, wxWizardP
     // add the active page to the event data
     m_direction = direction;
     m_page = page;
+}
+
+/// Do the adaptation
+bool wxWizard::DoLayoutAdaptation()
+{
+    wxWindowList windows;
+    wxWindowList pages;
+
+    // Make all the pages (that use sizers) scrollable
+    for ( wxSizerItemList::compatibility_iterator node = m_sizerPage->GetChildren().GetFirst(); node; node = node->GetNext() )
+    {
+        wxSizerItem * const item = node->GetData();
+        if ( item->IsWindow() )
+        {
+            wxWizardPage* page = wxDynamicCast(item->GetWindow(), wxWizardPage);
+            if (page)
+            {
+                while (page)
+                {
+                    if (!pages.Find(page) && page->GetSizer())
+                    {
+                        // Create a scrolled window and reparent
+                        wxScrolledWindow* scrolledWindow = new wxScrolledWindow(page, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL|wxVSCROLL|wxHSCROLL|wxBORDER_NONE);
+                        wxSizer* oldSizer = page->GetSizer();
+
+                        wxSizer* newSizer = new wxBoxSizer(wxVERTICAL);
+                        newSizer->Add(scrolledWindow,1, wxEXPAND, 0);
+
+                        page->SetSizer(newSizer, false /* don't delete the old sizer */);
+
+                        scrolledWindow->SetSizer(oldSizer);
+
+                        wxStandardDialogLayoutAdapter::DoReparentControls(page, scrolledWindow);
+
+                        pages.Append(page);
+                        windows.Append(scrolledWindow);
+                    }
+                    page = page->GetNext();
+                }
+            }
+        }
+    }
+
+    wxStandardDialogLayoutAdapter::DoFitWithScrolling(this, windows);
+
+    // Size event doesn't get sent soon enough on wxGTK
+    DoLayout();
+
+    SetLayoutAdaptationDone(true);
+
+    return true;
+}
+
+bool wxWizard::ResizeBitmap(wxBitmap& bmp)
+{
+    if (!GetBitmapPlacement())
+        return false;
+
+    if (bmp.IsOk())
+    {
+        wxSize pageSize = m_sizerPage->GetSize();
+        if (pageSize == wxSize(0,0))
+            pageSize = GetPageSize();
+        int bitmapWidth = wxMax(bmp.GetWidth(), GetMinimumBitmapWidth());
+        int bitmapHeight = pageSize.y;
+
+        if (!m_statbmp->GetBitmap().IsOk() || m_statbmp->GetBitmap().GetHeight() != bitmapHeight)
+        {
+            wxBitmap bitmap(bitmapWidth, bitmapHeight);
+            {
+                wxMemoryDC dc;
+                dc.SelectObject(bitmap);
+                dc.SetBackground(wxBrush(m_bitmapBackgroundColour));
+                dc.Clear();
+
+                if (GetBitmapPlacement() & wxWIZARD_TILE)
+                {
+                    TileBitmap(wxRect(0, 0, bitmapWidth, bitmapHeight), dc, bmp);
+                }
+                else
+                {
+                    int x, y;
+
+                    if (GetBitmapPlacement() & wxWIZARD_HALIGN_LEFT)
+                        x = 0;
+                    else if (GetBitmapPlacement() & wxWIZARD_HALIGN_RIGHT)
+                        x = bitmapWidth - bmp.GetWidth();
+                    else
+                        x = (bitmapWidth - bmp.GetWidth())/2;
+
+                    if (GetBitmapPlacement() & wxWIZARD_VALIGN_TOP)
+                        y = 0;
+                    else if (GetBitmapPlacement() & wxWIZARD_VALIGN_BOTTOM)
+                        y = bitmapHeight - bmp.GetHeight();
+                    else
+                        y = (bitmapHeight - bmp.GetHeight())/2;
+
+                    dc.DrawBitmap(bmp, x, y, true);
+                    dc.SelectObject(wxNullBitmap);
+                }
+            }
+
+            bmp = bitmap;
+        }
+    }
+
+    return true;
+}
+
+bool wxWizard::TileBitmap(const wxRect& rect, wxDC& dc, const wxBitmap& bitmap)
+{
+    int w = bitmap.GetWidth();
+    int h = bitmap.GetHeight();
+
+    wxMemoryDC dcMem;
+
+    dcMem.SelectObjectAsSource(bitmap);
+
+    int i, j;
+    for (i = rect.x; i < rect.x + rect.width; i += w)
+    {
+        for (j = rect.y; j < rect.y + rect.height; j+= h)
+            dc.Blit(i, j, bitmap.GetWidth(), bitmap.GetHeight(), & dcMem, 0, 0);
+    }
+    dcMem.SelectObject(wxNullBitmap);
+
+    return true;
 }
 
 #endif // wxUSE_WIZARDDLG

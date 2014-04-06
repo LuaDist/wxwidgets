@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     23.09.98
-// RCS-ID:      $Id: mimetype.cpp 38920 2006-04-26 08:21:31Z ABX $
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence (part of wxExtra library)
 /////////////////////////////////////////////////////////////////////////////
@@ -104,7 +103,7 @@ wxFileTypeImpl::GetAllCommands(wxArrayString * WXUNUSED(verbs),
                                wxArrayString * WXUNUSED(commands),
                                const wxFileType::MessageParameters& WXUNUSED(params)) const
 {
-    wxFAIL_MSG( _T("wxFileTypeImpl::GetAllCommands() not yet implemented") );
+    wxFAIL_MSG( wxT("wxFileTypeImpl::GetAllCommands() not yet implemented") );
     return 0;
 }
 
@@ -112,13 +111,13 @@ void
 wxMimeTypesManagerImpl::Initialize(int WXUNUSED(mailcapStyles),
                                    const wxString& WXUNUSED(extraDir))
 {
-    wxFAIL_MSG( _T("wxMimeTypesManagerImpl::Initialize() not yet implemented") );
+    wxFAIL_MSG( wxT("wxMimeTypesManagerImpl::Initialize() not yet implemented") );
 }
 
 void
 wxMimeTypesManagerImpl::ClearData()
 {
-    wxFAIL_MSG( _T("wxMimeTypesManagerImpl::ClearData() not yet implemented") );
+    wxFAIL_MSG( wxT("wxMimeTypesManagerImpl::ClearData() not yet implemented") );
 }
 
 // extension -> file type
@@ -205,7 +204,7 @@ wxMimeTypesManagerImpl::GetFileTypeFromMimeType(const wxString& WXUNUSED(mimeTyp
 size_t wxMimeTypesManagerImpl::EnumAllFileTypes(wxArrayString& WXUNUSED(mimetypes))
 {
     // VZ: don't know anything about this for Mac
-    wxFAIL_MSG( _T("wxMimeTypesManagerImpl::EnumAllFileTypes() not yet implemented") );
+    wxFAIL_MSG( wxT("wxMimeTypesManagerImpl::EnumAllFileTypes() not yet implemented") );
 
     return 0;
 }
@@ -213,7 +212,7 @@ size_t wxMimeTypesManagerImpl::EnumAllFileTypes(wxArrayString& WXUNUSED(mimetype
 wxFileType *
 wxMimeTypesManagerImpl::Associate(const wxFileTypeInfo& WXUNUSED(ftInfo))
 {
-    wxFAIL_MSG( _T("wxMimeTypesManagerImpl::Associate() not yet implemented") );
+    wxFAIL_MSG( wxT("wxMimeTypesManagerImpl::Associate() not yet implemented") );
 
     return NULL;
 }

@@ -1,10 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
 // Name:        src/motif/dcmemory.cpp
-// Purpose:     wxMemoryDC class
+// Purpose:     wxMemoryDCImpl class
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: dcmemory.cpp 42755 2006-10-30 19:41:46Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -12,11 +11,11 @@
 // For compilers that support precompilation, includes "wx.h".
 #include "wx/wxprec.h"
 
-#include "wx/dcmemory.h"
-
 #ifndef WX_PRECOMP
     #include "wx/utils.h"
     #include "wx/settings.h"
+    #include "wx/dcmemory.h"
+    #include "wx/dcclient.h"
 #endif
 
 #ifdef __VMS__
@@ -28,14 +27,15 @@
 #endif
 
 #include "wx/motif/private.h"
+#include "wx/motif/dcmemory.h"
 
 //-----------------------------------------------------------------------------
-// wxMemoryDC
+// wxMemoryDCImpl
 //-----------------------------------------------------------------------------
 
-IMPLEMENT_DYNAMIC_CLASS(wxMemoryDC, wxWindowDC)
+IMPLEMENT_ABSTRACT_CLASS(wxMemoryDCImpl, wxWindowDCImpl)
 
-void wxMemoryDC::Init()
+void wxMemoryDCImpl::Init()
 {
     m_ok = true;
     m_display = wxGetDisplay();
@@ -59,11 +59,12 @@ void wxMemoryDC::Init()
     SetFont(wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT));
 }
 
-wxMemoryDC::wxMemoryDC( wxDC* dc )
+wxMemoryDCImpl::wxMemoryDCImpl(wxMemoryDC *owner, wxDC* dc)
+              : wxWindowDCImpl(owner)
 {
     m_ok = true;
     if (dc && dc->IsKindOf(CLASSINFO(wxWindowDC)))
-        m_display = ((wxWindowDC*)dc)->GetDisplay();
+        m_display = ((wxWindowDCImpl *)dc->GetImpl())->GetDisplay();
     else
         m_display = wxGetDisplay();
 
@@ -85,11 +86,11 @@ wxMemoryDC::wxMemoryDC( wxDC* dc )
     SetPen (* wxBLACK_PEN);
 }
 
-wxMemoryDC::~wxMemoryDC(void)
+wxMemoryDCImpl::~wxMemoryDCImpl(void)
 {
 }
 
-void wxMemoryDC::DoSelect( const wxBitmap& bitmap )
+void wxMemoryDCImpl::DoSelect( const wxBitmap& bitmap )
 {
     m_bitmap = bitmap;
 
@@ -97,7 +98,7 @@ void wxMemoryDC::DoSelect( const wxBitmap& bitmap )
         XFreeGC((Display*) m_display, (GC) m_gc);
     m_gc = (WXGC) NULL;
 
-    if (m_bitmap.Ok() && (bitmap.GetDisplay() == m_display))
+    if (m_bitmap.IsOk() && (bitmap.GetDisplay() == m_display))
     {
         m_pixmap = m_bitmap.GetDrawable();
         Display* display = (Display*) m_display;
@@ -125,9 +126,9 @@ void wxMemoryDC::DoSelect( const wxBitmap& bitmap )
     };
 }
 
-void wxMemoryDC::DoGetSize( int *width, int *height ) const
+void wxMemoryDCImpl::DoGetSize( int *width, int *height ) const
 {
-    if (m_bitmap.Ok())
+    if (m_bitmap.IsOk())
     {
         if (width) (*width) = m_bitmap.GetWidth();
         if (height) (*height) = m_bitmap.GetHeight();

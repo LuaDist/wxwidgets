@@ -4,7 +4,6 @@
 // Author:      Vaclav Slavik, Julian Smart
 // Modified by:
 // Created:     2002-07-09
-// RCS-ID:      $Id: helpview.h 44610 2007-03-05 10:46:54Z JS $
 // Copyright:   (c) 2002 Vaclav Slavik, Julian Smart and others
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -36,7 +35,7 @@ public:
 
 #ifdef __WXMAC__
     /// Respond to Apple Event for opening a document
-    virtual void MacOpenFile(const wxString& filename);
+    virtual void MacOpenFiles(const wxArrayString& fileNames);
 #endif
 
     /// Prompt the user for a book to open
@@ -50,19 +49,14 @@ public:
     wxList& GetConnections() { return m_connections; }
 #endif
 
-    /// Respond to idle event
-    void OnIdle(wxIdleEvent& event);
-
 private:
     wxHtmlHelpController*   m_helpController;
-    bool                    m_exitIfNoMainWindow;
 
 #if wxUSE_IPC
     wxList                  m_connections;
     hvServer*               m_server;
 #endif
 
-DECLARE_EVENT_TABLE()
 };
 
 #if wxUSE_IPC
@@ -72,10 +66,9 @@ public:
     hvConnection();
     virtual ~hvConnection();
 
-    bool OnExecute(const wxString& topic, wxChar*data, int size, wxIPCFormat format);
-    wxChar *OnRequest(const wxString& topic, const wxString& item, int *size, wxIPCFormat format);
-    bool OnPoke(const wxString& topic, const wxString& item, wxChar *data, int size, wxIPCFormat format);
-    bool OnStartAdvise(const wxString& topic, const wxString& item);
+    bool OnExec(const wxString& topic, const wxString& data);
+    bool OnPoke(const wxString& topic, const wxString& item,
+                const void *data, size_t size, wxIPCFormat format);
 
 private:
 };

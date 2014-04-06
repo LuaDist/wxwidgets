@@ -4,7 +4,6 @@
 // Author:      David Norris <danorris@gmail.com>
 // Modified by: Ryan Norton, Francesco Montorsi
 // Created:     04/02/2005
-// RCS-ID:      $Id: xh_hyperlink.cpp 54563 2008-07-09 14:02:19Z VZ $
 // Copyright:   (c) 2005 David Norris
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

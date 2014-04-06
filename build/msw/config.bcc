@@ -50,6 +50,11 @@ CPP = cpp32 -Sr -oCON
 SHARED = 0
 !endif
 
+# GTK+ toolkit version [,2]
+!ifndef TOOLKIT_VERSION
+TOOLKIT_VERSION = 
+!endif
+
 # Build wxUniversal instead of native port? [0,1]
 !ifndef WXUNIV
 WXUNIV = 0
@@ -57,7 +62,7 @@ WXUNIV = 0
 
 # Compile Unicode build of wxWidgets? [0,1]
 !ifndef UNICODE
-UNICODE = 0
+UNICODE = 1
 !endif
 
 # Use MSLU library when building Unicode version. [0,1]
@@ -77,10 +82,11 @@ BUILD = debug
 DEBUG_INFO = default
 !endif
 
-# Should __WXDEBUG__ be defined? The default value "default" means that it will
-# be defined if BUILD=debug and not defined if BUILD=release. [0,1,default]
+# Value of wxDEBUG_LEVEL. The default value is the same as 1 and means that all
+# but expensive assert checks are enabled, use 0 to completely remove debugging
+# code. [0,1,default]
 !ifndef DEBUG_FLAG
-DEBUG_FLAG = default
+DEBUG_FLAG = 1
 !endif
 
 # Multiple libraries or single huge monolithic one? [0,1]
@@ -98,6 +104,11 @@ USE_GUI = 1
 USE_HTML = 1
 !endif
 
+# Build wxWebView library (USE_GUI must be 1)? [0,1]
+!ifndef USE_WEBVIEW
+USE_WEBVIEW = 1
+!endif
+
 # Build multimedia library (USE_GUI must be 1)? [0,1]
 !ifndef USE_MEDIA
 USE_MEDIA = 1
@@ -113,19 +124,29 @@ USE_XRC = 1
 USE_AUI = 1
 !endif
 
+# Build wxRibbon library (USE_GUI must be 1)? [0,1]
+!ifndef USE_RIBBON
+USE_RIBBON = 1
+!endif
+
+# Build wxPropertyGrid library (USE_GUI must be 1)? [0,1]
+!ifndef USE_PROPGRID
+USE_PROPGRID = 1
+!endif
+
 # Build wxRichTextCtrl library (USE_GUI must be 1)? [0,1]
 !ifndef USE_RICHTEXT
 USE_RICHTEXT = 1
 !endif
 
-# Build OpenGL canvas library (USE_GUI must be 1)? [0,1]
-!ifndef USE_OPENGL
-USE_OPENGL = 0
+# Build wxStyledTextCtrl library (USE_GUI must be 1)? [0,1]
+!ifndef USE_STC
+USE_STC = 1
 !endif
 
-# Build ODBC database classes (USE_GUI must be 1)? [0,1]
-!ifndef USE_ODBC
-USE_ODBC = 0
+# Build OpenGL canvas library (USE_GUI must be 1)? [0,1]
+!ifndef USE_OPENGL
+USE_OPENGL = 1
 !endif
 
 # Build quality assurance classes library (USE_GUI must be 1)? [0,1]
@@ -151,11 +172,6 @@ USE_THREADS = 1
 # Enable wxCairoContext for platforms other than Linux/GTK. [0,1]
 !ifndef USE_CAIRO
 USE_CAIRO = 0
-!endif
-
-# Link with gdiplus.lib? (Needed for wxGraphicsContext, will also set wxUSE_GRAPHICS_CONTEXT) [0,1]
-!ifndef USE_GDIPLUS
-USE_GDIPLUS = 0
 !endif
 
 # Is this official build by wxWidgets developers? [0,1]

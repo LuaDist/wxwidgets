@@ -3,7 +3,6 @@
 // Author:      Robert Roebling
 // Purpose:     Implement GNOME VFS support
 // Created:     03/17/06
-// RCS-ID:      $Id: gvfs.cpp 56711 2008-11-08 18:03:17Z BP $
 // Copyright:   Robert Roebling
 // Licence:     wxWindows Licence
 /////////////////////////////////////////////////////////////////////////////
@@ -36,34 +35,28 @@ wxFORCE_LINK_THIS_MODULE(gnome_vfs)
 // wxGnomeVFSLibrary
 //----------------------------------------------------------------------------
 
-#define wxDL_METHOD_DEFINE( rettype, name, args, shortargs, defret ) \
-    typedef rettype (* name ## Type) args ; \
-    name ## Type pfn_ ## name; \
-    rettype name args \
-    { if (m_ok) return pfn_ ## name shortargs ; return defret; }
-
-#define wxDL_METHOD_LOAD( lib, name, success ) \
-    pfn_ ## name = (name ## Type) lib->GetSymbol( wxT(#name), &success ); \
-    if (!success) return;
-
 class wxGnomeVFSLibrary
 {
 public:
     wxGnomeVFSLibrary();
     ~wxGnomeVFSLibrary();
-
     bool IsOk();
-    void InitializeMethods();
 
 private:
-    bool              m_ok;
-    wxDynamicLibrary *m_gnome_vfs_lib;
+    bool InitializeMethods();
+
+    wxDynamicLibrary m_libGnomeVFS;
+
+    // only true if we successfully loaded the library above
+    //
+    // don't rename this field, it's used by wxDL_XXX macros internally
+    bool m_ok;
 
 public:
     wxDL_METHOD_DEFINE( gboolean, gnome_vfs_init,
         (), (), FALSE )
-    wxDL_METHOD_DEFINE( void, gnome_vfs_shutdown,
-        (), (), /**/ )
+    wxDL_VOIDMETHOD_DEFINE( gnome_vfs_shutdown,
+        (), () )
 
     wxDL_METHOD_DEFINE( GnomeVFSResult, gnome_vfs_mime_set_icon,
         (const char *mime_type, const char *filename), (mime_type, filename), GNOME_VFS_OK )
@@ -71,29 +64,20 @@ public:
 
 wxGnomeVFSLibrary::wxGnomeVFSLibrary()
 {
-    m_gnome_vfs_lib = NULL;
-
     wxLogNull log;
 
-    m_gnome_vfs_lib = new wxDynamicLibrary( wxT("libgnomevfs-2.so.0") );
-    m_ok = m_gnome_vfs_lib->IsLoaded();
-    if (!m_ok) return;
-
-    InitializeMethods();
+    m_libGnomeVFS.Load("libgnomevfs-2.so.0");
+    m_ok = m_libGnomeVFS.IsLoaded() && InitializeMethods();
 }
 
 wxGnomeVFSLibrary::~wxGnomeVFSLibrary()
 {
-    if (m_gnome_vfs_lib)
-    {
-        // we crash on exit later (i.e. after main() finishes) if we unload
-        // this library, apparently it inserts some hooks in other libraries to
-        // which we link implicitly (GTK+ itself?) which are not uninstalled
-        // when it's unloaded resulting in this crash, so just leave it in
-        // memory -- it's a lesser evil
-        m_gnome_vfs_lib->Detach();
-        delete m_gnome_vfs_lib;
-    }
+    // we crash on exit later (i.e. after main() finishes) if we unload this
+    // library, apparently it inserts some hooks in other libraries to which we
+    // link implicitly (GTK+ itself?) which are not uninstalled when it's
+    // unloaded resulting in this crash, so just leave it in memory -- it's a
+    // lesser evil
+    m_libGnomeVFS.Detach();
 }
 
 bool wxGnomeVFSLibrary::IsOk()
@@ -101,15 +85,12 @@ bool wxGnomeVFSLibrary::IsOk()
     return m_ok;
 }
 
-void wxGnomeVFSLibrary::InitializeMethods()
+bool wxGnomeVFSLibrary::InitializeMethods()
 {
-    m_ok = false;
-    bool success;
+    wxDL_METHOD_LOAD( m_libGnomeVFS, gnome_vfs_init );
+    wxDL_METHOD_LOAD( m_libGnomeVFS, gnome_vfs_shutdown );
 
-    wxDL_METHOD_LOAD( m_gnome_vfs_lib, gnome_vfs_init, success )
-    wxDL_METHOD_LOAD( m_gnome_vfs_lib, gnome_vfs_shutdown, success )
-
-    m_ok = true;
+    return true;
 }
 
 static wxGnomeVFSLibrary* gs_lgvfs = NULL;
@@ -134,18 +115,15 @@ bool wxGnomeVFSMimeTypesManagerImpl::DoAssociation(const wxString& strType,
                        const wxArrayString& strExtensions,
                        const wxString& strDesc)
 {
-    int nIndex = AddToMimeData(strType, strIcon, entry, strExtensions, strDesc, true);
-
-    if ( nIndex == wxNOT_FOUND )
-        return false;
-
-    if (m_mailcapStylesInited & wxMAILCAP_GNOME)
-    {
-        // User modificationt to the MIME database
-        // are not supported :-)
-    }
-
-    return false;
+    return AddToMimeData
+           (
+            strType,
+            strIcon,
+            entry,
+            strExtensions,
+            strDesc,
+            true
+           ) != wxNOT_FOUND;
 }
 
 //----------------------------------------------------------------------------
@@ -184,6 +162,4 @@ void wxGnomeVFSModule::OnExit()
 
 IMPLEMENT_DYNAMIC_CLASS(wxGnomeVFSModule, wxModule)
 
-#endif
-    // wxUSE_LIBGNOMEVS
-    // wxUSE_MIMETYPE
+#endif // wxUSE_LIBGNOMEVFS && wxUSE_MIMETYPE

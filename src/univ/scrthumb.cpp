@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     13.02.01
-// RCS-ID:      $Id: scrthumb.cpp 39633 2006-06-08 11:25:30Z ABX $
 // Copyright:   (c) 2001 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -101,7 +100,7 @@ public:
                 break;
 
             default:
-                wxFAIL_MSG(_T("unexpected shaft part in wxScrollThumbTimer"));
+                wxFAIL_MSG(wxT("unexpected shaft part in wxScrollThumbTimer"));
                 // fall through
 
             case wxScrollThumb::Shaft_Below:
@@ -144,7 +143,7 @@ wxScrollThumb::wxScrollThumb(wxControlWithThumb *control)
 wxScrollThumb::~wxScrollThumb()
 {
     // it should have been destroyed
-    wxASSERT_MSG( !m_captureData, _T("memory leak in wxScrollThumb") );
+    wxASSERT_MSG( !m_captureData, wxT("memory leak in wxScrollThumb") );
 }
 
 // ----------------------------------------------------------------------------
@@ -284,7 +283,7 @@ wxCoord wxScrollThumb::GetMouseCoord(const wxMouseEvent& event) const
 int wxScrollThumb::GetThumbPos(const wxMouseEvent& event) const
 {
     wxCHECK_MSG( m_captureData && m_captureData->m_shaftPart == Shaft_Thumb, 0,
-                 _T("can't be called when thumb is not dragged") );
+                 wxT("can't be called when thumb is not dragged") );
 
     int x = GetMouseCoord(event) - m_captureData->m_ofsMouse;
     return m_control->PixelToThumbPos(x);

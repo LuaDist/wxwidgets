@@ -4,7 +4,6 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2007/04/20 (move from NSMenu.mm)
-// RCS-ID:      $Id: NSMenu.h 48107 2007-08-15 16:12:45Z DE $
 // Copyright:   (c) 2002 David Elliott
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////

@@ -1,28 +1,16 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        minifram.h
+// Name:        wx/gtk/minifram.h
 // Purpose:     wxMiniFrame class
 // Author:      Robert Roebling
-// RCS-ID:      $Id: minifram.h 42654 2006-10-29 20:15:26Z RR $
 // Copyright:   (c) Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
-#ifndef __GTKMINIFRAMEH__
-#define __GTKMINIFRAMEH__
+#ifndef _WX_GTK_MINIFRAME_H_
+#define _WX_GTK_MINIFRAME_H_
 
-#include "wx/defs.h"
-
-#if wxUSE_MINIFRAME
-
-#include "wx/object.h"
 #include "wx/bitmap.h"
 #include "wx/frame.h"
-
-//-----------------------------------------------------------------------------
-// classes
-//-----------------------------------------------------------------------------
-
-class WXDLLIMPEXP_CORE wxMiniFrame;
 
 //-----------------------------------------------------------------------------
 // wxMiniFrame
@@ -44,6 +32,7 @@ public:
     {
         Create(parent, id, title, pos, size, style, name);
     }
+    ~wxMiniFrame();
 
     bool Create(wxWindow *parent,
             wxWindowID id,
@@ -54,15 +43,21 @@ public:
             const wxString& name = wxFrameNameStr);
 
     virtual void SetTitle( const wxString &title );
+
+protected:
+    virtual void DoSetSizeHints( int minW, int minH,
+                                 int maxW, int maxH,
+                                 int incW, int incH );
+    virtual void DoGetClientSize(int* width, int* height) const;
+
  // implementation
- 
+public:
     bool   m_isDragging;
     int    m_oldX,m_oldY;
     int    m_diffX,m_diffY;
     wxBitmap  m_closeButton;
+    int m_miniEdge;
+    int m_miniTitle;
 };
 
-#endif
-
-#endif
-  //  __GTKMINIFRAMEH__
+#endif // _WX_GTK_MINIFRAME_H_

@@ -3,7 +3,6 @@
 // Purpose:     implementation of wxStdRenderer
 // Author:      Vadim Zeitlin
 // Created:     2006-09-16
-// RCS-ID:      $Id: stdrend.cpp 49996 2007-11-16 15:52:17Z CE $
 // Copyright:   (c) 2006 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -151,7 +150,7 @@ wxStdRenderer::ArrowDirection wxStdRenderer::GetArrowDirection(wxDirection dir)
             return Arrow_Down;
 
         default:
-            wxFAIL_MSG(_T("unknown arrow direction"));
+            wxFAIL_MSG(wxT("unknown arrow direction"));
     }
 
     return Arrow_Max;
@@ -169,7 +168,7 @@ void wxStdRenderer::DrawBackground(wxDC& dc,
 {
     wxColour colBg;
 
-    if (col.Ok())
+    if (col.IsOk())
     {
         colBg = col;
     }
@@ -199,7 +198,7 @@ void wxStdRenderer::DrawButtonSurface(wxDC& dc,
 // ----------------------------------------------------------------------------
 
 void
-wxStdRenderer::DrawFocusRect(wxDC& dc, const wxRect& rect, int WXUNUSED(flags))
+wxStdRenderer::DrawFocusRect(wxWindow* WXUNUSED(win), wxDC& dc, const wxRect& rect, int WXUNUSED(flags))
 {
     // draw the pixels manually because the "dots" in wxPen with wxDOT style
     // may be short traits and not really dots
@@ -290,7 +289,7 @@ void wxStdRenderer::DrawButtonLabel(wxDC& dc,
     {
         rectLabel.Inflate(-1);
 
-        DrawFocusRect(dc, rectLabel);
+        DrawFocusRect(NULL, dc, rectLabel);
     }
 }
 
@@ -412,18 +411,19 @@ void wxStdRenderer::DrawBorder(wxDC& dc,
 
     switch ( border )
     {
-        case wxBORDER_THEME:
         case wxBORDER_SUNKEN:
+        case wxBORDER_THEME:
             DrawSunkenBorder(dc, &rect);
             break;
 
-        // wxBORDER_DOUBLE is no longer supported since wxBORDER_THEME takes on the same value
+        // wxBORDER_DOUBLE and wxBORDER_THEME are currently the same value.
 #if 0
         case wxBORDER_DOUBLE:
             DrawAntiSunkenBorder(dc, &rect);
             DrawExtraBorder(dc, &rect);
             break;
 #endif
+
         case wxBORDER_STATIC:
             DrawStaticBorder(dc, &rect);
             break;
@@ -437,7 +437,7 @@ void wxStdRenderer::DrawBorder(wxDC& dc,
             break;
 
         default:
-            wxFAIL_MSG(_T("unknown border type"));
+            wxFAIL_MSG(wxT("unknown border type"));
             // fall through
 
         case wxBORDER_DEFAULT:
@@ -470,7 +470,7 @@ wxRect wxStdRenderer::GetBorderDimensions(wxBorder border) const
             break;
 #endif
         default:
-            wxFAIL_MSG(_T("unknown border type"));
+            wxFAIL_MSG(wxT("unknown border type"));
             // fall through
 
         case wxBORDER_DEFAULT:
@@ -636,7 +636,7 @@ void wxStdRenderer::DrawItem(wxDC& dc,
 
     if ( flags & wxCONTROL_FOCUSED )
     {
-        DrawFocusRect(dc, rect, flags);
+        DrawFocusRect(NULL, dc, rect, flags);
     }
 }
 
@@ -677,10 +677,10 @@ void wxStdRenderer::DrawCheckButton(wxDC& dc,
                                     wxAlignment align,
                                     int indexAccel)
 {
-    if (bitmap.Ok())
-         DrawCheckOrRadioButton(dc, label, bitmap, rect, flags, align, indexAccel);
+    if (bitmap.IsOk())
+        DrawCheckOrRadioButton(dc, label, bitmap, rect, flags, align, indexAccel);
     else
-         DrawCheckOrRadioButton(dc, label, GetCheckBitmap(flags), rect, flags, align, indexAccel);
+        DrawCheckOrRadioButton(dc, label, GetCheckBitmap(flags), rect, flags, align, indexAccel);
 }
 
 void wxStdRenderer::DrawRadioButton(wxDC& dc,
@@ -691,10 +691,11 @@ void wxStdRenderer::DrawRadioButton(wxDC& dc,
                                     wxAlignment align,
                                     int indexAccel)
 {
-    if (bitmap.Ok()) 
-       DrawCheckOrRadioButton(dc, label, bitmap, rect, flags, align, indexAccel);
-    else   
-       DrawCheckOrRadioButton(dc, label, GetRadioBitmap(flags), rect, flags, align, indexAccel);
+    if (bitmap.IsOk())
+        DrawCheckOrRadioButton(dc, label, bitmap, rect, flags, align, indexAccel);
+    else
+        DrawCheckOrRadioButton(dc, label, GetRadioBitmap(flags), rect, flags, align, indexAccel);
+
 }
 
 void wxStdRenderer::DrawCheckOrRadioButton(wxDC& dc,
@@ -860,7 +861,7 @@ wxSize wxStdRenderer::GetStatusBarBorders() const
     wxRect flat = GetBorderDimensions(wxBORDER_STATIC);
     wxASSERT_MSG( raised.x == raised.width && raised.y == raised.height &&
                   flat.x == flat.width && flat.y == flat.height,
-                  _T("this code expects uniform borders, you must override GetStatusBarBorders") );
+                  wxT("this code expects uniform borders, you must override GetStatusBarBorders") );
 
     // take the larger of flat/raised values:
     wxSize border(wxMax(raised.x, flat.x), wxMax(raised.y, flat.y));
@@ -890,6 +891,8 @@ void wxStdRenderer::DrawStatusField(wxDC& dc,
         DrawBorder(dc, wxBORDER_RAISED, rect, flags, &rectIn);
     else if ( style != wxSB_FLAT )
         DrawBorder(dc, wxBORDER_STATIC, rect, flags, &rectIn);
+    else
+        rectIn = rect;
 
     rectIn.Deflate(GetStatusBarFieldMargins());
 
@@ -1144,7 +1147,7 @@ void wxStdRenderer::DrawFrameIcon(wxDC& dc,
                                   const wxIcon& icon,
                                   int flags)
 {
-    if ( icon.Ok() )
+    if ( icon.IsOk() )
     {
         wxRect r = GetFrameClientArea(rect, flags & ~wxTOPLEVEL_TITLEBAR);
         dc.DrawIcon(icon, r.x, r.y);
@@ -1170,7 +1173,7 @@ void wxStdRenderer::DrawFrameButton(wxDC& dc,
     }
 
     wxBitmap bmp = GetFrameButtonBitmap(idx);
-    if ( !bmp.Ok() )
+    if ( !bmp.IsOk() )
         return;
 
     wxRect rectBtn(x, y, FRAME_BUTTON_WIDTH, FRAME_BUTTON_HEIGHT);

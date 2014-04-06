@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     19.08.00
-// RCS-ID:      $Id: colschem.h 44058 2006-12-24 19:06:39Z VS $
 // Copyright:   (c) 2000 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -12,7 +11,7 @@
 #ifndef _WX_UNIV_COLSCHEM_H_
 #define _WX_UNIV_COLSCHEM_H_
 
-class WXDLLEXPORT wxWindow;
+class WXDLLIMPEXP_FWD_CORE wxWindow;
 
 #include "wx/colour.h"
 #include "wx/checkbox.h"
@@ -21,7 +20,7 @@ class WXDLLEXPORT wxWindow;
 // wxColourScheme
 // ----------------------------------------------------------------------------
 
-class WXDLLEXPORT wxColourScheme
+class WXDLLIMPEXP_CORE wxColourScheme
 {
 public:
     // the standard colours
@@ -81,7 +80,7 @@ public:
     virtual wxColour GetBackground(wxWindow *win) const = 0;
 
     // virtual dtor for any base class
-    virtual ~wxColourScheme();
+    virtual ~wxColourScheme() {}
 };
 
 // some people just can't spell it correctly :-)

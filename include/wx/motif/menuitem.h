@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     11.11.97
-// RCS-ID:      $Id: menuitem.h 48053 2007-08-13 17:07:01Z JS $
 // Copyright:   (c) 1998 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -14,7 +13,7 @@
 
 #include "wx/bitmap.h"
 
-class WXDLLEXPORT wxMenuBar;
+class WXDLLIMPEXP_FWD_CORE wxMenuBar;
 
 // ----------------------------------------------------------------------------
 // wxMenuItem: an item in the menu, optionally implements owner-drawn behaviour
@@ -24,16 +23,16 @@ class WXDLLIMPEXP_CORE wxMenuItem : public wxMenuItemBase
 {
 public:
     // ctor & dtor
-    wxMenuItem(wxMenu *parentMenu = (wxMenu *)NULL,
+    wxMenuItem(wxMenu *parentMenu = NULL,
                int id = wxID_SEPARATOR,
                const wxString& text = wxEmptyString,
                const wxString& help = wxEmptyString,
                wxItemKind kind = wxITEM_NORMAL,
-               wxMenu *subMenu = (wxMenu *)NULL);
+               wxMenu *subMenu = NULL);
     virtual ~wxMenuItem();
 
     // accessors (some more are inherited from wxOwnerDrawn or are below)
-    virtual void SetText(const wxString& label);
+    virtual void SetItemLabel(const wxString& label);
     virtual void Enable(bool enable = true);
     virtual void Check(bool check = true);
     // included SetBitmap and GetBitmap as copied from the GTK include file
@@ -63,15 +62,6 @@ private:
     wxBitmap  m_bitmap; // Bitmap for menuitem, if any
 
     DECLARE_DYNAMIC_CLASS(wxMenuItem)
-
-public:
-
-#if wxABI_VERSION >= 20805
-    // return the item label including any mnemonics and accelerators.
-    // This used to be called GetText.
-    wxString GetItemLabel() const { return GetText(); }
-#endif
-
 };
 
 #endif  // _WX_MOTIF_MENUITEM_H

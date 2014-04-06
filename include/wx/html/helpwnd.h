@@ -4,7 +4,6 @@
 // Notes:       Based on htmlhelp.cpp, implementing a monolithic
 //              HTML Help controller class,  by Vaclav Slavik
 // Author:      Harm van der Heijden and Vaclav Slavik
-// RCS-ID:      $Id: helpwnd.h 49563 2007-10-31 20:46:21Z VZ $
 // Copyright:   (c) Harm van der Heijden and Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -28,6 +27,7 @@
 #include "wx/combobox.h"
 #include "wx/checkbox.h"
 #include "wx/stattext.h"
+#include "wx/hash.h"
 #include "wx/html/htmlwin.h"
 #include "wx/html/htmprint.h"
 
@@ -127,6 +127,7 @@ public:
     bool KeywordSearch(const wxString& keyword,
                        wxHelpSearchMode mode = wxHELP_SEARCH_ALL);
 
+#if wxUSE_CONFIG
     void UseConfig(wxConfigBase *config, const wxString& rootpath = wxEmptyString)
         {
             m_Config = config;
@@ -139,6 +140,7 @@ public:
     // saved values : things set by SetFonts, SetBorders.
     void ReadCustomization(wxConfigBase *cfg, const wxString& path = wxEmptyString);
     void WriteCustomization(wxConfigBase *cfg, const wxString& path = wxEmptyString);
+#endif // wxUSE_CONFIG
 
     // call this to let wxHtmlHelpWindow know page changed
     void NotifyPageChanged();
@@ -228,8 +230,10 @@ protected:
 
     wxHtmlHelpFrameCfg m_Cfg;
 
+#if wxUSE_CONFIG
     wxConfigBase *m_Config;
     wxString m_ConfigRoot;
+#endif // wxUSE_CONFIG
 
     // pagenumbers of controls in notebook (usually 0,1,2)
     int m_ContentsPage;
@@ -258,7 +262,7 @@ private:
     wxHtmlHelpMergedIndex *m_mergedIndex;
 
     DECLARE_EVENT_TABLE()
-    DECLARE_NO_COPY_CLASS(wxHtmlHelpWindow)
+    wxDECLARE_NO_COPY_CLASS(wxHtmlHelpWindow);
 };
 
 /*!
@@ -268,7 +272,7 @@ private:
 enum
 {
     //wxID_HTML_HELPFRAME = wxID_HIGHEST + 1,
-    wxID_HTML_PANEL = wxID_HIGHEST + 2,
+    wxID_HTML_PANEL = wxID_HIGHEST + 10,
     wxID_HTML_BACK,
     wxID_HTML_FORWARD,
     wxID_HTML_UPNODE,

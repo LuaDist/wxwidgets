@@ -12,18 +12,33 @@
         <installable>no</installable>
     </subproject>
 
+    <subproject id="execmon" template="sub">
+        <dir>execmon</dir>
+        <installable>yes</installable>
+    </subproject>
+
     <subproject id="helpview" template="sub">
         <dir>helpview/src</dir>
         <installable>no</installable>
     </subproject>
 
-    <subproject id="tex2rtf" template="sub">
-        <dir>tex2rtf/src</dir>
+    <subproject id="hhp2cached" template="sub">
+        <dir>hhp2cached</dir>
+        <installable>no</installable>
+    </subproject>
+
+    <subproject id="ifacecheck" template="sub">
+        <dir>ifacecheck/src</dir>
         <installable>yes</installable>
     </subproject>
 
-    <subproject id="helpgen" template="sub">
-        <dir>HelpGen/src</dir>
+    <subproject id="screenshotgen" template="sub">
+        <dir>screenshotgen/src</dir>
+        <installable>yes</installable>
+    </subproject>
+
+    <subproject id="wxrc" template="sub">
+        <dir>wxrc</dir>
         <installable>yes</installable>
     </subproject>
 

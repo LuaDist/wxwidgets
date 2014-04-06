@@ -2,7 +2,6 @@
 // Name:        src/gtk1/slider.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: slider.cpp 40024 2006-07-06 09:09:09Z ABX $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -54,19 +53,19 @@ ProcessScrollEvent(wxSlider *win, wxEventType evtType, double dvalue)
     int value = (int)(dvalue < 0 ? dvalue - 0.5 : dvalue + 0.5);
     wxScrollEvent event( evtType, win->GetId(), value, orient );
     event.SetEventObject( win );
-    win->GetEventHandler()->ProcessEvent( event );
+    win->HandleWindowEvent( event );
 
     if ( evtType != wxEVT_SCROLL_THUMBTRACK )
     {
         wxScrollEvent event2(wxEVT_SCROLL_CHANGED, win->GetId(), value, orient);
         event2.SetEventObject( win );
-        win->GetEventHandler()->ProcessEvent( event2 );
+        win->HandleWindowEvent( event2 );
     }
 
-    wxCommandEvent cevent( wxEVT_COMMAND_SLIDER_UPDATED, win->GetId() );
+    wxCommandEvent cevent( wxEVT_SLIDER, win->GetId() );
     cevent.SetEventObject( win );
     cevent.SetInt( value );
-    win->GetEventHandler()->ProcessEvent( cevent );
+    win->HandleWindowEvent( cevent );
 }
 
 //-----------------------------------------------------------------------------
@@ -125,8 +124,6 @@ static gint gtk_slider_button_release_callback( GtkWidget *scale,
 // wxSlider
 //-----------------------------------------------------------------------------
 
-IMPLEMENT_DYNAMIC_CLASS(wxSlider,wxControl)
-
 bool wxSlider::Create(wxWindow *parent, wxWindowID id,
         int value, int minValue, int maxValue,
         const wxPoint& pos, const wxSize& size,
@@ -145,9 +142,9 @@ bool wxSlider::Create(wxWindow *parent, wxWindowID id,
     m_oldPos = 0.0;
 
     if (style & wxSL_VERTICAL)
-        m_widget = gtk_vscale_new( (GtkAdjustment *) NULL );
+        m_widget = gtk_vscale_new( NULL );
     else
-        m_widget = gtk_hscale_new( (GtkAdjustment *) NULL );
+        m_widget = gtk_hscale_new( NULL );
 
     if (style & wxSL_LABELS)
     {

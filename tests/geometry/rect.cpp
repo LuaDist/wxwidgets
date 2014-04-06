@@ -3,7 +3,6 @@
 // Purpose:     wxRect unit test
 // Author:      Vadim Zeitlin
 // Created:     2004-12-11
-// RCS-ID:      $Id: rect.cpp 56161 2008-10-08 16:06:36Z VZ $
 // Copyright:   (c) 2004 wxWindows
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -64,7 +63,7 @@ private:
 // register in the unnamed registry so that these tests are run by default
 CPPUNIT_TEST_SUITE_REGISTRATION( RectTestCase );
 
-// also include in it's own registry so that these tests can be run alone
+// also include in its own registry so that these tests can be run alone
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( RectTestCase, "RectTestCase" );
 
 void RectTestCase::CentreIn()
@@ -129,6 +128,14 @@ void RectTestCase::Operators()
             ( data.GetSecond() + data.GetFirst() ) == data.GetResult()
         );
     }
+
+    // test operator*() which returns the intersection of two rectangles
+    wxRect r1 = wxRect(0, 2, 3, 4);
+    wxRect r2 = wxRect(1, 2, 7, 8);
+    r1 *= r2;
+    CPPUNIT_ASSERT(wxRect(1, 2, 2, 4) == r1);
+
+    CPPUNIT_ASSERT( (r1 * wxRect()).IsEmpty() );
 }
 
 void RectTestCase::Union()

@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by: Jurgen Doornik
 // Created:     25/01/99
-// RCS-ID:      $Id: server.cpp 36266 2005-11-27 14:03:36Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -32,8 +31,8 @@
 // we're using TCP/IP or real DDE.
 #include "ipcsetup.h"
 
-#if defined(__WXGTK__) || defined(__WXX11__) || defined(__WXMOTIF__) || defined(__WXMAC__)
-    #include "mondrian.xpm"
+#ifndef wxHAS_IMAGES_IN_RESOURCES
+    #include "../sample.xpm"
 #endif
 
 #include "server.h"
@@ -47,10 +46,10 @@
 IMPLEMENT_APP(MyApp)
 
 BEGIN_EVENT_TABLE(MyFrame, wxFrame)
-    EVT_MENU   (wxID_EXIT,         MyFrame::OnExit)
     EVT_CLOSE( MyFrame::OnClose )
-    EVT_BUTTON( ID_START,         MyFrame::OnStart )
-    EVT_CHOICE( ID_SERVERNAME,  MyFrame::OnServerName )
+
+    EVT_BUTTON( ID_START,          MyFrame::OnStart )
+    EVT_CHOICE( ID_SERVERNAME,     MyFrame::OnServerName )
     EVT_BUTTON( ID_DISCONNECT,     MyFrame::OnDisconnect )
     EVT_BUTTON( ID_ADVISE,         MyFrame::OnAdvise )
 END_EVENT_TABLE()
@@ -66,16 +65,14 @@ END_EVENT_TABLE()
 
 bool MyApp::OnInit()
 {
+    if ( !wxApp::OnInit() )
+        return false;
+
     // Create the main frame window
-    m_frame = new MyFrame(NULL, _T("Server"));
+    m_frame = new MyFrame(NULL, "Server");
     m_frame->Show(true);
 
     return true;
-}
-
-int MyApp::OnExit()
-{
-    return 0;
 }
 
 // ----------------------------------------------------------------------------
@@ -90,77 +87,69 @@ MyFrame::MyFrame(wxFrame *frame, const wxString& title)
     CreateStatusBar();
 #endif // wxUSE_STATUSBAR
 
-    // Give it an icon
-    SetIcon(wxICON(mondrian));
+    SetIcon(wxICON(sample));
 
-    // Make a menubar
-    wxMenu *file_menu = new wxMenu;
-
-    file_menu->Append(wxID_EXIT, _T("&Quit\tCtrl-Q"));
-
-    wxMenuBar *menu_bar = new wxMenuBar;
-
-    menu_bar->Append(file_menu, _T("&File"));
-
-    // Associate the menu bar with the frame
-    SetMenuBar(menu_bar);
-
-    // set a dialog background
-    SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE));
-
-    // add the controls to the frame
-    wxBoxSizer *item0 = new wxBoxSizer( wxVERTICAL );
-
-    wxBoxSizer *item1 = new wxBoxSizer( wxHORIZONTAL );
-
-    wxFlexGridSizer *item2 = new wxFlexGridSizer( 2, 0, 0 );
-    item2->AddGrowableCol( 1 );
-
-    wxButton *item3 = new wxButton( this, ID_START, wxT("Start Server"), wxDefaultPosition, wxDefaultSize, 0 );
-    item2->Add( item3, 0, wxGROW|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-
-    wxString strs4[] = 
-    {
-        IPC_SERVICE, _T("...")
-    };
-    wxChoice *item4 = new wxChoice( this, ID_SERVERNAME, wxDefaultPosition, wxSize(100,-1), 2, strs4, 0 );
-    item2->Add( item4, 0, wxGROW|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-
-    wxButton *item5 = new wxButton( this, ID_DISCONNECT, wxT("Disconnect Client"), wxDefaultPosition, wxDefaultSize, 0 );
-    item2->Add( item5, 0, wxGROW|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-
-    item2->Add( 20, 20, 0, wxALIGN_CENTER|wxALL, 5 );
-
-    wxButton *item6 = new wxButton( this, ID_ADVISE, wxT("Advise"), wxDefaultPosition, wxDefaultSize, 0 );
-    item2->Add( item6, 0, wxGROW|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-
-    item2->Add( 20, 20, 0, wxALIGN_CENTER|wxALL, 5 );
-
-    item1->Add( item2, 1, wxALIGN_CENTER|wxALL, 5 );
-
-    item0->Add( item1, 0, wxGROW|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-
-    wxStaticBox *item8 = new wxStaticBox( this, -1, wxT("Server log") );
-    wxStaticBoxSizer *item7 = new wxStaticBoxSizer( item8, wxVERTICAL );
-
-    wxTextCtrl *item9 = new wxTextCtrl( this, ID_LOG, wxT(""), wxDefaultPosition, wxSize(500,140), wxTE_MULTILINE );
-    item7->Add( item9, 1, wxGROW|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-
-    item0->Add( item7, 0, wxGROW|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-
-    SetSizer( item0 );
-    item0->SetSizeHints( this );
-
-    // status
     m_server = NULL;
+
+    wxPanel * const panel = new wxPanel(this);
+
+    wxBoxSizer * const sizerMain = new wxBoxSizer( wxVERTICAL );
+
+    wxFlexGridSizer * const sizerCmds = new wxFlexGridSizer( 2, 0, 0 );
+    sizerCmds->AddGrowableCol( 1 );
+
+    wxButton *btn;
+
+    btn = new wxButton(panel, ID_START, "&Start Server");
+    sizerCmds->Add(btn, 0, wxGROW|wxALIGN_CENTER_VERTICAL|wxALL, 5);
+
+    const wxString choices[] = { IPC_SERVICE, "..." };
+    wxChoice * const choice = new wxChoice
+                                  (
+                                    panel,
+                                    ID_SERVERNAME,
+                                    wxDefaultPosition, wxSize(100, -1),
+                                    WXSIZEOF(choices), choices
+                                  );
+    sizerCmds->Add(choice, 0, wxGROW|wxALIGN_CENTER_VERTICAL|wxALL, 5);
+
+    btn = new wxButton(panel, ID_DISCONNECT, "&Disconnect Client");
+    sizerCmds->Add(btn, 0, wxGROW|wxALIGN_CENTER_VERTICAL|wxALL, 5);
+    sizerCmds->AddSpacer(20);
+
+    btn = new wxButton( panel, ID_ADVISE, "&Advise");
+    sizerCmds->Add(btn, 0, wxGROW|wxALIGN_CENTER_VERTICAL|wxALL, 5);
+    sizerCmds->AddSpacer(20);
+
+    sizerMain->Add(sizerCmds, 0, wxGROW|wxALIGN_CENTER_VERTICAL|wxALL, 5);
+
+    wxStaticBoxSizer * const
+        sizerLog = new wxStaticBoxSizer(wxVERTICAL, panel, "Server &log");
+
+    wxTextCtrl * const textLog = new wxTextCtrl
+                                 (
+                                    panel,
+                                    wxID_ANY,
+                                    "",
+                                    wxDefaultPosition, wxSize(500, 140),
+                                    wxTE_MULTILINE
+                                 );
+    sizerLog->Add(textLog, 1, wxGROW|wxALIGN_CENTER_VERTICAL|wxALL, 5);
+
+    sizerMain->Add(sizerLog, 1, wxGROW|wxALIGN_CENTER_VERTICAL|wxALL, 5);
+
+    panel->SetSizer(sizerMain);
+    sizerMain->SetSizeHints(panel);
+    SetClientSize(panel->GetSize());
+
     GetServername()->SetSelection(0);
-    wxLogTextCtrl *logWindow = new wxLogTextCtrl(GetLog());
+    wxLogTextCtrl *logWindow = new wxLogTextCtrl(textLog);
     delete wxLog::SetActiveTarget(logWindow);
-    wxLogMessage(_T("Click on Start to start the server"));
-    Enable();
+    wxLogMessage("Click on Start to start the server");
+    UpdateUI();
 }
 
-void MyFrame::Enable()
+void MyFrame::UpdateUI()
 {
     GetStart()->Enable(m_server == NULL);
     GetServername()->Enable(m_server == NULL);
@@ -170,17 +159,8 @@ void MyFrame::Enable()
 
 void MyFrame::OnClose(wxCloseEvent& event)
 {
-    if (m_server)
-    {
-        delete m_server;
-        m_server = NULL;
-    }
+    wxDELETE(m_server);
     event.Skip();
-}
-
-void MyFrame::OnExit(wxCommandEvent& WXUNUSED(event))
-{
-    Close(true);
 }
 
 void MyFrame::OnStart(wxCommandEvent& WXUNUSED(event))
@@ -190,29 +170,34 @@ void MyFrame::OnStart(wxCommandEvent& WXUNUSED(event))
     wxString servername = GetServername()->GetStringSelection();
     if (m_server->Create(servername))
     {
-        wxLogMessage(_T("Server %s started"), servername.c_str());
+        wxLogMessage("Server %s started", servername);
   #if wxUSE_DDE_FOR_IPC
-        wxLogMessage(_T("Server uses DDE"));
+        wxLogMessage("Server uses DDE");
   #else // !wxUSE_DDE_FOR_IPC
-        wxLogMessage(_T("Server uses TCP"));
+        wxLogMessage("Server uses TCP");
   #endif // wxUSE_DDE_FOR_IPC/!wxUSE_DDE_FOR_IPC
     }
     else
     {
-        wxLogMessage(_T("Server %s failed to start"), servername.c_str());
-        delete m_server;
-        m_server = NULL;
+        wxLogMessage("Server %s failed to start", servername);
+        wxDELETE(m_server);
     }
-    Enable();
+    UpdateUI();
 }
 
 void MyFrame::OnServerName( wxCommandEvent& WXUNUSED(event) )
 {
-    if (GetServername()->GetStringSelection() == _T("..."))
+    if ( GetServername()->GetStringSelection() == "..." )
     {
-        wxString s = wxGetTextFromUser(_T("Specify the name of the server"),
-            _T("Server Name"), _(""), this);
-        if (!s.IsEmpty() && s != IPC_SERVICE)
+        wxString s = wxGetTextFromUser
+                     (
+                        "Specify the name of the server",
+                        "Server Name",
+                        "",
+                        this
+                     );
+
+        if ( !s.empty() && s != IPC_SERVICE )
         {
             GetServername()->Insert(s, 0);
             GetServername()->SetSelection(0);
@@ -223,12 +208,12 @@ void MyFrame::OnServerName( wxCommandEvent& WXUNUSED(event) )
 void MyFrame::Disconnect()
 {
     m_server->Disconnect();
-    Enable();
+    UpdateUI();
 }
 
 void MyFrame::OnDisconnect(wxCommandEvent& WXUNUSED(event))
 {
-    Disconnect();    
+    Disconnect();
 }
 
 void MyFrame::OnAdvise(wxCommandEvent& WXUNUSED(event))
@@ -252,48 +237,50 @@ MyServer::~MyServer()
 
 wxConnectionBase *MyServer::OnAcceptConnection(const wxString& topic)
 {
-    wxLogMessage(_T("OnAcceptConnection(\"%s\")"), topic.c_str());
+    wxLogMessage("OnAcceptConnection(\"%s\")", topic);
 
     if ( topic == IPC_TOPIC )
     {
         m_connection = new MyConnection();
-        wxGetApp().GetFrame()->Enable();
-        wxLogMessage(_T("Connection accepted"));
+        wxGetApp().GetFrame()->UpdateUI();
+        wxLogMessage("Connection accepted");
         return m_connection;
     }
-    // unknown topic
+    //else: unknown topic
+
+    wxLogMessage("Unknown topic, connection refused");
     return NULL;
 }
 
 void MyServer::Disconnect()
 {
-    if (m_connection)
+    if ( m_connection )
     {
-        m_connection->Disconnect();
-        delete m_connection;
-        m_connection = NULL;
-        wxGetApp().GetFrame()->Enable();
-        wxLogMessage(_T("Disconnected client"));
+        wxDELETE(m_connection);
+        wxGetApp().GetFrame()->UpdateUI();
+        wxLogMessage("Disconnected client");
     }
 }
 
 void MyServer::Advise()
 {
-    if (CanAdvise())
+    if ( CanAdvise() )
     {
-        wxString s = wxDateTime::Now().Format();
-        m_connection->Advise(m_connection->m_sAdvise, (wxChar *)s.c_str());
-        s = wxDateTime::Now().FormatTime() + _T(" ") + wxDateTime::Now().FormatDate();
-        m_connection->Advise(m_connection->m_sAdvise, (wxChar *)s.c_str(), (s.Length() + 1) * sizeof(wxChar));
+        const wxDateTime now = wxDateTime::Now();
+
+        m_connection->Advise(m_connection->m_advise, now.Format());
+
+        const wxString s = now.FormatTime() + " " + now.FormatDate();
+        m_connection->Advise(m_connection->m_advise, s.mb_str(), wxNO_LEN);
 
 #if wxUSE_DDE_FOR_IPC
-        wxLogMessage(_T("DDE Advise type argument cannot be wxIPC_PRIVATE. The client will receive it as wxIPC_TEXT, and receive the correct no of bytes, but not print a correct log entry."));
+        wxLogMessage("DDE Advise type argument cannot be wxIPC_PRIVATE. "
+                     "The client will receive it as wxIPC_TEXT, "
+                     " and receive the correct no of bytes, "
+                     "but not print a correct log entry.");
 #endif
-        char bytes[3];
-        bytes[0] = '1'; bytes[1] = '2'; bytes[2] = '3';
-        m_connection->Advise(m_connection->m_sAdvise, (wxChar *)bytes, 3, wxIPC_PRIVATE);
-        // this works, but the log treats it as a string now
-//        m_connection->Advise(m_connection->m_sAdvise, (wxChar *)bytes, 3, wxIPC_TEXT );
+        char bytes[3] = { '1', '2', '3' };
+        m_connection->Advise(m_connection->m_advise, bytes, 3, wxIPC_PRIVATE);
     }
 }
 
@@ -301,118 +288,103 @@ void MyServer::Advise()
 // MyConnection
 // ----------------------------------------------------------------------------
 
-MyConnection::MyConnection()
-            : wxConnection()
+bool
+MyConnection::OnExecute(const wxString& topic,
+                        const void *data,
+                        size_t size,
+                        wxIPCFormat format)
 {
-}
-
-MyConnection::~MyConnection()
-{
-}
-
-bool MyConnection::OnExecute(const wxString& topic,
-    wxChar *data, int size, wxIPCFormat format)
-{
-    Log(_T("OnExecute"), topic, _T(""), data, size, format);
+    Log("OnExecute", topic, "", data, size, format);
     return true;
 }
 
-bool MyConnection::OnPoke(const wxString& topic,
-    const wxString& item, wxChar *data, int size, wxIPCFormat format)
+bool
+MyConnection::OnPoke(const wxString& topic,
+                     const wxString& item,
+                     const void *data,
+                     size_t size,
+                     wxIPCFormat format)
 {
-    Log(_T("OnPoke"), topic, item, data, size, format);
+    Log("OnPoke", topic, item, data, size, format);
     return wxConnection::OnPoke(topic, item, data, size, format);
 }
 
-wxChar *MyConnection::OnRequest(const wxString& topic,
-    const wxString& item, int * size, wxIPCFormat format)
+const void *
+MyConnection::OnRequest(const wxString& topic,
+                        const wxString& item,
+                        size_t *size,
+                        wxIPCFormat format)
 {
-    wxChar *data;
-    if (item == _T("Date"))
+    *size = 0;
+
+    wxString s,
+             afterDate;
+    if ( item.StartsWith("Date", &afterDate) )
     {
-        m_sRequestDate = wxDateTime::Now().Format();
-        data = (wxChar *)m_sRequestDate.c_str();
-        *size = -1;
-    }    
-    else if (item == _T("Date+len"))
+        const wxDateTime now = wxDateTime::Now();
+
+        if ( afterDate.empty() )
+        {
+            s = now.Format();
+            *size = wxNO_LEN;
+        }
+        else if ( afterDate == "+len" )
+        {
+            s = now.FormatTime() + " " + now.FormatDate();
+            *size = strlen(s.mb_str()) + 1;
+        }
+    }
+    else if ( item == "bytes[3]" )
     {
-        m_sRequestDate = wxDateTime::Now().FormatTime() + _T(" ") + wxDateTime::Now().FormatDate();
-        data = (wxChar *)m_sRequestDate.c_str();
-        *size = (m_sRequestDate.Length() + 1) * sizeof(wxChar);
-    }    
-    else if (item == _T("bytes[3]"))
-    {
-        data = (wxChar *)m_achRequestBytes;
-        m_achRequestBytes[0] = '1'; m_achRequestBytes[1] = '2'; m_achRequestBytes[2] = '3';
+        s = "123";
         *size = 3;
     }
-    else
+
+    if ( !*size )
     {
-        data = NULL;
-        *size = 0;
+        wxLogMessage("Unknown request for \"%s\"", item);
+        return NULL;
     }
-     Log(_T("OnRequest"), topic, item, data, *size, format);
+
+    // store the data pointer to which we return in a member variable to ensure
+    // that the pointer remains valid even after we return
+    m_requestData = s.mb_str();
+    const void * const data = m_requestData;
+    Log("OnRequest", topic, item, data, *size, format);
     return data;
 }
 
-bool MyConnection::OnStartAdvise(const wxString& topic,
-                                 const wxString& item)
+bool MyConnection::OnStartAdvise(const wxString& topic, const wxString& item)
 {
-    wxLogMessage(_T("OnStartAdvise(\"%s\",\"%s\")"), topic.c_str(), item.c_str());
-    wxLogMessage(_T("Returning true"));
-    m_sAdvise = item;
-    wxGetApp().GetFrame()->Enable();
+    wxLogMessage("OnStartAdvise(\"%s\", \"%s\")", topic, item);
+    wxLogMessage("Returning true");
+    m_advise = item;
+    wxGetApp().GetFrame()->UpdateUI();
     return true;
 }
 
-bool MyConnection::OnStopAdvise(const wxString& topic,
-                                 const wxString& item)
+bool MyConnection::OnStopAdvise(const wxString& topic, const wxString& item)
 {
-    wxLogMessage(_T("OnStopAdvise(\"%s\",\"%s\")"), topic.c_str(), item.c_str());
-    wxLogMessage(_T("Returning true"));
-    m_sAdvise.Empty();
-    wxGetApp().GetFrame()->Enable();
+    wxLogMessage("OnStopAdvise(\"%s\",\"%s\")", topic, item);
+    wxLogMessage("Returning true");
+    m_advise.clear();
+    wxGetApp().GetFrame()->UpdateUI();
     return true;
 }
 
-void MyConnection::Log(const wxString& command, const wxString& topic,
-    const wxString& item, wxChar *data, int size, wxIPCFormat format)
+bool
+MyConnection::DoAdvise(const wxString& item,
+                       const void *data,
+                       size_t size,
+                       wxIPCFormat format)
 {
-    wxString s;
-    if (topic.IsEmpty() && item.IsEmpty())
-        s.Printf(_T("%s("), command.c_str());
-    else if (topic.IsEmpty())
-        s.Printf(_T("%s(\"%s\","), command.c_str(), item.c_str());
-    else if (item.IsEmpty())
-        s.Printf(_T("%s(\"%s\","), command.c_str(), topic.c_str());
-    else
-        s.Printf(_T("%s(\"%s\",\"%s\","), command.c_str(), topic.c_str(), item.c_str());
-
-    if (format == wxIPC_TEXT || format == wxIPC_UNICODETEXT) 
-        wxLogMessage(_T("%s\"%s\",%d)"), s.c_str(), data, size);
-    else if (format == wxIPC_PRIVATE)
-    {
-        if (size == 3)
-        {
-            char *bytes = (char *)data;
-            wxLogMessage(_T("%s'%c%c%c',%d)"), s.c_str(), bytes[0], bytes[1], bytes[2], size);
-        }
-        else
-            wxLogMessage(_T("%s...,%d)"), s.c_str(), size);
-    }
-    else if (format == wxIPC_INVALID) 
-        wxLogMessage(_T("%s[invalid data],%d)"), s.c_str(), size);
-}
-
-bool MyConnection::Advise(const wxString& item, wxChar *data, int size, wxIPCFormat format)
-{
-    Log(_T("Advise"), _T(""), item, data, size, format);
-    return wxConnection::Advise(item, data, size, format);
+    Log("Advise", "", item, data, size, format);
+    return wxConnection::DoAdvise(item, data, size, format);
 }
 
 bool MyConnection::OnDisconnect()
 {
-    wxLogMessage(_T("OnDisconnect()"));
+    wxLogMessage("OnDisconnect()");
     wxGetApp().GetFrame()->Disconnect();
     return true;
 }

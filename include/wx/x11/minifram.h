@@ -6,7 +6,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: minifram.h 42077 2006-10-17 14:44:52Z ABX $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -16,7 +15,7 @@
 
 #include "wx/frame.h"
 
-class WXDLLEXPORT wxMiniFrame: public wxFrame {
+class WXDLLIMPEXP_CORE wxMiniFrame: public wxFrame {
 
     DECLARE_DYNAMIC_CLASS(wxMiniFrame)
 
@@ -27,7 +26,7 @@ public:
         const wxString& title,
         const wxPoint& pos = wxDefaultPosition,
         const wxSize& size = wxDefaultSize,
-        long style = wxDEFAULT_FRAME_STYLE|wxTINY_CAPTION_HORIZ,
+        long style = wxDEFAULT_FRAME_STYLE|wxTINY_CAPTION,
         const wxString& name = wxFrameNameStr)
     {
         // Use wxFrame constructor in absence of more specific code.

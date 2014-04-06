@@ -4,8 +4,8 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: utils.cpp 49838 2007-11-11 23:52:54Z VZ $
 // Copyright:   (c) Julian Smart
+//              (c) 2013 Rob Bresalier
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
@@ -15,6 +15,8 @@
 #if defined(__BORLANDC__)
     #pragma hdrstop
 #endif
+
+#include "wx/private/eventloopsourcesmanager.h"
 
 // ============================================================================
 // declarations
@@ -34,6 +36,8 @@
 #endif
 
 #include "wx/apptrait.h"
+#include "wx/generic/private/timer.h"
+#include "wx/evtloop.h"
 
 #include <ctype.h>
 #include <stdarg.h>
@@ -55,8 +59,6 @@
 #ifdef __VMS__
 #pragma message disable nosimpint
 #endif
-
-#include "wx/unix/execute.h"
 
 #include "wx/x11/private.h"
 
@@ -81,63 +83,10 @@ void wxFlushEvents()
     // ??
 }
 
-bool wxCheckForInterrupt(wxWindow *wnd)
+bool wxCheckForInterrupt(wxWindow *WXUNUSED(wnd))
 {
     wxFAIL_MSG(wxT("wxCheckForInterrupt not yet implemented."));
     return false;
-}
-
-// ----------------------------------------------------------------------------
-// wxExecute stuff
-// ----------------------------------------------------------------------------
-
-WX_DECLARE_HASH_MAP( int, wxEndProcessData*, wxIntegerHash, wxIntegerEqual, wxProcMap );
-
-static wxProcMap *gs_procmap;
-
-int wxAddProcessCallback(wxEndProcessData *proc_data, int fd)
-{
-    if (!gs_procmap) gs_procmap = new wxProcMap();
-    (*gs_procmap)[fd] = proc_data;
-    return 1;
-}
-
-void wxCheckForFinishedChildren()
-{
-    wxProcMap::iterator it;
-    if (!gs_procmap) return;
-    if (gs_procmap->size() == 0) {
-      // Map empty, delete it.
-      delete gs_procmap;
-      gs_procmap = NULL;
-      return;
-    }
-    for (it = gs_procmap->begin();it != gs_procmap->end(); ++it)
-    {
-        wxEndProcessData *proc_data = it->second;
-        int pid = (proc_data->pid > 0) ? proc_data->pid : -(proc_data->pid);
-        int status = 0;
-        // has the process really terminated?
-        int rc = waitpid(pid, &status, WNOHANG);
-        if (rc == 0)
-            continue;       // no, it didn't exit yet, continue waiting
-
-        // set exit code to -1 if something bad happened
-        proc_data->exitcode = rc != -1 && WIFEXITED(status) ?
-                   WEXITSTATUS(status) : -1;
-
-        // child exited, end waiting
-        close(it->first);
-
-        // don't call us again!
-        gs_procmap->erase(it->first);
-
-        wxHandleProcessTermination(proc_data);
-
-        // Iterator is invalid. Handle any further children in subsequent
-        // calls.
-        break;
-    }
 }
 
 // ----------------------------------------------------------------------------
@@ -145,14 +94,11 @@ void wxCheckForFinishedChildren()
 // ----------------------------------------------------------------------------
 
 // Emit a beeeeeep
-#ifndef __EMX__
-// on OS/2, we use the wxBell from wxBase library (src/os2/utils.cpp)
 void wxBell()
 {
     // Use current setting for the bell
     XBell ((Display*) wxGetDisplay(), 0);
 }
-#endif
 
 wxPortId wxGUIAppTraits::GetToolkitVersion(int *verMaj, int *verMin) const
 {
@@ -169,6 +115,10 @@ wxPortId wxGUIAppTraits::GetToolkitVersion(int *verMaj, int *verMin) const
     return wxPORT_X11;
 }
 
+wxEventLoopBase* wxGUIAppTraits::CreateEventLoop()
+{
+    return new wxEventLoop;
+}
 
 // ----------------------------------------------------------------------------
 // display info
@@ -412,12 +362,11 @@ void wxAllocColor(Display *d,Colormap cmp,XColor *xc)
 {
     if (!XAllocColor(d,cmp,xc))
     {
-        //          cout << "wxAllocColor : Warning : Can not allocate color, attempt find nearest !\n";
+        //          cout << "wxAllocColor : Warning : Cannot allocate color, attempt find nearest !\n";
         wxAllocNearestColor(d,cmp,xc);
     }
 }
 
-#ifdef __WXDEBUG__
 wxString wxGetXEventName(XEvent& event)
 {
 #if wxUSE_NANOX
@@ -425,7 +374,7 @@ wxString wxGetXEventName(XEvent& event)
     return str;
 #else
     int type = event.xany.type;
-    static char* event_name[] = {
+    static const char* event_name[] = {
         "", "unknown(-)",                                         // 0-1
         "KeyPress", "KeyRelease", "ButtonPress", "ButtonRelease", // 2-5
         "MotionNotify", "EnterNotify", "LeaveNotify", "FocusIn",  // 6-9
@@ -442,12 +391,28 @@ wxString wxGetXEventName(XEvent& event)
         return wxString::FromAscii(event_name[type]);
 #endif
 }
-#endif
 
-bool wxWindowIsVisible(Window win)
+#if wxUSE_EVENTLOOP_SOURCE
+
+class wxX11EventLoopSourcesManager : public wxEventLoopSourcesManagerBase
 {
-    XWindowAttributes wa;
-    XGetWindowAttributes(wxGlobalDisplay(), win, &wa);
+public:
+    wxEventLoopSource *
+    AddSourceForFD(int WXUNUSED(fd),
+                   wxEventLoopSourceHandler* WXUNUSED(handler),
+                   int WXUNUSED(flags))
+    {
+        wxFAIL_MSG("Monitoring FDs in the main loop is not implemented in wxX11");
 
-    return (wa.map_state == IsViewable);
+        return NULL;
+    }
+};
+
+wxEventLoopSourcesManagerBase* wxGUIAppTraits::GetEventLoopSourcesManager()
+{
+    static wxX11EventLoopSourcesManager s_eventLoopSourcesManager;
+
+    return &s_eventLoopSourcesManager;
 }
+
+#endif // wxUSE_EVENTLOOP_SOURCE

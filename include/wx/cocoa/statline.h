@@ -4,7 +4,6 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2003/03/18
-// RCS-ID:      $Id: statline.h 43874 2006-12-09 14:52:59Z VZ $
 // Copyright:   (c) 2003 David Elliott
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -17,7 +16,7 @@
 // ========================================================================
 // wxStaticLine
 // ========================================================================
-class WXDLLEXPORT wxStaticLine: public wxStaticLineBase// , protected wxCocoaNSButton
+class WXDLLIMPEXP_CORE wxStaticLine: public wxStaticLineBase// , protected wxCocoaNSButton
 {
     DECLARE_DYNAMIC_CLASS(wxStaticLine)
     DECLARE_EVENT_TABLE()
@@ -46,7 +45,7 @@ public:
 // ------------------------------------------------------------------------
 protected:
     // Static lines cannot be enabled/disabled
-    virtual void CocoaSetEnabled(bool enable) { }
+    virtual void CocoaSetEnabled(bool WXUNUSED(enable)) { }
 // ------------------------------------------------------------------------
 // Implementation
 // ------------------------------------------------------------------------

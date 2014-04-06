@@ -4,7 +4,6 @@
 // Author:      Guilhem Lavaux
 // Modified by:
 // Created:     20/07/1997
-// RCS-ID:      $Id: url.cpp 57545 2008-12-25 17:03:20Z VZ $
 // Copyright:   (c) 1997, 1998 Guilhem Lavaux
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -30,7 +29,6 @@
 #include <string.h>
 #include <ctype.h>
 
-IMPLEMENT_CLASS(wxProtoInfo, wxObject)
 IMPLEMENT_CLASS(wxURL, wxURI)
 
 // Protocols list
@@ -66,9 +64,15 @@ wxURL::wxURL(const wxString& url) : wxURI(url)
     ParseURL();
 }
 
-wxURL::wxURL(const wxURI& url) : wxURI(url)
+wxURL::wxURL(const wxURI& uri) : wxURI(uri)
 {
-    Init(url.BuildURI());
+    Init(uri.BuildURI());
+    ParseURL();
+}
+
+wxURL::wxURL(const wxURL& url) : wxURI(url)
+{
+    Init(url.GetURL());
     ParseURL();
 }
 
@@ -103,18 +107,39 @@ void wxURL::Init(const wxString& url)
 // Assignment
 // --------------------------------------------------------------
 
-wxURL& wxURL::operator = (const wxURI& url)
-{
-    wxURI::operator = (url);
-    Init(url.BuildURI());
-    ParseURL();
-    return *this;
-}
 wxURL& wxURL::operator = (const wxString& url)
 {
     wxURI::operator = (url);
+    Free();
     Init(url);
     ParseURL();
+
+    return *this;
+}
+
+wxURL& wxURL::operator = (const wxURI& uri)
+{
+    if (&uri != this)
+    {
+        wxURI::operator = (uri);
+        Free();
+        Init(uri.BuildURI());
+        ParseURL();
+    }
+
+    return *this;
+}
+
+wxURL& wxURL::operator = (const wxURL& url)
+{
+    if (&url != this)
+    {
+        wxURI::operator = (url);
+        Free();
+        Init(url.GetURL());
+        ParseURL();
+    }
+
     return *this;
 }
 
@@ -167,6 +192,8 @@ bool wxURL::ParseURL()
             m_url = m_url + wxT("//") + m_server;
 
         // We initialize specific variables.
+        if (m_protocol)
+            m_protocol->Destroy();
         m_protocol = m_proxy; // FIXME: we should clone the protocol
     }
 #endif // wxUSE_PROTOCOL_HTTP
@@ -184,12 +211,17 @@ void wxURL::CleanData()
 #if wxUSE_PROTOCOL_HTTP
     if (!m_useProxy)
 #endif // wxUSE_PROTOCOL_HTTP
+    {
         if (m_protocol)
+        {
             // Need to safely delete the socket (pending events)
             m_protocol->Destroy();
+            m_protocol = NULL;
+        }
+    }
 }
 
-wxURL::~wxURL()
+void wxURL::Free()
 {
     CleanData();
 #if wxUSE_PROTOCOL_HTTP
@@ -199,6 +231,11 @@ wxURL::~wxURL()
 #if wxUSE_URL_NATIVE
     delete m_nativeImp;
 #endif
+}
+
+wxURL::~wxURL()
+{
+    Free();
 }
 
 // --------------------------------------------------------------
@@ -213,7 +250,7 @@ bool wxURL::FetchProtocol()
     {
         if (m_scheme == info->m_protoname)
         {
-            if (m_port.IsNull())
+            if ( m_port.empty() )
                 m_port = info->m_servname;
             m_protoinfo = info;
             m_protocol = (wxProtocol *)m_protoinfo->m_cinfo->CreateObject();
@@ -267,7 +304,11 @@ wxInputStream *wxURL::GetInputStream()
     wxIPV4address addr;
 
     // m_protoinfo is NULL when we use a proxy
-    if (!m_useProxy && m_protoinfo->m_needhost)
+    if (
+#if wxUSE_PROTOCOL_HTTP
+         !m_useProxy &&
+#endif // wxUSE_PROTOCOL_HTTP
+         m_protoinfo->m_needhost )
     {
         if (!addr.Hostname(m_server))
         {
@@ -283,13 +324,15 @@ wxInputStream *wxURL::GetInputStream()
             return NULL;
         }
     }
-#endif
+#endif // wxUSE_SOCKETS
 
     wxString fullPath;
 
+#if wxUSE_PROTOCOL_HTTP
     // When we use a proxy, we have to pass the whole URL to it.
     if (m_useProxy)
         fullPath += m_url;
+#endif // wxUSE_PROTOCOL_HTTP
 
     if(m_path.empty())
         fullPath += wxT("/");
@@ -321,8 +364,7 @@ void wxURL::SetDefaultProxy(const wxString& url_proxy)
         if ( ms_proxyDefault )
         {
             ms_proxyDefault->Close();
-            delete ms_proxyDefault;
-            ms_proxyDefault = NULL;
+            wxDELETE(ms_proxyDefault);
         }
     }
     else
@@ -421,7 +463,7 @@ wxURLModule::wxURLModule()
 {
     // we must be cleaned up before wxSocketModule as otherwise deleting
     // ms_proxyDefault from our OnExit() won't work (and can actually crash)
-    AddDependency(wxClassInfo::FindClass(_T("wxSocketModule")));
+    AddDependency(wxClassInfo::FindClass(wxT("wxSocketModule")));
 }
 
 bool wxURLModule::OnInit()
@@ -432,7 +474,7 @@ bool wxURLModule::OnInit()
     // down the program startup (especially if there is no DNS server
     // available, in which case it may take up to 1 minute)
 
-    if ( wxGetenv(_T("HTTP_PROXY")) )
+    if ( wxGetenv(wxT("HTTP_PROXY")) )
     {
         wxURL::ms_useDefaultProxy = true;
     }
@@ -443,91 +485,11 @@ bool wxURLModule::OnInit()
 void wxURLModule::OnExit()
 {
 #if wxUSE_PROTOCOL_HTTP
-    delete wxURL::ms_proxyDefault;
-    wxURL::ms_proxyDefault = NULL;
+    wxDELETE(wxURL::ms_proxyDefault);
 #endif // wxUSE_PROTOCOL_HTTP
 }
 
 #endif // wxUSE_SOCKETS
 
-// ---------------------------------------------------------------------------
-//
-//                        wxURL Compatibility
-//
-// ---------------------------------------------------------------------------
-
-#if WXWIN_COMPATIBILITY_2_4
-
-#include "wx/url.h"
-
-wxString wxURL::GetProtocolName() const
-{
-    return m_scheme;
-}
-
-wxString wxURL::GetHostName() const
-{
-    return m_server;
-}
-
-wxString wxURL::GetPath() const
-{
-    return m_path;
-}
-
-//Note that this old code really doesn't convert to a URI that well and looks
-//more like a dirty hack than anything else...
-
-wxString wxURL::ConvertToValidURI(const wxString& uri, const wxChar* delims)
-{
-  wxString out_str;
-  wxString hexa_code;
-  size_t i;
-
-  for (i = 0; i < uri.Len(); i++)
-  {
-    wxChar c = uri.GetChar(i);
-
-    if (c == wxT(' '))
-    {
-      // GRG, Apr/2000: changed to "%20" instead of '+'
-
-      out_str += wxT("%20");
-    }
-    else
-    {
-      // GRG, Apr/2000: modified according to the URI definition (RFC 2396)
-      //
-      // - Alphanumeric characters are never escaped
-      // - Unreserved marks are never escaped
-      // - Delimiters must be escaped if they appear within a component
-      //     but not if they are used to separate components. Here we have
-      //     no clear way to distinguish between these two cases, so they
-      //     are escaped unless they are passed in the 'delims' parameter
-      //     (allowed delimiters).
-
-      static const wxChar marks[] = wxT("-_.!~*()'");
-
-      if ( !wxIsalnum(c) && !wxStrchr(marks, c) && !wxStrchr(delims, c) )
-      {
-        hexa_code.Printf(wxT("%%%02X"), c);
-        out_str += hexa_code;
-      }
-      else
-      {
-        out_str += c;
-      }
-    }
-  }
-
-  return out_str;
-}
-
-wxString wxURL::ConvertFromURI(const wxString& uri)
-{
-    return wxURI::Unescape(uri);
-}
-
-#endif //WXWIN_COMPATIBILITY_2_4
 
 #endif // wxUSE_URL

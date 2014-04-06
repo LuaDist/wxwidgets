@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by: Robert Vazan (sizers)
 // Created:     15.08.99
-// RCS-ID:      $Id: wizard.cpp 41036 2006-09-06 17:37:30Z PC $
 // Copyright:   (c) Vadim Zeitlin
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -38,10 +37,13 @@
     #include "wx/sizer.h"
 #endif
 
+#include "wx/textctrl.h"
 #include "wx/wizard.h"
 
 #include "wiztest.xpm"
 #include "wiztest2.xpm"
+
+#include "../sample.xpm"
 
 // ----------------------------------------------------------------------------
 // constants
@@ -50,11 +52,15 @@
 // ids for menu items
 enum
 {
+    Wizard_About = wxID_ABOUT,
     Wizard_Quit = wxID_EXIT,
     Wizard_RunModal = wxID_HIGHEST,
+
     Wizard_RunNoSizer,
     Wizard_RunModeless,
-    Wizard_About = wxID_ABOUT
+
+    Wizard_LargeWizard,
+    Wizard_ExpandBitmap
 };
 
 // ----------------------------------------------------------------------------
@@ -121,13 +127,13 @@ public:
     {
         m_bitmap = wxBitmap(wiztest2_xpm);
 
-        m_checkbox = new wxCheckBox(this, wxID_ANY, _T("&Check me"));
+        m_checkbox = new wxCheckBox(this, wxID_ANY, wxT("&Check me"));
 
         wxBoxSizer *mainSizer = new wxBoxSizer(wxVERTICAL);
         mainSizer->Add(
             new wxStaticText(this, wxID_ANY,
-                             _T("You need to check the checkbox\n")
-                             _T("below before going to the next page\n")),
+                             wxT("You need to check the checkbox\n")
+                             wxT("below before going to the next page\n")),
             0,
             wxALL,
             5
@@ -139,15 +145,14 @@ public:
             wxALL,
             5 // Border
         );
-        SetSizer(mainSizer);
-        mainSizer->Fit(this);
+        SetSizerAndFit(mainSizer);
     }
 
     virtual bool TransferDataFromWindow()
     {
         if ( !m_checkbox->GetValue() )
         {
-            wxMessageBox(_T("Check the checkbox first!"), _T("No way"),
+            wxMessageBox(wxT("Check the checkbox first!"), wxT("No way"),
                          wxICON_WARNING | wxOK, this);
 
             return false;
@@ -178,12 +183,12 @@ public:
         //        static wxString choices[] = { "forward", "backward", "both", "neither" };
         // The above syntax can cause an internal compiler error with gcc.
         wxString choices[4];
-        choices[0] = _T("forward");
-        choices[1] = _T("backward");
-        choices[2] = _T("both");
-        choices[3] = _T("neither");
+        choices[0] = wxT("forward");
+        choices[1] = wxT("backward");
+        choices[2] = wxT("both");
+        choices[3] = wxT("neither");
 
-        m_radio = new wxRadioBox(this, wxID_ANY, _T("Allow to proceed:"),
+        m_radio = new wxRadioBox(this, wxID_ANY, wxT("Allow to proceed:"),
                                  wxDefaultPosition, wxDefaultSize,
                                  WXSIZEOF(choices), choices,
                                  1, wxRA_SPECIFY_COLS);
@@ -197,14 +202,13 @@ public:
             5 // Border
         );
 
-        SetSizer(mainSizer);
-        mainSizer->Fit(this);
+        SetSizerAndFit(mainSizer);
     }
 
     // wizard event handlers
     void OnWizardCancel(wxWizardEvent& event)
     {
-        if ( wxMessageBox(_T("Do you really want to cancel?"), _T("Question"),
+        if ( wxMessageBox(wxT("Do you really want to cancel?"), wxT("Question"),
                           wxICON_QUESTION | wxYES_NO, this) != wxYES )
         {
             // not confirmed
@@ -225,7 +229,7 @@ public:
         if ( !event.GetDirection() && sel == Backward )
             return;
 
-        wxMessageBox(_T("You can't go there"), _T("Not allowed"),
+        wxMessageBox(wxT("You can't go there"), wxT("Not allowed"),
                      wxICON_WARNING | wxOK, this);
 
         event.Veto();
@@ -252,14 +256,14 @@ public:
         wxBoxSizer *mainSizer = new wxBoxSizer(wxVERTICAL);
 
         mainSizer->Add(
-            new wxStaticText(this, wxID_ANY, _T("Try checking the box below and\n")
-                                       _T("then going back and clearing it")),
+            new wxStaticText(this, wxID_ANY, wxT("Try checking the box below and\n")
+                                       wxT("then going back and clearing it")),
             0, // No vertical stretching
             wxALL,
             5 // Border width
         );
 
-        m_checkbox = new wxCheckBox(this, wxID_ANY, _T("&Skip the next page"));
+        m_checkbox = new wxCheckBox(this, wxID_ANY, wxT("&Skip the next page"));
         mainSizer->Add(
             m_checkbox,
             0, // No vertical stretching
@@ -270,16 +274,16 @@ public:
 #if wxUSE_CHECKLISTBOX
         static const wxChar *aszChoices[] =
         {
-            _T("Zeroth"),
-            _T("First"),
-            _T("Second"),
-            _T("Third"),
-            _T("Fourth"),
-            _T("Fifth"),
-            _T("Sixth"),
-            _T("Seventh"),
-            _T("Eighth"),
-            _T("Nineth")
+            wxT("Zeroth"),
+            wxT("First"),
+            wxT("Second"),
+            wxT("Third"),
+            wxT("Fourth"),
+            wxT("Fifth"),
+            wxT("Sixth"),
+            wxT("Seventh"),
+            wxT("Eighth"),
+            wxT("Nineth")
         };
 
         m_checklistbox = new wxCheckListBox
@@ -299,8 +303,15 @@ public:
         );
 #endif // wxUSE_CHECKLISTBOX
 
-        SetSizer(mainSizer);
-        mainSizer->Fit(this);
+        wxSize textSize = wxSize(150, 200);
+        if (((wxFrame*) wxTheApp->GetTopWindow())->GetMenuBar()->IsChecked(Wizard_LargeWizard))
+            textSize = wxSize(150, wxGetClientDisplayRect().GetHeight() - 200);
+
+
+        wxTextCtrl* textCtrl = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, textSize, wxTE_MULTILINE);
+        mainSizer->Add(textCtrl, 0, wxALL|wxEXPAND, 5);
+
+        SetSizerAndFit(mainSizer);
     }
 
     // implement wxWizardPage functions
@@ -353,7 +364,10 @@ IMPLEMENT_APP(MyApp)
 // `Main program' equivalent: the program execution "starts" here
 bool MyApp::OnInit()
 {
-    MyFrame *frame = new MyFrame(_T("wxWizard Sample"));
+    if ( !wxApp::OnInit() )
+        return false;
+
+    MyFrame *frame = new MyFrame(wxT("wxWizard Sample"));
 
     // and show it (the frames, unlike simple controls, are not shown when
     // created initially)
@@ -368,17 +382,29 @@ bool MyApp::OnInit()
 // ----------------------------------------------------------------------------
 
 MyWizard::MyWizard(wxFrame *frame, bool useSizer)
-        : wxWizard(frame,wxID_ANY,_T("Absolutely Useless Wizard"),
-                   wxBitmap(wiztest_xpm),wxDefaultPosition,
-                   wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
 {
+    SetExtraStyle(wxWIZARD_EX_HELPBUTTON);
+
+    Create(frame,wxID_ANY,wxT("Absolutely Useless Wizard"),
+                   wxBitmap(wiztest_xpm),wxDefaultPosition,
+                   wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
+    SetIcon(wxICON(sample));
+
+    // Allow the bitmap to be expanded to fit the page height
+    if (frame->GetMenuBar()->IsChecked(Wizard_ExpandBitmap))
+        SetBitmapPlacement(wxWIZARD_VALIGN_CENTRE);
+
+    // Enable scrolling adaptation
+    if (frame->GetMenuBar()->IsChecked(Wizard_LargeWizard))
+        SetLayoutAdaptationMode(wxDIALOG_ADAPTATION_MODE_ENABLED);
+
     // a wizard page may be either an object of predefined class
     m_page1 = new wxWizardPageSimple(this);
 
     /* wxStaticText *text = */ new wxStaticText(m_page1, wxID_ANY,
-             _T("This wizard doesn't help you\nto do anything at all.\n")
-             _T("\n")
-             _T("The next pages will present you\nwith more useless controls."),
+             wxT("This wizard doesn't help you\nto do anything at all.\n")
+             wxT("\n")
+             wxT("The next pages will present you\nwith more useless controls."),
              wxPoint(5,5)
         );
 
@@ -387,8 +413,10 @@ MyWizard::MyWizard(wxFrame *frame, bool useSizer)
     wxValidationPage *page4 = new wxValidationPage(this);
 
     // set the page order using a convenience function - could also use
-    // SetNext/Prev directly as below
-    wxWizardPageSimple::Chain(page3, page4);
+    // SetNext/Prev directly as below, but Chain() is shorter, avoids the risk
+    // of an error and can itself be chained, e.g. you could write
+    // page3.Chain(page4).Chain(page5) and so on.
+    page3->Chain(page4);
 
     // this page is not a wxWizardPageSimple, so we use SetNext/Prev to insert
     // it into the chain of pages
@@ -412,19 +440,24 @@ MyFrame::MyFrame(const wxString& title)
                   wxDefaultPosition, wxSize(250, 150))  // small frame
 {
     wxMenu *menuFile = new wxMenu;
-    menuFile->Append(Wizard_RunModal, _T("&Run wizard modal...\tCtrl-R"));
-    menuFile->Append(Wizard_RunNoSizer, _T("Run wizard &without sizer..."));
-    menuFile->Append(Wizard_RunModeless, _T("Run wizard &modeless..."));
+    menuFile->Append(Wizard_RunModal, wxT("&Run wizard modal...\tCtrl-R"));
+    menuFile->Append(Wizard_RunNoSizer, wxT("Run wizard &without sizer..."));
+    menuFile->Append(Wizard_RunModeless, wxT("Run wizard &modeless..."));
     menuFile->AppendSeparator();
-    menuFile->Append(Wizard_Quit, _T("E&xit\tAlt-X"), _T("Quit this program"));
+    menuFile->Append(Wizard_Quit, wxT("E&xit\tAlt-X"), wxT("Quit this program"));
+
+    wxMenu *menuOptions = new wxMenu;
+    menuOptions->AppendCheckItem(Wizard_LargeWizard, wxT("&Scroll Wizard Pages"));
+    menuOptions->AppendCheckItem(Wizard_ExpandBitmap, wxT("Si&ze Bitmap To Page"));
 
     wxMenu *helpMenu = new wxMenu;
-    helpMenu->Append(Wizard_About, _T("&About...\tF1"), _T("Show about dialog"));
+    helpMenu->Append(Wizard_About, wxT("&About\tF1"), wxT("Show about dialog"));
 
     // now append the freshly created menu to the menu bar...
     wxMenuBar *menuBar = new wxMenuBar();
-    menuBar->Append(menuFile, _T("&File"));
-    menuBar->Append(helpMenu, _T("&Help"));
+    menuBar->Append(menuFile, wxT("&File"));
+    menuBar->Append(menuOptions, wxT("&Options"));
+    menuBar->Append(helpMenu, wxT("&Help"));
 
     // ... and attach this menu bar to the frame
     SetMenuBar(menuBar);
@@ -443,9 +476,9 @@ void MyFrame::OnQuit(wxCommandEvent& WXUNUSED(event))
 
 void MyFrame::OnAbout(wxCommandEvent& WXUNUSED(event))
 {
-    wxMessageBox(_T("Demo of wxWizard class\n")
-                 _T("(c) 1999, 2000 Vadim Zeitlin"),
-                 _T("About wxWizard sample"), wxOK | wxICON_INFORMATION, this);
+    wxMessageBox(wxT("Demo of wxWizard class\n")
+                 wxT("(c) 1999, 2000 Vadim Zeitlin"),
+                 wxT("About wxWizard sample"), wxOK | wxICON_INFORMATION, this);
 }
 
 void MyFrame::OnRunWizard(wxCommandEvent& WXUNUSED(event))

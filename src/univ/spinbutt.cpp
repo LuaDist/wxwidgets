@@ -1,10 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Name:        univ/spinbutt.cpp
+// Name:        src/univ/spinbutt.cpp
 // Purpose:     implementation of the universal version of wxSpinButton
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     21.01.01
-// RCS-ID:      $Id: spinbutt.cpp 42816 2006-10-31 08:50:17Z RD $
 // Copyright:   (c) 2001 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -37,9 +36,6 @@
 // ============================================================================
 // implementation of wxSpinButton
 // ============================================================================
-
-IMPLEMENT_DYNAMIC_CLASS(wxSpinEvent, wxNotifyEvent)
-IMPLEMENT_DYNAMIC_CLASS(wxSpinButton, wxControl)
 
 // ----------------------------------------------------------------------------
 // creation

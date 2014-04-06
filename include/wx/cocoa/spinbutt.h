@@ -4,7 +4,6 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2003/07/14
-// RCS-ID:      $Id: spinbutt.h 42077 2006-10-17 14:44:52Z ABX $
 // Copyright:   (c) 2003 David Elliott
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -17,7 +16,7 @@
 // ========================================================================
 // wxSpinButton
 // ========================================================================
-class WXDLLEXPORT wxSpinButton: public wxSpinButtonBase// , protected wxCocoaNSStepper
+class WXDLLIMPEXP_CORE wxSpinButton: public wxSpinButtonBase// , protected wxCocoaNSStepper
 {
     DECLARE_DYNAMIC_CLASS(wxSpinButton)
     DECLARE_EVENT_TABLE()

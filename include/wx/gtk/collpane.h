@@ -4,7 +4,6 @@
 // Author:      Francesco Montorsi
 // Modified by:
 // Created:     8/10/2006
-// RCS-ID:      $Id: collpane.h 43853 2006-12-07 07:22:55Z PC $
 // Copyright:   (c) Francesco Montorsi
 // Licence:     wxWindows Licence
 /////////////////////////////////////////////////////////////////////////////
@@ -12,13 +11,11 @@
 #ifndef _WX_COLLAPSABLE_PANEL_H_GTK_
 #define _WX_COLLAPSABLE_PANEL_H_GTK_
 
-#include "wx/generic/collpaneg.h"
-
 // ----------------------------------------------------------------------------
 // wxCollapsiblePane
 // ----------------------------------------------------------------------------
 
-class WXDLLIMPEXP_CORE wxCollapsiblePane : public wxGenericCollapsiblePane
+class WXDLLIMPEXP_CORE wxCollapsiblePane : public wxCollapsiblePaneBase
 {
 public:
     wxCollapsiblePane() { Init(); }
@@ -37,11 +34,6 @@ public:
         Create(parent, winid, label, pos, size, style, val, name);
     }
 
-    void Init()
-    {
-        m_bIgnoreNextChange = false;
-    }
-
     bool Create(wxWindow *parent,
                 wxWindowID winid,
                 const wxString& label,
@@ -51,9 +43,12 @@ public:
                 const wxValidator& val = wxDefaultValidator,
                 const wxString& name = wxCollapsiblePaneNameStr);
 
-    void Collapse(bool collapse = true);
-    bool IsCollapsed() const;
-    void SetLabel(const wxString &str);
+    virtual void Collapse(bool collapse = true);
+    virtual bool IsCollapsed() const;
+    virtual void SetLabel(const wxString& str);
+
+    virtual wxWindow *GetPane() const { return m_pPane; }
+    virtual wxString GetLabel() const { return m_strLabel; }
 
 protected:
     virtual wxSize DoGetBestSize() const;
@@ -62,8 +57,20 @@ public:     // used by GTK callbacks
     bool m_bIgnoreNextChange;
     wxSize m_szCollapsed;
 
+    wxWindow *m_pPane;
+
+    // the button label without ">>" or "<<"
+    wxString m_strLabel;
+
 private:
+    void Init()
+    {
+        m_bIgnoreNextChange = false;
+    }
+
     void OnSize(wxSizeEvent&);
+    virtual void AddChildGTK(wxWindowGTK* child);
+    GdkWindow *GTKGetWindow(wxArrayGdkWindows& windows) const;
 
     DECLARE_DYNAMIC_CLASS(wxCollapsiblePane)
     DECLARE_EVENT_TABLE()

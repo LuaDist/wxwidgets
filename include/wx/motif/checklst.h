@@ -5,7 +5,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: checklst.h 38319 2006-03-23 22:05:23Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -60,13 +59,13 @@ public:
     void Check(unsigned int uiIndex, bool bCheck = true);
 
     // override base class functions
-    virtual int DoAppend(const wxString& item);
+    virtual int DoInsertItems(const wxArrayStringsAdapter& items,
+                              unsigned int pos,
+                              void **clientData, wxClientDataType type);
     virtual int FindString(const wxString& s, bool bCase = false) const;
     virtual void SetString(unsigned int n, const wxString& s);
     virtual wxString GetString(unsigned int n) const;
 
-    virtual void DoInsertItems(const wxArrayString& items, unsigned int pos);
-    virtual void DoSetItems(const wxArrayString& items, void **clientData);
 private:
     void DoToggleItem( int item, int x );
 private:

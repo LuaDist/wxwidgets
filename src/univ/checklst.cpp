@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     12.09.00
-// RCS-ID:      $Id: checklst.cpp 41227 2006-09-14 19:36:47Z VZ $
 // Copyright:   (c) 2000 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -56,8 +55,6 @@ public:
 // ============================================================================
 // implementation of wxCheckListBox
 // ============================================================================
-
-IMPLEMENT_DYNAMIC_CLASS(wxCheckListBox, wxListBox)
 
 // ----------------------------------------------------------------------------
 // creation
@@ -122,7 +119,7 @@ bool wxCheckListBox::Create(wxWindow *parent,
 bool wxCheckListBox::IsChecked(unsigned int item) const
 {
     wxCHECK_MSG( IsValid(item), false,
-                 _T("invalid index in wxCheckListBox::IsChecked") );
+                 wxT("invalid index in wxCheckListBox::IsChecked") );
 
     return m_checks[item] != 0;
 }
@@ -130,7 +127,7 @@ bool wxCheckListBox::IsChecked(unsigned int item) const
 void wxCheckListBox::Check(unsigned int item, bool check)
 {
     wxCHECK_RET( IsValid(item),
-                 _T("invalid index in wxCheckListBox::Check") );
+                 wxT("invalid index in wxCheckListBox::Check") );
 
     // intermediate var is needed to avoid compiler warning with VC++
     bool isChecked = m_checks[item] != 0;
@@ -146,46 +143,16 @@ void wxCheckListBox::Check(unsigned int item, bool check)
 // methods forwarded to wxListBox
 // ----------------------------------------------------------------------------
 
-void wxCheckListBox::Delete(unsigned int n)
+void wxCheckListBox::DoDeleteOneItem(unsigned int n)
 {
-    wxCHECK_RET( IsValid(n), _T("invalid index in wxListBox::Delete") );
-
-    wxListBox::Delete(n);
+    wxListBox::DoDeleteOneItem(n);
 
     m_checks.RemoveAt(n);
 }
 
-int wxCheckListBox::DoAppend(const wxString& item)
+void wxCheckListBox::OnItemInserted(unsigned int pos)
 {
-    int pos = wxListBox::DoAppend(item);
-
-    // the item is initially unchecked
     m_checks.Insert(false, pos);
-
-    return pos;
-}
-
-void wxCheckListBox::DoInsertItems(const wxArrayString& items, unsigned int pos)
-{
-    wxListBox::DoInsertItems(items, pos);
-
-    unsigned int count = items.GetCount();
-    for ( unsigned int n = 0; n < count; n++ )
-    {
-        m_checks.Insert(false, pos + n);
-    }
-}
-
-void wxCheckListBox::DoSetItems(const wxArrayString& items, void **clientData)
-{
-    // call it first as it does DoClear()
-    wxListBox::DoSetItems(items, clientData);
-
-    unsigned int count = items.GetCount();
-    for ( unsigned int n = 0; n < count; n++ )
-    {
-        m_checks.Add(false);
-    }
 }
 
 void wxCheckListBox::DoClear()
@@ -231,7 +198,7 @@ bool wxCheckListBox::PerformAction(const wxControlAction& action,
         {
             Check(sel, !IsChecked(sel));
 
-            SendEvent(wxEVT_COMMAND_CHECKLISTBOX_TOGGLED, sel);
+            SendEvent(wxEVT_CHECKLISTBOX, sel);
         }
     }
     else

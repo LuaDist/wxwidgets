@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: bmpbuttn.h 41020 2006-09-05 20:47:48Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -16,9 +15,8 @@
 
 #define wxDEFAULT_BUTTON_MARGIN 4
 
-class WXDLLEXPORT wxBitmapButton: public wxBitmapButtonBase
+class WXDLLIMPEXP_CORE wxBitmapButton: public wxBitmapButtonBase
 {
-    DECLARE_DYNAMIC_CLASS(wxBitmapButton)
 public:
     wxBitmapButton();
     virtual ~wxBitmapButton();
@@ -37,37 +35,24 @@ public:
         const wxValidator& validator = wxDefaultValidator,
         const wxString& name = wxButtonNameStr);
 
-    virtual void SetLabel(const wxBitmap& bitmap)
-    {
-        SetBitmapLabel(bitmap);
-    }
-    virtual void SetLabel(const wxString& label)
-    {
-        wxControl::SetLabel(label);
-    }
-
-    virtual void SetBitmapLabel(const wxBitmap& bitmap);
-
-    void SetBitmapSelected(const wxBitmap& sel);
-    void SetBitmapFocus(const wxBitmap& focus);
-    void SetBitmapDisabled(const wxBitmap& disabled);
-
     // Implementation
-    void DoSetBitmap();
     virtual void ChangeBackgroundColour();
-    virtual wxSize DoGetBestSize() const;
 
 protected:
-    wxBitmap m_bmpNormalOriginal; // May be different from m_buttonBitmap
-    // if m_buttonBitmap has been changed
-    // to reflect button background colour
-    wxBitmap m_bmpSelectedOriginal;
-    wxBitmap m_bmpDisabledOriginal;
+    virtual wxSize DoGetBestSize() const;
+
+    virtual void DoSetBitmap(const wxBitmap& bitmap, State which);
+    virtual void OnSetBitmap();
+
+    // original bitmaps may be different from the ones we were initialized with
+    // if they were changed to reflect button background colour
+    wxBitmap m_bitmapsOriginal[State_Max];
 
     wxBitmapCache m_bitmapCache;
 
     WXPixmap m_insensPixmap;
+
+    DECLARE_DYNAMIC_CLASS(wxBitmapButton)
 };
 
-#endif
-// _WX_BMPBUTTN_H_
+#endif // _WX_BMPBUTTN_H_

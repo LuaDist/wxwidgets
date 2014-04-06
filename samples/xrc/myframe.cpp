@@ -2,7 +2,6 @@
 // Name:        myframe.cpp
 // Purpose:     XML resources sample: A derived frame, called MyFrame
 // Author:      Robert O'Connor (rob@medicalmnemonics.com), Vaclav Slavik
-// RCS-ID:      $Id: myframe.cpp 43298 2006-11-11 01:15:42Z VZ $
 // Copyright:   (c) Robert O'Connor and Vaclav Slavik
 // Licence:     wxWindows licence
 //-----------------------------------------------------------------------------
@@ -49,7 +48,10 @@
 #include "derivdlg.h"
 // Our custom class, for the custom class example.
 #include "custclas.h"
-// For functions to manipulate our wxTreeCtrl and wxListCtrl
+// And our objref dialog, for the object reference and ID range example.
+#include "objrefdlg.h"
+// For functions to manipulate the corresponding controls.
+#include "wx/animate.h"
 #include "wx/treectrl.h"
 #include "wx/listctrl.h"
 
@@ -57,10 +59,10 @@
 // Regular resources (the non-XRC kind).
 //-----------------------------------------------------------------------------
 
-// The application icon
-// All non-MSW platforms use an xpm. MSW uses an .ico file
-#if defined(__WXGTK__) || defined(__WXX11__) || defined(__WXMOTIF__) || defined(__WXMAC__) || defined(__WXMGL__)
-    #include "rc/appicon.xpm"
+// the application icon (under Windows and OS/2 it is in resources and even
+// though we could still include the XPM here it would be unused)
+#ifndef wxHAS_IMAGES_IN_RESOURCES
+    #include "../sample.xpm"
 #endif
 
 //-----------------------------------------------------------------------------
@@ -83,10 +85,12 @@ BEGIN_EVENT_TABLE(MyFrame, wxFrame)
     EVT_MENU(XRCID("derived_tool_or_menuitem"), MyFrame::OnDerivedDialogToolOrMenuCommand)
     EVT_MENU(XRCID("controls_tool_or_menuitem"), MyFrame::OnControlsToolOrMenuCommand)
     EVT_MENU(XRCID("uncentered_tool_or_menuitem"), MyFrame::OnUncenteredToolOrMenuCommand)
+    EVT_MENU(XRCID("obj_ref_tool_or_menuitem"), MyFrame::OnObjRefToolOrMenuCommand)
     EVT_MENU(XRCID("custom_class_tool_or_menuitem"), MyFrame::OnCustomClassToolOrMenuCommand)
     EVT_MENU(XRCID("platform_property_tool_or_menuitem"), MyFrame::OnPlatformPropertyToolOrMenuCommand)
     EVT_MENU(XRCID("art_provider_tool_or_menuitem"), MyFrame::OnArtProviderToolOrMenuCommand)
     EVT_MENU(XRCID("variable_expansion_tool_or_menuitem"), MyFrame::OnVariableExpansionToolOrMenuCommand)
+    EVT_MENU(XRCID("recursive_load"), MyFrame::OnRecursiveLoad)
     EVT_MENU(wxID_ABOUT, MyFrame::OnAboutToolOrMenuCommand)
 END_EVENT_TABLE()
 
@@ -108,7 +112,7 @@ MyFrame::MyFrame(wxWindow* parent)
     wxXmlResource::Get()->LoadFrame(this, parent, wxT("main_frame"));
 
     // Set the icon for the frame.
-    SetIcon(wxICON(appicon));
+    SetIcon(wxICON(sample));
 
     // Load the menubar from XRC and set this frame's menubar to it.
     SetMenuBar(wxXmlResource::Get()->LoadMenuBar(wxT("main_menu")));
@@ -136,18 +140,26 @@ MyFrame::MyFrame(wxWindow* parent)
 void MyFrame::OnUnloadResourceMenuCommand(wxCommandEvent& WXUNUSED(event))
 {
     if ( wxXmlResource::Get()->Unload(wxT("rc/basicdlg.xrc")) )
-        wxLogMessage(_T("Basic dialog resource has now been unloaded, you ")
-                     _T("won't be able to use it before loading it again"));
+    {
+        wxLogMessage(wxT("Basic dialog resource has now been unloaded, you ")
+                     wxT("won't be able to use it before loading it again"));
+    }
     else
-        wxLogWarning(_T("Failed to unload basic dialog resource"));
+    {
+        wxLogWarning(wxT("Failed to unload basic dialog resource"));
+    }
 }
 
 void MyFrame::OnReloadResourceMenuCommand(wxCommandEvent& WXUNUSED(event))
 {
     if ( wxXmlResource::Get()->Load(wxT("rc/basicdlg.xrc")) )
-        wxLogStatus(_T("Basic dialog resource has been loaded."));
+    {
+        wxLogStatus(wxT("Basic dialog resource has been loaded."));
+    }
     else
-        wxLogError(_T("Failed to load basic dialog resource"));
+    {
+        wxLogError(wxT("Failed to load basic dialog resource"));
+    }
 }
 
 void MyFrame::OnExitToolOrMenuCommand(wxCommandEvent& WXUNUSED(event))
@@ -207,22 +219,20 @@ void MyFrame::OnControlsToolOrMenuCommand(wxCommandEvent& WXUNUSED(event))
     wxXmlResource::Get()->LoadDialog(&dlg, this, wxT("controls_dialog"));
 
 #if wxUSE_LISTCTRL
-    // There is no data in the listctrl. This will add some columns
-    // and some data. You don't need to use any pointers
-    // at all to manipulate the controls, just simply use the XRCCTL(...) macros.
-    // "controls_treectrl" is the name of this control in the XRC.
-    // (1) Insert a column, with the column header of "Name"
-    // (The '_' function around "Name" marks this string as one to translate).
-    XRCCTRL(dlg, "controls_listctrl", wxListCtrl)->InsertColumn( 0,
-                                                                 _("Name"),
-                                                                 wxLIST_FORMAT_LEFT,
-                                                                 ( 200 )
-                                                                );
-    // (2) Insert some items into the listctrl
-    XRCCTRL(dlg, "controls_listctrl", wxListCtrl)->InsertItem(0,wxT("Todd Hope"));
-    XRCCTRL(dlg, "controls_listctrl", wxListCtrl)->InsertItem(1,wxT("Kim Wynd"));
-    XRCCTRL(dlg, "controls_listctrl", wxListCtrl)->InsertItem(2,wxT("Leon Li"));
-#endif
+    // The resource file specifies the columns of the control as they are
+    // typically static while the items themselves are added from here as
+    // usually they are not static (but if they are, they can be defined in the
+    // resources too, see the two other list controls definitions in
+    // controls.xrc)
+
+    // Insert some items into the listctrl: notice that we can access it using
+    // XRCCTRL
+    wxListCtrl * const list = XRCCTRL(dlg, "controls_listctrl", wxListCtrl);
+
+    list->InsertItem(0, "Athos", 0);   list->SetItem(0, 1, "90", 2);
+    list->InsertItem(1, "Porthos", 5); list->SetItem(1, 1, "120", 3);
+    list->InsertItem(2, "Aramis", 1);  list->SetItem(2, 1, "80", 4);
+#endif // wxUSE_LISTCTRL
 
 #if wxUSE_TREECTRL
     // There is no data in the tree ctrl. These lines will add some.
@@ -244,7 +254,7 @@ void MyFrame::OnControlsToolOrMenuCommand(wxCommandEvent& WXUNUSED(event))
 #if wxUSE_ANIMATIONCTRL
     // dynamically connect our event handler for the "clicked" event of the "play" button
     // in the animation ctrl page of our dialog
-    dlg.Connect(XRCID("controls_animation_button_play"), wxEVT_COMMAND_BUTTON_CLICKED,
+    dlg.Connect(XRCID("controls_animation_button_play"), wxEVT_BUTTON,
                 wxCommandEventHandler(MyFrame::OnAnimationCtrlPlay));
 #endif
 
@@ -258,6 +268,22 @@ void MyFrame::OnUncenteredToolOrMenuCommand(wxCommandEvent& WXUNUSED(event))
     wxDialog dlg;
     wxXmlResource::Get()->LoadDialog(&dlg, this, wxT("uncentered_dialog"));
     dlg.ShowModal();
+}
+
+
+void MyFrame::OnObjRefToolOrMenuCommand(wxCommandEvent& WXUNUSED(event))
+{
+    // The dialog redirects log messages, so save the old log target first
+    wxLog* oldlogtarget = wxLog::SetActiveTarget(NULL);
+
+    // Make an instance of the dialog
+    ObjrefDialog* objrefDialog = new ObjrefDialog(this);
+    // Show the instance of the dialog, modally.
+    objrefDialog->ShowModal();
+    objrefDialog->Destroy();
+
+    // Restore the old log target
+    delete wxLog::SetActiveTarget(oldlogtarget);
 }
 
 
@@ -305,12 +331,53 @@ void MyFrame::OnVariableExpansionToolOrMenuCommand(wxCommandEvent& WXUNUSED(even
     dlg.ShowModal();
 }
 
+void MyFrame::OnRecursiveLoad(wxCommandEvent& WXUNUSED(event))
+{
+    // this dialog is created manually to show how you can inject a single
+    // control from XRC into an existing dialog
+    //
+    // this is a slightly contrived example, please keep in mind that it's done
+    // only to demonstrate LoadObjectRecursively() in action and is not the
+    // recommended to do this
+    wxDialog dlg(NULL, wxID_ANY, "Recursive Load Example",
+                 wxDefaultPosition, wxDefaultSize,
+                 wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
+    wxSizer * const sizer = new wxBoxSizer(wxVERTICAL);
+    sizer->Add
+    (
+        new wxStaticText
+        (
+            &dlg,
+            wxID_ANY,
+            "The entire tree book control below is loaded from XRC"
+        ),
+        wxSizerFlags().Expand().Border()
+    );
+
+    sizer->Add
+    (
+        static_cast<wxWindow *>
+        (
+            // notice that controls_treebook is defined inside a notebook page
+            // inside a dialog defined in controls.xrc and so LoadObject()
+            // wouldn't find it -- but LoadObjectRecursively() does
+            wxXmlResource::Get()->
+                LoadObjectRecursively(&dlg, "controls_treebook", "wxTreebook")
+        ),
+        wxSizerFlags(1).Expand().Border()
+    );
+
+    dlg.SetSizer(sizer);
+    dlg.SetClientSize(400, 200);
+
+    dlg.ShowModal();
+}
 
 void MyFrame::OnAboutToolOrMenuCommand(wxCommandEvent& WXUNUSED(event))
 {
     wxString msg;
-    msg.Printf( _T("This is the about dialog of XML resources demo.\n")
-                _T("Welcome to %s"), wxVERSION_STRING);
+    msg.Printf( wxT("This is the about dialog of XML resources demo.\n")
+                wxT("Welcome to %s"), wxVERSION_STRING);
 
     wxMessageBox(msg, _("About XML resources demo"), wxOK | wxICON_INFORMATION, this);
 }

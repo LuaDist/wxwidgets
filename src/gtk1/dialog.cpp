@@ -2,7 +2,6 @@
 // Name:        src/gtk1/dialog.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: dialog.cpp 44074 2006-12-29 20:16:53Z VZ $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -19,6 +18,7 @@
 #endif // WX_PRECOMP
 
 #include "wx/evtloop.h"
+#include "wx/modalhook.h"
 
 #include <gdk/gdk.h>
 #include <gtk/gtk.h>
@@ -42,8 +42,6 @@ BEGIN_EVENT_TABLE(wxDialog,wxDialogBase)
     EVT_BUTTON  (wxID_APPLY,    wxDialog::OnApply)
     EVT_CLOSE   (wxDialog::OnCloseWindow)
 END_EVENT_TABLE()
-
-IMPLEMENT_DYNAMIC_CLASS(wxDialog,wxTopLevelWindow)
 
 void wxDialog::Init()
 {
@@ -139,9 +137,9 @@ void wxDialog::OnCloseWindow(wxCloseEvent& WXUNUSED(event))
 
     s_closing.Append(this);
 
-    wxCommandEvent cancelEvent(wxEVT_COMMAND_BUTTON_CLICKED, wxID_CANCEL);
+    wxCommandEvent cancelEvent(wxEVT_BUTTON, wxID_CANCEL);
     cancelEvent.SetEventObject( this );
-    GetEventHandler()->ProcessEvent(cancelEvent);
+    HandleWindowEvent(cancelEvent);
     s_closing.DeleteObject(this);
 }
 
@@ -162,6 +160,9 @@ bool wxDialog::Show( bool show )
         GtkOnSize( m_x, m_y, m_width, m_height );
     }
 
+    if (show && CanDoLayoutAdaptation())
+        DoLayoutAdaptation();
+
     bool ret = wxWindow::Show( show );
 
     if (show) InitDialog();
@@ -181,6 +182,8 @@ void wxDialog::SetModal( bool WXUNUSED(flag) )
 
 int wxDialog::ShowModal()
 {
+    WX_HOOK_MODAL_DIALOG();
+
     if (IsModal())
     {
        wxFAIL_MSG( wxT("wxDialog:ShowModal called twice") );
@@ -189,17 +192,11 @@ int wxDialog::ShowModal()
 
     // use the apps top level window as parent if none given unless explicitly
     // forbidden
-    if ( !GetParent() && !(GetWindowStyleFlag() & wxDIALOG_NO_PARENT) )
+    wxWindow * const parent = GetParentForModalDialog();
+    if ( parent )
     {
-        wxWindow *parent = wxTheApp->GetTopWindow();
-        if ( parent &&
-                parent != this &&
-                    !parent->IsBeingDeleted() &&
-                        !(parent->GetExtraStyle() & wxWS_EX_TRANSIENT) )
-        {
-            m_parent = parent;
-            gtk_window_set_transient_for( GTK_WINDOW(m_widget), GTK_WINDOW(parent->m_widget) );
-        }
+        m_parent = parent;
+        gtk_window_set_transient_for( GTK_WINDOW(m_widget), GTK_WINDOW(parent->m_widget) );
     }
 
     wxBusyCursorSuspender cs; // temporarily suppress the busy cursor

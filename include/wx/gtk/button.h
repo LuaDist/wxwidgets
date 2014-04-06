@@ -1,8 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////
 // Name:        wx/gtk/button.h
-// Purpose:
+// Purpose:     wxGTK wxButton class declaration
 // Author:      Robert Roebling
-// Id:          $Id: button.h 40923 2006-08-30 05:55:56Z PC $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -14,10 +13,10 @@
 // wxButton
 //-----------------------------------------------------------------------------
 
-class WXDLLIMPEXP_CORE wxButton: public wxButtonBase
+class WXDLLIMPEXP_CORE wxButton : public wxButtonBase
 {
 public:
-    wxButton();
+    wxButton() {}
     wxButton(wxWindow *parent, wxWindowID id,
            const wxString& label = wxEmptyString,
            const wxPoint& pos = wxDefaultPosition,
@@ -28,8 +27,6 @@ public:
         Create(parent, id, label, pos, size, style, validator, name);
     }
 
-    virtual ~wxButton();
-
     bool Create(wxWindow *parent, wxWindowID id,
            const wxString& label = wxEmptyString,
            const wxPoint& pos = wxDefaultPosition,
@@ -37,30 +34,39 @@ public:
            const wxValidator& validator = wxDefaultValidator,
            const wxString& name = wxButtonNameStr);
 
-    virtual void SetDefault();
+    virtual wxWindow *SetDefault();
     virtual void SetLabel( const wxString &label );
-    virtual bool Enable( bool enable = TRUE );
 
     // implementation
     // --------------
 
-    // Since this wxButton doesn't derive from wxButtonBase (why?) we need
-    // to override this here too...
-    virtual bool ShouldInheritColours() const { return false; }
-    
     static wxVisualAttributes
     GetClassDefaultAttributes(wxWindowVariant variant = wxWINDOW_VARIANT_NORMAL);
 
     // helper to allow access to protected member from GTK callback
     void MoveWindow(int x, int y, int width, int height) { DoMoveWindow(x, y, width, height); }
 
+    // called from GTK callbacks: they update the button state and call
+    // GTKUpdateBitmap()
+    void GTKMouseEnters();
+    void GTKMouseLeaves();
+    void GTKPressed();
+    void GTKReleased();
+
 protected:
     virtual wxSize DoGetBestSize() const;
     virtual void DoApplyWidgetStyle(GtkRcStyle *style);
 
-    virtual GdkWindow *GTKGetWindow(wxArrayGdkWindows& windows) const;
+#if wxUSE_MARKUP
+    virtual bool DoSetLabelMarkup(const wxString& markup);
+#endif // wxUSE_MARKUP
 
 private:
+    typedef wxButtonBase base_type;
+
+    // Return the GtkLabel used by this button.
+    GtkLabel *GTKGetLabel() const;
+
     DECLARE_DYNAMIC_CLASS(wxButton)
 };
 

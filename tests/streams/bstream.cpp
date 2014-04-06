@@ -2,9 +2,8 @@
 // Name:        tests/streams/bstream.cpp
 // Purpose:     House the base stream test suite.
 // Author:      Hans Van Leemputten
-// RCS-ID:      $Id: bstream.cpp 42331 2006-10-24 07:47:07Z MW $
 // Copyright:   (c) 2004 Hans Van Leemputten
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // For compilers that support precompilation, includes "wx/wx.h".
@@ -53,6 +52,7 @@ Test *StreamCase::suite()
     STREAM_REGISTER_SUB_SUITE(tempStream);
     STREAM_REGISTER_SUB_SUITE(zlibStream);
     STREAM_REGISTER_SUB_SUITE(backStream);
+    STREAM_REGISTER_SUB_SUITE(socketStream);
 
     extern CppUnit::Test* GetlargeFileSuite();
     Test *lfs = GetlargeFileSuite();
@@ -68,6 +68,6 @@ Test *StreamCase::suite()
 
 // register in the unnamed registry so that these tests are run by default
 CPPUNIT_TEST_SUITE_REGISTRATION(StreamCase);
-// also include in it's own registry so that these tests can be run alone
+// also include in its own registry so that these tests can be run alone
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(StreamCase, STREAM_TEST_NAME);
 

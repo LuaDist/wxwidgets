@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     2005-01-19
-// RCS-ID:      $Id: stackwalk.h 43346 2006-11-12 14:33:03Z RR $
 // Copyright:   (c) 2005 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -73,8 +72,10 @@ public:
         FreeStack();
     }
 
-    virtual void Walk(size_t skip = 1, size_t maxDepth = 200);
-    virtual void WalkFromException() { Walk(2); }
+    virtual void Walk(size_t skip = 1, size_t maxDepth = wxSTACKWALKER_MAX_DEPTH);
+#if wxUSE_ON_FATAL_EXCEPTION
+    virtual void WalkFromException(size_t maxDepth = wxSTACKWALKER_MAX_DEPTH) { Walk(2, maxDepth); }
+#endif // wxUSE_ON_FATAL_EXCEPTION
 
     static const wxString& GetExePath() { return ms_exepath; }
 

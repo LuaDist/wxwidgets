@@ -4,9 +4,8 @@
 // Author:      David Elliott
 // Modified by: Mark Oxenham
 // Created:     2003/03/16
-// RCS-ID:      $Id: textctrl.mm 50334 2007-11-30 05:08:21Z DE $
 // Copyright:   (c) 2003 David Elliott
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #include "wx/wxprec.h"
@@ -21,7 +20,6 @@
 #include "wx/cocoa/string.h"
 
 #include "wx/cocoa/autorelease.h"
-#include "wx/cocoa/ObjcRef.h"
 
 #import <Foundation/NSString.h>
 #import <AppKit/NSTextField.h>
@@ -30,12 +28,10 @@
 
 #include <math.h>
 
-IMPLEMENT_DYNAMIC_CLASS(wxTextCtrl, wxTextCtrlBase)
 BEGIN_EVENT_TABLE(wxTextCtrl, wxTextCtrlBase)
 END_EVENT_TABLE()
+WX_IMPLEMENT_COCOA_OWNER(wxTextCtrl,NSTextField,NSControl,NSView)
 
-// Replaced by special 2.8 code:
-//WX_IMPLEMENT_COCOA_OWNER(wxTextCtrl,NSTextField,NSControl,NSView)
 bool wxTextCtrl::Create(wxWindow *parent, wxWindowID winid,
             const wxString& value,
             const wxPoint& pos,
@@ -96,15 +92,7 @@ void wxTextCtrl::Cocoa_didChangeText(void)
 
 void wxTextCtrl::CocoaTarget_action(void)
 {
-    // NSTextField only sends the action message on enter key press and thus
-    // we send the appropriate event type.
-    wxCommandEvent event(wxEVT_COMMAND_TEXT_ENTER, GetId());
-
-    // See wxTextCtrlBase::SendTextUpdatedEvent for why we don't set the string.
-    //event.SetString(GetValue());
-
-    event.SetEventObject(this);
-    GetEventHandler()->ProcessEvent(event);
+    SendTextUpdatedEvent();
 }
 
 void wxTextCtrl::AppendText(wxString const&)
@@ -272,67 +260,3 @@ wxSize wxTextCtrl::DoGetBestSize() const
     wxLogTrace(wxTRACE_COCOA_Window_Size,wxT("wxTextCtrl=%p::DoGetBestSize()==(%d,%d)"),this,size.x,size.y);
     return size;
 }
-
-///////////////////////////////////////////////////////////////////////////
-// Added within the 2.8 release cycle, just after 2.8.7:
-
-@interface WXNSTextFieldDelegate : NSObject
-{
-}
-
-- (void)controlTextDidChange:(NSNotification*)notification;
-@end // @interface WXNSTextFieldDelegate : NSObject
-
-WX_DECLARE_HASH_MAP(WX_NSTextField, wxTextCtrl*, wxPointerHash, wxPointerEqual, wxCocoaNSTextField_wxTextCtrl_Hash);
-
-static wxCocoaNSTextField_wxTextCtrl_Hash sg_textField_textCtrl_hash;
-static wxObjcAutoRefFromAlloc<WXNSTextFieldDelegate*> sg_cocoaDelegate([[WXNSTextFieldDelegate alloc] init]);
-
-static inline wxTextCtrl* GetTextCtrlFromCocoaTextField(WX_NSTextField cocoaObjcClass)
-{
-    wxCocoaNSTextField_wxTextCtrl_Hash::iterator iter = sg_textField_textCtrl_hash.find(cocoaObjcClass);
-    if(iter != sg_textField_textCtrl_hash.end())
-        return iter->second;
-    return NULL;
-}
-
-void wxTextCtrl::SetNSTextField(WX_NSTextField cocoaObjcClass)
-{
-    DisassociateNSTextField((WX_NSTextField)m_cocoaNSView);
-    if(m_cocoaNSView)
-    {
-        sg_textField_textCtrl_hash.erase((WX_NSTextField)m_cocoaNSView);
-        [(WX_NSTextField)m_cocoaNSView setDelegate:nil];
-    }
-    SetNSControl(cocoaObjcClass);
-    AssociateNSTextField((WX_NSTextField)m_cocoaNSView);
-    if(m_cocoaNSView)
-    {
-        sg_textField_textCtrl_hash.insert(wxCocoaNSTextField_wxTextCtrl_Hash::value_type((WX_NSTextField)m_cocoaNSView, this));
-        [(WX_NSTextField)m_cocoaNSView setDelegate:sg_cocoaDelegate];
-    }
-}
-
-inline void wxTextCtrl::CocoaNotification_controlTextDidChange(WX_NSNotification notification)
-{
-    wxCommandEvent event(wxEVT_COMMAND_TEXT_UPDATED, GetId());
-
-    // See wxTextCtrlBase::SendTextUpdatedEvent for why we don't set the string.
-    //event.SetString(GetValue());
-
-    event.SetEventObject(this);
-    GetEventHandler()->ProcessEvent(event);
-}
-
-@implementation WXNSTextFieldDelegate : NSObject
-
-- (void)controlTextDidChange:(NSNotification*)notification
-{
-    wxTextCtrl *tc = GetTextCtrlFromCocoaTextField([notification object]);
-    if(tc != NULL)
-        tc->CocoaNotification_controlTextDidChange(notification);
-}
-
-
-@end // @implementation WXNSTextFieldDelegate : NSObject
-

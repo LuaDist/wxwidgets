@@ -2,33 +2,12 @@
 // Name:        wx/gtk1/gauge.h
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: gauge.h 42077 2006-10-17 14:44:52Z ABX $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #ifndef __GTKGAUGEH__
 #define __GTKGAUGEH__
-
-#include "wx/defs.h"
-
-#if wxUSE_GAUGE
-
-#include "wx/object.h"
-#include "wx/list.h"
-#include "wx/control.h"
-
-//-----------------------------------------------------------------------------
-// classes
-//-----------------------------------------------------------------------------
-
-class WXDLLIMPEXP_CORE wxGauge;
-
-//-----------------------------------------------------------------------------
-// global data
-//-----------------------------------------------------------------------------
-
-extern WXDLLIMPEXP_CORE const wxChar wxGaugeNameStr[];
 
 //-----------------------------------------------------------------------------
 // wxGaugeBox
@@ -65,8 +44,8 @@ public:
     void SetBezelFace( int WXUNUSED(w) ) { }
     void SetRange( int r );
     void SetValue( int pos );
-    int GetShadowWidth() const { return 0; };
-    int GetBezelFace() const { return 0; };
+    int GetShadowWidth() const { return 0; }
+    int GetBezelFace() const { return 0; }
     int GetRange() const;
     int GetValue() const;
 
@@ -96,8 +75,6 @@ protected:
 private:
     DECLARE_DYNAMIC_CLASS(wxGauge)
 };
-
-#endif
 
 #endif
     // __GTKGAUGEH__

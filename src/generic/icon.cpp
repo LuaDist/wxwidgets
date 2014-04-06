@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: icon.cpp 40531 2006-08-09 17:59:30Z VS $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -24,15 +23,17 @@
 
 IMPLEMENT_DYNAMIC_CLASS(wxIcon, wxBitmap)
 
-wxIcon::wxIcon( const char **bits, int WXUNUSED(width), int WXUNUSED(height) ) :
+wxIcon::wxIcon(const char* const* bits) :
     wxBitmap( bits )
 {
 }
 
-wxIcon::wxIcon( char **bits, int WXUNUSED(width), int WXUNUSED(height) ) :
+#ifdef wxNEEDS_CHARPP
+wxIcon::wxIcon(char **bits) :
     wxBitmap( bits )
 {
 }
+#endif
 
 wxIcon::wxIcon() :  wxBitmap()
 {

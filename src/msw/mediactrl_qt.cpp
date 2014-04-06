@@ -5,7 +5,6 @@
 // Modified by: Robin Dunn (moved QT code from mediactrl.cpp)
 //
 // Created:     11/07/04
-// RCS-ID:      $Id: mediactrl_qt.cpp 45498 2007-04-16 13:03:05Z VZ $
 // Copyright:   (c) Ryan Norton
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -44,11 +43,7 @@
 // Externals (somewhere in src/msw/app.cpp and src/msw/window.cpp)
 //---------------------------------------------------------------------------
 extern "C" WXDLLIMPEXP_BASE HINSTANCE wxGetInstance(void);
-#ifdef __WXWINCE__
-extern WXDLLIMPEXP_CORE       wxChar *wxCanvasClassName;
-#else
 extern WXDLLIMPEXP_CORE const wxChar *wxCanvasClassName;
-#endif
 
 LRESULT WXDLLIMPEXP_CORE APIENTRY _EXPORT wxWndProc(HWND hWnd, UINT message,
                                    WPARAM wParam, LPARAM lParam);
@@ -171,22 +166,6 @@ enum
 //---------------------------------------------------------------------------
 //  QT Library
 //---------------------------------------------------------------------------
-#define wxDL_METHOD_DEFINE( rettype, name, args, shortargs, defret ) \
-    typedef rettype (* name ## Type) args ; \
-    name ## Type pfn_ ## name; \
-    rettype name args \
-    { if (m_ok) return pfn_ ## name shortargs ; return defret; }
-
-#define wxDL_VOIDMETHOD_DEFINE( name, args, shortargs ) \
-    typedef void (* name ## Type) args ; \
-    name ## Type pfn_ ## name; \
-    void name args \
-    { if (m_ok) pfn_ ## name shortargs ; }
-
-#define wxDL_METHOD_LOAD( lib, name, success ) \
-    pfn_ ## name = (name ## Type) lib.GetSymbol( wxT(#name), &success ); \
-    if (!success) return false
-
 
 class WXDLLIMPEXP_MEDIA wxQuickTimeLibrary
 {
@@ -297,76 +276,71 @@ public:
 
 bool wxQuickTimeLibrary::Initialize()
 {
-    m_ok = false;
-
     // Turn off the wxDynamicLibrary logging as we're prepared to handle the
     // errors
     wxLogNull nolog;
 
-    if (!m_dll.Load(wxT("qtmlClient.dll")))
-    {
+    m_ok = m_dll.Load(wxT("qtmlClient.dll"));
+    if ( !m_ok )
         return false;
-    }
 
-    wxDL_METHOD_LOAD( m_dll, StartMovie, m_ok );
-    wxDL_METHOD_LOAD( m_dll, StopMovie, m_ok );
-    wxDL_METHOD_LOAD( m_dll, IsMovieDone, m_ok );
-    wxDL_METHOD_LOAD( m_dll, GoToBeginningOfMovie, m_ok );
-    wxDL_METHOD_LOAD( m_dll, GetMoviesError, m_ok );
-    wxDL_METHOD_LOAD( m_dll, EnterMovies, m_ok );
-    wxDL_METHOD_LOAD( m_dll, ExitMovies, m_ok );
-    wxDL_METHOD_LOAD( m_dll, InitializeQTML, m_ok );
-    wxDL_METHOD_LOAD( m_dll, TerminateQTML, m_ok );
-    wxDL_METHOD_LOAD( m_dll, NativePathNameToFSSpec, m_ok );
-    wxDL_METHOD_LOAD( m_dll, OpenMovieFile, m_ok );
-    wxDL_METHOD_LOAD( m_dll, CloseMovieFile, m_ok );
-    wxDL_METHOD_LOAD( m_dll, NewMovieFromFile, m_ok );
-    wxDL_METHOD_LOAD( m_dll, GetMovieRate, m_ok );
-    wxDL_METHOD_LOAD( m_dll, SetMovieRate, m_ok );
-    wxDL_METHOD_LOAD( m_dll, MoviesTask, m_ok );
-    wxDL_METHOD_LOAD( m_dll, BlockMove, m_ok );
-    wxDL_METHOD_LOAD( m_dll, NewHandleClear, m_ok );
-    wxDL_METHOD_LOAD( m_dll, NewMovieFromDataRef, m_ok );
-    wxDL_METHOD_LOAD( m_dll, DisposeHandle, m_ok );
-    wxDL_METHOD_LOAD( m_dll, GetMovieNaturalBoundsRect, m_ok );
-    wxDL_METHOD_LOAD( m_dll, GetMovieIndTrackType, m_ok );
-    wxDL_METHOD_LOAD( m_dll, CreatePortAssociation, m_ok );
-    wxDL_METHOD_LOAD( m_dll, DestroyPortAssociation, m_ok );
-    wxDL_METHOD_LOAD( m_dll, GetNativeWindowPort, m_ok );
-    wxDL_METHOD_LOAD( m_dll, SetMovieGWorld, m_ok );
-    wxDL_METHOD_LOAD( m_dll, DisposeMovie, m_ok );
-    wxDL_METHOD_LOAD( m_dll, SetMovieBox, m_ok );
-    wxDL_METHOD_LOAD( m_dll, SetMovieTimeScale, m_ok );
-    wxDL_METHOD_LOAD( m_dll, GetMovieDuration, m_ok );
-    wxDL_METHOD_LOAD( m_dll, GetMovieTimeBase, m_ok );
-    wxDL_METHOD_LOAD( m_dll, GetMovieTimeScale, m_ok );
-    wxDL_METHOD_LOAD( m_dll, GetMovieTime, m_ok );
-    wxDL_METHOD_LOAD( m_dll, SetMovieTime, m_ok );
-    wxDL_METHOD_LOAD( m_dll, GetMovieVolume, m_ok );
-    wxDL_METHOD_LOAD( m_dll, SetMovieVolume, m_ok );
-    wxDL_METHOD_LOAD( m_dll, SetMovieTimeValue, m_ok );
-    wxDL_METHOD_LOAD( m_dll, NewMovieController, m_ok );
-    wxDL_METHOD_LOAD( m_dll, DisposeMovieController, m_ok );
-    wxDL_METHOD_LOAD( m_dll, MCSetVisible, m_ok );
-    wxDL_METHOD_LOAD( m_dll, PrePrerollMovie, m_ok );
-    wxDL_METHOD_LOAD( m_dll, PrerollMovie, m_ok );
-    wxDL_METHOD_LOAD( m_dll, GetMoviePreferredRate, m_ok );
-    wxDL_METHOD_LOAD( m_dll, GetMovieLoadState, m_ok );
-    wxDL_METHOD_LOAD( m_dll, MCDoAction, m_ok );
-    wxDL_METHOD_LOAD( m_dll, MCSetControllerBoundsRect, m_ok );
-    wxDL_METHOD_LOAD( m_dll, NativeEventToMacEvent, m_ok );
-    wxDL_METHOD_LOAD( m_dll, MCIsPlayerEvent, m_ok );
-    wxDL_METHOD_LOAD( m_dll, MCSetMovie, m_ok );
-    wxDL_METHOD_LOAD( m_dll, MCSetActionFilterWithRefCon, m_ok );
-    wxDL_METHOD_LOAD( m_dll, MCGetControllerInfo, m_ok );
-    wxDL_METHOD_LOAD( m_dll, BeginUpdate, m_ok );
-    wxDL_METHOD_LOAD( m_dll, UpdateMovie, m_ok );
-    wxDL_METHOD_LOAD( m_dll, EndUpdate, m_ok );
-    wxDL_METHOD_LOAD( m_dll, GetMoviesStickyError, m_ok );
+    wxDL_METHOD_LOAD( m_dll, StartMovie );
+    wxDL_METHOD_LOAD( m_dll, StopMovie );
+    wxDL_METHOD_LOAD( m_dll, IsMovieDone );
+    wxDL_METHOD_LOAD( m_dll, GoToBeginningOfMovie );
+    wxDL_METHOD_LOAD( m_dll, GetMoviesError );
+    wxDL_METHOD_LOAD( m_dll, EnterMovies );
+    wxDL_METHOD_LOAD( m_dll, ExitMovies );
+    wxDL_METHOD_LOAD( m_dll, InitializeQTML );
+    wxDL_METHOD_LOAD( m_dll, TerminateQTML );
+    wxDL_METHOD_LOAD( m_dll, NativePathNameToFSSpec );
+    wxDL_METHOD_LOAD( m_dll, OpenMovieFile );
+    wxDL_METHOD_LOAD( m_dll, CloseMovieFile );
+    wxDL_METHOD_LOAD( m_dll, NewMovieFromFile );
+    wxDL_METHOD_LOAD( m_dll, GetMovieRate );
+    wxDL_METHOD_LOAD( m_dll, SetMovieRate );
+    wxDL_METHOD_LOAD( m_dll, MoviesTask );
+    wxDL_METHOD_LOAD( m_dll, BlockMove );
+    wxDL_METHOD_LOAD( m_dll, NewHandleClear );
+    wxDL_METHOD_LOAD( m_dll, NewMovieFromDataRef );
+    wxDL_METHOD_LOAD( m_dll, DisposeHandle );
+    wxDL_METHOD_LOAD( m_dll, GetMovieNaturalBoundsRect );
+    wxDL_METHOD_LOAD( m_dll, GetMovieIndTrackType );
+    wxDL_METHOD_LOAD( m_dll, CreatePortAssociation );
+    wxDL_METHOD_LOAD( m_dll, DestroyPortAssociation );
+    wxDL_METHOD_LOAD( m_dll, GetNativeWindowPort );
+    wxDL_METHOD_LOAD( m_dll, SetMovieGWorld );
+    wxDL_METHOD_LOAD( m_dll, DisposeMovie );
+    wxDL_METHOD_LOAD( m_dll, SetMovieBox );
+    wxDL_METHOD_LOAD( m_dll, SetMovieTimeScale );
+    wxDL_METHOD_LOAD( m_dll, GetMovieDuration );
+    wxDL_METHOD_LOAD( m_dll, GetMovieTimeBase );
+    wxDL_METHOD_LOAD( m_dll, GetMovieTimeScale );
+    wxDL_METHOD_LOAD( m_dll, GetMovieTime );
+    wxDL_METHOD_LOAD( m_dll, SetMovieTime );
+    wxDL_METHOD_LOAD( m_dll, GetMovieVolume );
+    wxDL_METHOD_LOAD( m_dll, SetMovieVolume );
+    wxDL_METHOD_LOAD( m_dll, SetMovieTimeValue );
+    wxDL_METHOD_LOAD( m_dll, NewMovieController );
+    wxDL_METHOD_LOAD( m_dll, DisposeMovieController );
+    wxDL_METHOD_LOAD( m_dll, MCSetVisible );
+    wxDL_METHOD_LOAD( m_dll, PrePrerollMovie );
+    wxDL_METHOD_LOAD( m_dll, PrerollMovie );
+    wxDL_METHOD_LOAD( m_dll, GetMoviePreferredRate );
+    wxDL_METHOD_LOAD( m_dll, GetMovieLoadState );
+    wxDL_METHOD_LOAD( m_dll, MCDoAction );
+    wxDL_METHOD_LOAD( m_dll, MCSetControllerBoundsRect );
+    wxDL_METHOD_LOAD( m_dll, NativeEventToMacEvent );
+    wxDL_METHOD_LOAD( m_dll, MCIsPlayerEvent );
+    wxDL_METHOD_LOAD( m_dll, MCSetMovie );
+    wxDL_METHOD_LOAD( m_dll, MCSetActionFilterWithRefCon );
+    wxDL_METHOD_LOAD( m_dll, MCGetControllerInfo );
+    wxDL_METHOD_LOAD( m_dll, BeginUpdate );
+    wxDL_METHOD_LOAD( m_dll, UpdateMovie );
+    wxDL_METHOD_LOAD( m_dll, EndUpdate );
+    wxDL_METHOD_LOAD( m_dll, GetMoviesStickyError );
 
-    m_ok = true;
-
-    return true;
+    return m_ok;
 }
 
 class WXDLLIMPEXP_MEDIA wxQTMediaBackend : public wxMediaBackendCommonBase
@@ -429,6 +403,7 @@ public:
     wxTimer* m_timer;               // Load or Play timer
     wxQuickTimeLibrary m_lib;       // DLL to load functions from
     ComponentInstance m_pMC;        // Movie Controller
+    wxEvtHandler* m_evthandler;
 
     friend class wxQTMediaEvtHandler;
 
@@ -456,7 +431,7 @@ private:
     wxQTMediaBackend *m_qtb;
     WXHWND m_hwnd;
 
-    DECLARE_NO_COPY_CLASS(wxQTMediaEvtHandler)
+    wxDECLARE_NO_COPY_CLASS(wxQTMediaEvtHandler);
 };
 
 
@@ -605,6 +580,7 @@ LRESULT CALLBACK wxQTMediaBackend::QTWndProc(HWND hWnd, UINT nMsg,
 wxQTMediaBackend::wxQTMediaBackend()
 : m_movie(NULL), m_bPlaying(false), m_timer(NULL), m_pMC(NULL)
 {
+    m_evthandler = NULL;
 }
 
 //---------------------------------------------------------------------------
@@ -630,7 +606,11 @@ wxQTMediaBackend::~wxQTMediaBackend()
         }
 
         // destroy wxQTMediaEvtHandler we pushed on it
-        m_ctrl->PopEventHandler(true);
+        if (m_evthandler)
+        {
+            m_ctrl->RemoveEventHandler(m_evthandler);
+            delete m_evthandler;
+        }
 
         m_lib.DestroyPortAssociation(
             (CGrafPtr)m_lib.GetNativeWindowPort(m_ctrl->GetHWND()));
@@ -689,7 +669,8 @@ bool wxQTMediaBackend::CreateControl(wxControl* ctrl, wxWindow* parent,
 
     // Part of a suggestion from Greg Hazel
     // to repaint movie when idle
-    m_ctrl->PushEventHandler(new wxQTMediaEvtHandler(this, m_ctrl->GetHWND()));
+    m_evthandler = new wxQTMediaEvtHandler(this, m_ctrl->GetHWND());
+    m_ctrl->PushEventHandler(m_evthandler);
 
     // done
     return true;
@@ -709,15 +690,13 @@ bool wxQTMediaBackend::Load(const wxString& fileName)
     if (m_movie)
         Cleanup();
 
-    bool result = true;
-    OSErr err = noErr;
     short movieResFile = 0; //= 0 because of annoying VC6 warning
     FSSpec sfFile;
 
-    err = m_lib.NativePathNameToFSSpec(
+    OSErr err = m_lib.NativePathNameToFSSpec(
         (char*) (const char*) fileName.mb_str(),
         &sfFile, 0);
-    result = (err == noErr);
+    bool result = (err == noErr);
 
     if (result)
     {
@@ -1088,11 +1067,7 @@ void wxQTMediaBackend::Cleanup()
 {
     m_bPlaying = false;
 
-    if (m_timer)
-    {
-        delete m_timer;
-        m_timer = NULL;
-    }
+    wxDELETE(m_timer);
 
     m_lib.StopMovie(m_movie);
 
@@ -1168,7 +1143,7 @@ bool wxQTMediaBackend::ShowPlayerControls(wxMediaCtrlPlayerControls flags)
 //              | (1<< 4) /*mcFlagDontInvalidate*/ // if we take care of repainting ourselves
                       ;
 
-            m_lib.MCDoAction(m_pMC, 38/*mcActionSetFlags*/, (void*)mcFlags);
+            m_lib.MCDoAction(m_pMC, 38/*mcActionSetFlags*/, wxUIntToPtr(mcFlags));
 
             // intercept the wndproc of our control window
             wxSetWindowProc((HWND)m_ctrl->GetHWND(), wxQTMediaBackend::QTWndProc);
@@ -1186,7 +1161,7 @@ bool wxQTMediaBackend::ShowPlayerControls(wxMediaCtrlPlayerControls flags)
 //---------------------------------------------------------------------------
 // wxQTMediaBackend::MCFilterProc (static)
 //
-// Callback for when the movie controller recieves a message
+// Callback for when the movie controller receives a message
 //---------------------------------------------------------------------------
 Boolean wxQTMediaBackend::MCFilterProc(MovieController WXUNUSED(theController),
                                short action,
@@ -1305,8 +1280,9 @@ void wxQTMediaEvtHandler::OnEraseBackground(wxEraseEvent& evt)
 //  End QT Backend
 //---------------------------------------------------------------------------
 
-// in source file that contains stuff you don't directly use
-#include "wx/html/forcelnk.h"
-FORCE_LINK_ME(wxmediabackend_qt)
+// Allow the user code to use wxFORCE_LINK_MODULE() to ensure that this object
+// file is not discarded by the linker.
+#include "wx/link.h"
+wxFORCE_LINK_THIS_MODULE(wxmediabackend_qt)
 
 #endif // wxUSE_MEDIACTRL && wxUSE_ACTIVEX

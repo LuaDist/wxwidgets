@@ -5,7 +5,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/06/99
-// RCS-ID:      $Id: fontdlg.h 38448 2006-03-30 14:04:17Z ABX $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -14,13 +13,12 @@
 #define _WX_FONTDLG_H_
 
 #include "wx/dialog.h"
-#include "wx/cmndata.h"
 
 /*
  * Font dialog
  */
 
-class WXDLLEXPORT wxFontDialog: public wxFontDialogBase
+class WXDLLIMPEXP_CORE wxFontDialog: public wxFontDialogBase
 {
 public:
     wxFontDialog() : wxFontDialogBase() { /* must be Create()d later */ }

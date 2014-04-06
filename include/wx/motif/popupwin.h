@@ -4,7 +4,6 @@
 // Author:      Mattia Barbon
 // Modified by:
 // Created:     28.08.03
-// RCS-ID:      $Id: popupwin.h 35650 2005-09-23 12:56:45Z MR $
 // Copyright:   (c) 2003 Mattia Barbon
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////

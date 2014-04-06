@@ -3,7 +3,6 @@
 // Purpose:     wxMemoryDC class declaration
 // Created:     2006-08-10
 // Author:      Vaclav Slavik
-// RCS-ID:      $Id: dcmemory.h 42755 2006-10-30 19:41:46Z VZ $
 // Copyright:   (c) 2006 REA Elektronik GmbH
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -11,21 +10,19 @@
 #ifndef _WX_DFB_DCMEMORY_H_
 #define _WX_DFB_DCMEMORY_H_
 
-#include "wx/dc.h"
+#include "wx/dfb/dc.h"
 #include "wx/bitmap.h"
 
-class WXDLLIMPEXP_CORE wxMemoryDC : public wxDC, public wxMemoryDCBase
+class WXDLLIMPEXP_CORE wxMemoryDCImpl : public wxDFBDCImpl
 {
 public:
-    wxMemoryDC() { Init(); }
-    wxMemoryDC(wxBitmap& bitmap) { Init(); SelectObject(bitmap); }
-    wxMemoryDC(wxDC *dc); // create compatible DC
+    wxMemoryDCImpl(wxMemoryDC *owner);
+    wxMemoryDCImpl(wxMemoryDC *owner, wxBitmap& bitmap);
+    wxMemoryDCImpl(wxMemoryDC *owner, wxDC *dc); // create compatible DC
 
-    // implementation from now on:
-
-    wxBitmap GetSelectedObject() const { return m_bmp; }
-
-protected:
+    // override wxMemoryDC-specific base class virtual methods
+    virtual const wxBitmap& GetSelectedBitmap() const { return m_bmp; }
+    virtual wxBitmap& GetSelectedBitmap() { return m_bmp; }
     virtual void DoSelect(const wxBitmap& bitmap);
 
 private:
@@ -33,7 +30,7 @@ private:
 
     wxBitmap m_bmp;
 
-    DECLARE_DYNAMIC_CLASS(wxMemoryDC)
+    DECLARE_DYNAMIC_CLASS(wxMemoryDCImpl)
 };
 
 #endif // _WX_DFB_DCMEMORY_H_

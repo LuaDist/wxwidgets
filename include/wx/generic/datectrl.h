@@ -1,10 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        generic/datectrl.h
+// Name:        wx/generic/datectrl.h
 // Purpose:     generic wxDatePickerCtrl implementation
 // Author:      Andreas Pflug
 // Modified by:
 // Created:     2005-01-19
-// RCS-ID:      $Id: datectrl.h 42539 2006-10-27 18:02:21Z RR $
 // Copyright:   (c) 2005 Andreas Pflug <pgadmin@pse-consulting.de>
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -12,13 +11,15 @@
 #ifndef _WX_GENERIC_DATECTRL_H_
 #define _WX_GENERIC_DATECTRL_H_
 
-class WXDLLIMPEXP_ADV wxCalendarDateAttr;
-class WXDLLIMPEXP_ADV wxCalendarCtrl;
-class WXDLLIMPEXP_ADV wxCalendarEvent;
-class WXDLLIMPEXP_ADV wxComboCtrl;
-class WXDLLIMPEXP_ADV wxCalendarComboPopup;
+#include "wx/compositewin.h"
 
-class WXDLLIMPEXP_ADV wxDatePickerCtrlGeneric : public wxDatePickerCtrlBase
+class WXDLLIMPEXP_FWD_CORE wxComboCtrl;
+
+class WXDLLIMPEXP_FWD_ADV wxCalendarCtrl;
+class WXDLLIMPEXP_FWD_ADV wxCalendarComboPopup;
+
+class WXDLLIMPEXP_ADV wxDatePickerCtrlGeneric
+    : public wxCompositeWindow<wxDatePickerCtrlBase>
 {
 public:
     // creating the control
@@ -58,8 +59,7 @@ public:
                       const wxDateTime& upperdate = wxDefaultDateTime);
 
     // extra methods available only in this (generic) implementation
-    bool SetFormat(const wxChar *fmt);
-    wxCalendarCtrl *GetCalendar() const { return m_cal; }
+    wxCalendarCtrl *GetCalendar() const;
 
 
     // implementation only from now on
@@ -74,17 +74,22 @@ protected:
 private:
     void Init();
 
+    // return the list of the windows composing this one
+    virtual wxWindowList GetCompositeWindowParts() const;
+
     void OnText(wxCommandEvent &event);
     void OnSize(wxSizeEvent& event);
     void OnFocus(wxFocusEvent& event);
 
-    wxCalendarCtrl *m_cal;
+#ifdef __WXOSX_COCOA__
+    virtual void OSXGenerateEvent(const wxDateTime& WXUNUSED(dt)) { }
+#endif
+
     wxComboCtrl* m_combo;
     wxCalendarComboPopup* m_popup;
 
-
     DECLARE_EVENT_TABLE()
-    DECLARE_NO_COPY_CLASS(wxDatePickerCtrlGeneric)
+    wxDECLARE_NO_COPY_CLASS(wxDatePickerCtrlGeneric);
 };
 
 #endif // _WX_GENERIC_DATECTRL_H_

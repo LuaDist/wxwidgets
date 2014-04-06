@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/10/99
-// RCS-ID:      $Id: pen.cpp 42273 2006-10-23 11:58:28Z ABX $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -23,19 +22,75 @@
 #endif
 
 #include "wx/os2/private.h"
-#include "assert.h"
 
-IMPLEMENT_DYNAMIC_CLASS(wxPen, wxGDIObject)
+class WXDLLIMPEXP_FWD_CORE wxPen;
+
+// ----------------------------------------------------------------------------
+// wxPenRefData: contains information about an HPEN and its handle
+// ----------------------------------------------------------------------------
+
+class WXDLLEXPORT wxPenRefData: public wxGDIRefData
+{
+    friend class WXDLLIMPEXP_FWD_CORE wxPen;
+public:
+    wxPenRefData();
+    wxPenRefData(const wxPenRefData& rData);
+    wxPenRefData(const wxColour& col, int width, wxPenStyle style);
+    wxPenRefData(const wxBitmap& stipple, int width);
+    virtual ~wxPenRefData();
+
+    bool operator==(const wxPenRefData& data) const
+    {
+        // we intentionally don't compare m_hPen fields here
+        return m_nStyle == data.m_nStyle &&
+               m_nWidth == data.m_nWidth &&
+               m_nJoin == data.m_nJoin &&
+               m_nCap == data.m_nCap &&
+               m_vColour == data.m_vColour &&
+               (m_nStyle != wxPENSTYLE_STIPPLE || m_vStipple.IsSameAs(data.m_vStipple)) &&
+               (m_nStyle != wxPENSTYLE_USER_DASH ||
+                (m_dash == data.m_dash &&
+                    memcmp(m_dash, data.m_dash, m_nbDash*sizeof(wxDash)) == 0));
+    }
+
+private:
+    // initialize the fields which have reasonable default values
+    //
+    // doesn't initialize m_width and m_style which must be initialize in ctor
+    void Init()
+    {
+        m_nJoin = wxJOIN_ROUND;
+        m_nCap = wxCAP_ROUND;
+        m_nbDash = 0;
+        m_dash = NULL;
+        m_hPen = 0;
+    }
+
+    int                             m_nWidth;
+    wxPenStyle                      m_nStyle;
+    wxPenJoin                       m_nJoin;
+    wxPenCap                        m_nCap;
+    wxBitmap                        m_vStipple;
+    int                             m_nbDash;
+    wxDash *                        m_dash;
+    wxColour                        m_vColour;
+    WXHPEN                          m_hPen;// in OS/2 GPI this will be the PS the pen is associated with
+
+    wxDECLARE_NO_ASSIGN_CLASS(wxPenRefData);
+};
+
+#define M_PENDATA ((wxPenRefData *)m_refData)
+
+// ----------------------------------------------------------------------------
+// wxPenRefData ctors/dtor
+// ----------------------------------------------------------------------------
 
 wxPenRefData::wxPenRefData()
 {
-    m_nStyle  = wxSOLID;
+    Init();
+
+    m_nStyle  = wxPENSTYLE_SOLID;
     m_nWidth  = 1;
-    m_nJoin   = wxJOIN_ROUND ;
-    m_nCap    = wxCAP_ROUND ;
-    m_nbDash  = 0 ;
-    m_dash    = (wxDash*)NULL;
-    m_hPen    = 0L;
 } // end of wxPenRefData::wxPenRefData
 
 wxPenRefData::wxPenRefData(
@@ -52,59 +107,77 @@ wxPenRefData::wxPenRefData(
     m_hPen    = 0L;
 } // end of wxPenRefData::wxPenRefData
 
+wxPenRefData::wxPenRefData(const wxColour& col, int width, wxPenStyle style)
+{
+    Init();
+
+    m_nStyle = style;
+    m_nWidth = width;
+
+    m_vColour = col;
+}
+
+wxPenRefData::wxPenRefData(const wxBitmap& stipple, int width)
+{
+    Init();
+
+    m_nStyle = wxPENSTYLE_STIPPLE;
+    m_nWidth = width;
+
+    m_vStipple = stipple;
+}
+
 wxPenRefData::~wxPenRefData()
 {
 } // end of wxPenRefData::~wxPenRefData
 
-//
-// Pens
-//
-wxPen::wxPen()
-{
-} // end of wxPen::wxPen
+// ----------------------------------------------------------------------------
+// wxPen
+// ----------------------------------------------------------------------------
 
-wxPen::~wxPen()
-{
-} // end of wxPen::wxPen
+IMPLEMENT_DYNAMIC_CLASS(wxPen, wxGDIObject)
 
-// Should implement Create
 wxPen::wxPen(
   const wxColour&                   rColour
 , int                               nWidth
-, int                               nStyle
+, wxPenStyle                        nStyle
 )
 {
-    m_refData = new wxPenRefData;
-
-    M_PENDATA->m_vColour = rColour;
-    M_PENDATA->m_nWidth  = nWidth;
-    M_PENDATA->m_nStyle  = nStyle;
-    M_PENDATA->m_nJoin   = wxJOIN_ROUND ;
-    M_PENDATA->m_nCap    = wxCAP_ROUND ;
-    M_PENDATA->m_hPen    = 0L;
+    m_refData = new wxPenRefData(rColour, nWidth, nStyle);
 
     RealizeResource();
 } // end of wxPen::wxPen
+
+#if FUTURE_WXWIN_COMPATIBILITY_3_0
+wxPen::wxPen(const wxColour& colour, int width, int style)
+{
+    m_refData = new wxPenRefData(colour, width, (wxPenStyle)style);
+
+    RealizeResource();
+}
+#endif
 
 wxPen::wxPen(
   const wxBitmap&                   rStipple
 , int                               nWidth
 )
 {
-    m_refData = new wxPenRefData;
-
-    M_PENDATA->m_vStipple = rStipple;
-    M_PENDATA->m_nWidth   = nWidth;
-    M_PENDATA->m_nStyle   = wxSTIPPLE;
-    M_PENDATA->m_nJoin    = wxJOIN_ROUND ;
-    M_PENDATA->m_nCap     = wxCAP_ROUND ;
-    M_PENDATA->m_hPen     = 0;
+    m_refData = new wxPenRefData (rStipple, nWidth);
 
     RealizeResource();
 } // end of wxPen::wxPen
 
+bool wxPen::operator==(const wxPen& pen) const
+{
+    const wxPenRefData *
+        penData = static_cast<const wxPenRefData *>(pen.m_refData);
+
+    // an invalid pen is only equal to another invalid pen
+    return m_refData ? penData && *M_PENDATA == *penData : !penData;
+}
+
 int wx2os2PenStyle(
-  int                               nWxStyle
+  wxPenStyle                               nWxStyle
 );
 
 bool wxPen::RealizeResource()
@@ -145,10 +218,10 @@ bool wxPen::RealizeResource()
         {
             vError = ::WinGetLastError(vHabmain);
             sError = wxPMErrorToStr(vError);
-            wxLogError(_T("Unable to set current color table to RGB mode. Error: %s\n"), sError.c_str());
+            wxLogError(wxT("Unable to set current color table to RGB mode. Error: %s\n"), sError.c_str());
             return false;
         }
-        if (M_PENDATA->m_nStyle == wxTRANSPARENT)
+        if (M_PENDATA->m_nStyle == wxPENSTYLE_TRANSPARENT)
         {
             return true;
         }
@@ -211,7 +284,7 @@ bool wxPen::RealizeResource()
         {
             vError = ::WinGetLastError(vHabmain);
             sError = wxPMErrorToStr(vError);
-            wxLogError(_T("Can't set Gpi attributes for a LINEBUNDLE. Error: %s\n"), sError.c_str());
+            wxLogError(wxT("Can't set Gpi attributes for a LINEBUNDLE. Error: %s\n"), sError.c_str());
             return false;
         }
 
@@ -219,7 +292,7 @@ bool wxPen::RealizeResource()
         ULONG                           flDefMask = 0L;
         switch(M_PENDATA->m_nStyle)
         {
-            case wxSTIPPLE:
+            case wxPENSTYLE_STIPPLE:
                 ::GpiSetBitmapId( M_PENDATA->m_hPen
                                  ,(USHORT)M_PENDATA->m_vStipple.GetHBITMAP()
                                  ,(USHORT)M_PENDATA->m_vStipple.GetId()
@@ -231,42 +304,42 @@ bool wxPen::RealizeResource()
                 flDefMask = ABB_REF_POINT;
                 break;
 
-            case wxBDIAGONAL_HATCH:
+            case wxPENSTYLE_BDIAGONAL_HATCH:
                 m_vAreaBundle.usSymbol = PATSYM_DIAG3;
                 m_vAreaBundle.usSet = LCID_DEFAULT;
                 flAttrMask = ABB_COLOR | ABB_BACK_COLOR | ABB_MIX_MODE | ABB_BACK_MIX_MODE | ABB_SYMBOL;
                 flDefMask = ABB_SET | ABB_REF_POINT;
                 break;
 
-            case wxCROSSDIAG_HATCH:
+            case wxPENSTYLE_CROSSDIAG_HATCH:
                 m_vAreaBundle.usSymbol = PATSYM_DIAGHATCH;
                 m_vAreaBundle.usSet = LCID_DEFAULT;
                 flAttrMask = ABB_COLOR | ABB_BACK_COLOR | ABB_MIX_MODE | ABB_BACK_MIX_MODE | ABB_SYMBOL;
                 flDefMask = ABB_SET | ABB_REF_POINT;
                 break;
 
-            case wxFDIAGONAL_HATCH:
+            case wxPENSTYLE_FDIAGONAL_HATCH:
                 m_vAreaBundle.usSymbol = PATSYM_DIAG1;
                 m_vAreaBundle.usSet = LCID_DEFAULT;
                 flAttrMask = ABB_COLOR | ABB_BACK_COLOR | ABB_MIX_MODE | ABB_BACK_MIX_MODE | ABB_SYMBOL;
                 flDefMask = ABB_SET | ABB_REF_POINT;
                 break;
 
-            case wxCROSS_HATCH:
+            case wxPENSTYLE_CROSS_HATCH:
                 m_vAreaBundle.usSymbol = PATSYM_HATCH;
                 m_vAreaBundle.usSet = LCID_DEFAULT;
                 flAttrMask = ABB_COLOR | ABB_BACK_COLOR | ABB_MIX_MODE | ABB_BACK_MIX_MODE | ABB_SYMBOL;
                 flDefMask = ABB_SET | ABB_REF_POINT;
                 break;
 
-            case wxHORIZONTAL_HATCH:
+            case wxPENSTYLE_HORIZONTAL_HATCH:
                 m_vAreaBundle.usSymbol = PATSYM_HORIZ;
                 m_vAreaBundle.usSet = LCID_DEFAULT;
                 flAttrMask = ABB_COLOR | ABB_BACK_COLOR | ABB_MIX_MODE | ABB_BACK_MIX_MODE | ABB_SYMBOL;
                 flDefMask = ABB_SET | ABB_REF_POINT;
                 break;
 
-            case wxVERTICAL_HATCH:
+            case wxPENSTYLE_VERTICAL_HATCH:
                 m_vAreaBundle.usSymbol = PATSYM_VERT;
                 m_vAreaBundle.usSet = LCID_DEFAULT;
                 flAttrMask = ABB_COLOR | ABB_BACK_COLOR | ABB_MIX_MODE | ABB_BACK_MIX_MODE | ABB_SYMBOL;
@@ -296,7 +369,7 @@ bool wxPen::RealizeResource()
         {
             vError = ::WinGetLastError(vHabmain);
             sError = wxPMErrorToStr(vError);
-            wxLogError(_T("Can't set Gpi attributes for an AREABUNDLE. Error: %s\n"), sError.c_str());
+            wxLogError(wxT("Can't set Gpi attributes for an AREABUNDLE. Error: %s\n"), sError.c_str());
         }
 
         return (bool)bOk;
@@ -327,38 +400,33 @@ bool wxPen::IsFree() const
     return (M_PENDATA && M_PENDATA->m_hPen == 0);
 }
 
-void wxPen::Unshare()
+wxGDIRefData* wxPen::CreateGDIRefData() const
 {
-    // Don't change shared data
-    if (!m_refData)
-    {
-        m_refData = new wxPenRefData();
-    }
-    else
-    {
-        wxPenRefData* ref = new wxPenRefData(*(wxPenRefData*)m_refData);
-        UnRef();
-        m_refData = ref;
-    }
-} // end of wxPen::Unshare
+    return new wxPenRefData;
+}
+
+wxGDIRefData* wxPen::CloneGDIRefData(const wxGDIRefData* data) const
+{
+    return new wxPenRefData(*static_cast<const wxPenRefData*>(data));
+}
 
 void wxPen::SetColour( const wxColour& rColour )
 {
-    Unshare();
+    AllocExclusive();
     M_PENDATA->m_vColour = rColour;
     RealizeResource();
 } // end of wxPen::SetColour
 
 void wxPen::SetColour( unsigned char cRed, unsigned char cGreen, unsigned char cBlue)
 {
-    Unshare();
+    AllocExclusive();
     M_PENDATA->m_vColour.Set(cRed, cGreen, cBlue);
     RealizeResource();
 } // end of wxPen::SetColour
 
 void wxPen::SetPS( HPS hPS )
 {
-    Unshare();
+    AllocExclusive();
     if (M_PENDATA->m_hPen)
         ::GpiDestroyPS(M_PENDATA->m_hPen);
     M_PENDATA->m_hPen = hPS;
@@ -369,16 +437,16 @@ void wxPen::SetWidth(
   int                               nWidth
 )
 {
-    Unshare();
+    AllocExclusive();
     M_PENDATA->m_nWidth = nWidth;
     RealizeResource();
 } // end of wxPen::SetWidth
 
 void wxPen::SetStyle(
-  int                               nStyle
+  wxPenStyle                               nStyle
 )
 {
-    Unshare();
+    AllocExclusive();
     M_PENDATA->m_nStyle = nStyle;
     RealizeResource();
 } // end of wxPen::SetStyle
@@ -387,9 +455,9 @@ void wxPen::SetStipple(
   const wxBitmap&                   rStipple
 )
 {
-    Unshare();
+    AllocExclusive();
     M_PENDATA->m_vStipple = rStipple;
-    M_PENDATA->m_nStyle = wxSTIPPLE;
+    M_PENDATA->m_nStyle = wxPENSTYLE_STIPPLE;
     RealizeResource();
 } // end of wxPen::SetStipple
 
@@ -402,56 +470,127 @@ void wxPen::SetDashes( int WXUNUSED(nNbDashes),
 } // end of wxPen::SetDashes
 
 void wxPen::SetJoin(
-  int                               nJoin
+  wxPenJoin                               nJoin
 )
 {
-    Unshare();
+    AllocExclusive();
     M_PENDATA->m_nJoin = nJoin;
     RealizeResource();
 } // end of wxPen::SetJoin
 
 void wxPen::SetCap(
-  int                               nCap
+  wxPenCap                               nCap
 )
 {
-    Unshare();
+    AllocExclusive();
     M_PENDATA->m_nCap = nCap;
     RealizeResource();
 } // end of wxPen::SetCap
 
+wxColour wxPen::GetColour() const
+{
+    wxCHECK_MSG( IsOk(), wxNullColour, wxT("invalid pen") );
+
+    return M_PENDATA->m_vColour;
+}
+
+int wxPen::GetWidth() const
+{
+    wxCHECK_MSG( IsOk(), -1, wxT("invalid pen") );
+
+    return M_PENDATA->m_nWidth;
+}
+
+wxPenStyle wxPen::GetStyle() const
+{
+    wxCHECK_MSG( IsOk(), wxPENSTYLE_INVALID, wxT("invalid pen") );
+
+    return M_PENDATA->m_nStyle;
+}
+
+wxPenJoin wxPen::GetJoin() const
+{
+    wxCHECK_MSG( IsOk(), wxJOIN_INVALID, wxT("invalid pen") );
+
+    return M_PENDATA->m_nJoin;
+}
+
+wxPenCap wxPen::GetCap() const
+{
+    wxCHECK_MSG( IsOk(), wxCAP_INVALID, wxT("invalid pen") );
+
+    return M_PENDATA->m_nCap;
+}
+
+int wxPen::GetPS() const
+{
+    wxCHECK_MSG( IsOk(), 0, wxT("invalid pen") );
+
+    return M_PENDATA->m_hPen;
+}
+
+int wxPen::GetDashes(wxDash** ptr) const
+{
+    wxCHECK_MSG( IsOk(), -1, wxT("invalid pen") );
+
+    *ptr = M_PENDATA->m_dash;
+    return M_PENDATA->m_nbDash;
+}
+
+wxDash* wxPen::GetDash() const
+{
+    wxCHECK_MSG( IsOk(), NULL, wxT("invalid pen") );
+
+    return M_PENDATA->m_dash;
+}
+
+int wxPen::GetDashCount() const
+{
+    wxCHECK_MSG( IsOk(), -1, wxT("invalid pen") );
+
+    return M_PENDATA->m_nbDash;
+}
+
+wxBitmap* wxPen::GetStipple() const
+{
+    wxCHECK_MSG( IsOk(), NULL, wxT("invalid pen") );
+
+    return &(M_PENDATA->m_vStipple);
+}
+
 int wx2os2PenStyle(
-  int                               nWxStyle
+  wxPenStyle                               nWxStyle
 )
 {
     int                             nPMStyle = 0;
 
     switch (nWxStyle)
     {
-        case wxDOT:
+        case wxPENSTYLE_DOT:
             nPMStyle = LINETYPE_DOT;
             break;
 
-        case wxDOT_DASH:
+        case wxPENSTYLE_DOT_DASH:
             nPMStyle = LINETYPE_DASHDOT;
             break;
 
-        case wxSHORT_DASH:
+        case wxPENSTYLE_SHORT_DASH:
             nPMStyle = LINETYPE_SHORTDASH;
             break;
 
-        case wxLONG_DASH:
+        case wxPENSTYLE_LONG_DASH:
             nPMStyle = LINETYPE_LONGDASH;
             break;
 
-        case wxTRANSPARENT:
+        case wxPENSTYLE_TRANSPARENT:
             nPMStyle = LINETYPE_INVISIBLE;
             break;
 
-        case wxUSER_DASH:
+        case wxPENSTYLE_USER_DASH:
             nPMStyle = LINETYPE_DASHDOUBLEDOT; // We must make a choice... This is mine!
             break;
 
-        case wxSOLID:
+        case wxPENSTYLE_SOLID:
         default:
             nPMStyle = LINETYPE_SOLID;
             break;

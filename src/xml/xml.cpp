@@ -3,7 +3,6 @@
 // Purpose:     wxXmlDocument - XML parser & data holder class
 // Author:      Vaclav Slavik
 // Created:     2000/03/05
-// RCS-ID:      $Id: xml.cpp 65726 2010-10-02 15:47:41Z TIK $
 // Copyright:   (c) 2000 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -29,6 +28,8 @@
 #include "wx/datstrm.h"
 #include "wx/zstream.h"
 #include "wx/strconv.h"
+#include "wx/scopedptr.h"
+#include "wx/versioninfo.h"
 
 #include "expat.h" // from Expat
 
@@ -40,7 +41,7 @@ IMPLEMENT_CLASS(wxXmlDocument, wxObject)
 
 
 // a private utility used by wxXML
-static bool wxIsWhiteOnly(const wxChar *buf);
+static bool wxIsWhiteOnly(const wxString& buf);
 
 
 //-----------------------------------------------------------------------------
@@ -49,11 +50,15 @@ static bool wxIsWhiteOnly(const wxChar *buf);
 
 wxXmlNode::wxXmlNode(wxXmlNode *parent,wxXmlNodeType type,
                      const wxString& name, const wxString& content,
-                     wxXmlProperty *props, wxXmlNode *next)
+                     wxXmlAttribute *attrs, wxXmlNode *next, int lineNo)
     : m_type(type), m_name(name), m_content(content),
-      m_properties(props), m_parent(parent),
-      m_children(NULL), m_next(next)
+      m_attrs(attrs), m_parent(parent),
+      m_children(NULL), m_next(next),
+      m_lineNo(lineNo),
+      m_noConversion(false)
 {
+    wxASSERT_MSG ( type != wxXML_ELEMENT_NODE || content.empty(), "element nodes can't have content" );
+
     if (m_parent)
     {
         if (m_parent->m_children)
@@ -67,11 +72,15 @@ wxXmlNode::wxXmlNode(wxXmlNode *parent,wxXmlNodeType type,
 }
 
 wxXmlNode::wxXmlNode(wxXmlNodeType type, const wxString& name,
-                     const wxString& content)
+                     const wxString& content,
+                     int lineNo)
     : m_type(type), m_name(name), m_content(content),
-      m_properties(NULL), m_parent(NULL),
-      m_children(NULL), m_next(NULL)
-{}
+      m_attrs(NULL), m_parent(NULL),
+      m_children(NULL), m_next(NULL),
+      m_lineNo(lineNo), m_noConversion(false)
+{
+    wxASSERT_MSG ( type != wxXML_ELEMENT_NODE || content.empty(), "element nodes can't have content" );
+}
 
 wxXmlNode::wxXmlNode(const wxXmlNode& node)
 {
@@ -82,6 +91,22 @@ wxXmlNode::wxXmlNode(const wxXmlNode& node)
 
 wxXmlNode::~wxXmlNode()
 {
+    DoFree();
+}
+
+wxXmlNode& wxXmlNode::operator=(const wxXmlNode& node)
+{
+    if ( &node != this )
+    {
+        DoFree();
+        DoCopy(node);
+    }
+
+    return *this;
+}
+
+void wxXmlNode::DoFree()
+{
     wxXmlNode *c, *c2;
     for (c = m_children; c; c = c2)
     {
@@ -89,20 +114,12 @@ wxXmlNode::~wxXmlNode()
         delete c;
     }
 
-    wxXmlProperty *p, *p2;
-    for (p = m_properties; p; p = p2)
+    wxXmlAttribute *p, *p2;
+    for (p = m_attrs; p; p = p2)
     {
         p2 = p->GetNext();
         delete p;
     }
-}
-
-wxXmlNode& wxXmlNode::operator=(const wxXmlNode& node)
-{
-    wxDELETE(m_properties);
-    wxDELETE(m_children);
-    DoCopy(node);
-    return *this;
 }
 
 void wxXmlNode::DoCopy(const wxXmlNode& node)
@@ -110,6 +127,8 @@ void wxXmlNode::DoCopy(const wxXmlNode& node)
     m_type = node.m_type;
     m_name = node.m_name;
     m_content = node.m_content;
+    m_lineNo = node.m_lineNo;
+    m_noConversion = node.m_noConversion;
     m_children = NULL;
 
     wxXmlNode *n = node.m_children;
@@ -119,51 +138,51 @@ void wxXmlNode::DoCopy(const wxXmlNode& node)
         n = n->GetNext();
     }
 
-    m_properties = NULL;
-    wxXmlProperty *p = node.m_properties;
+    m_attrs = NULL;
+    wxXmlAttribute *p = node.m_attrs;
     while (p)
     {
-       AddProperty(p->GetName(), p->GetValue());
+       AddAttribute(p->GetName(), p->GetValue());
        p = p->GetNext();
     }
 }
 
-bool wxXmlNode::HasProp(const wxString& propName) const
+bool wxXmlNode::HasAttribute(const wxString& attrName) const
 {
-    wxXmlProperty *prop = GetProperties();
+    wxXmlAttribute *attr = GetAttributes();
 
-    while (prop)
+    while (attr)
     {
-        if (prop->GetName() == propName) return true;
-        prop = prop->GetNext();
+        if (attr->GetName() == attrName) return true;
+        attr = attr->GetNext();
     }
 
     return false;
 }
 
-bool wxXmlNode::GetPropVal(const wxString& propName, wxString *value) const
+bool wxXmlNode::GetAttribute(const wxString& attrName, wxString *value) const
 {
-    wxCHECK_MSG( value, false, wxT("value argument must not be NULL") );
+    wxCHECK_MSG( value, false, "value argument must not be NULL" );
 
-    wxXmlProperty *prop = GetProperties();
+    wxXmlAttribute *attr = GetAttributes();
 
-    while (prop)
+    while (attr)
     {
-        if (prop->GetName() == propName)
+        if (attr->GetName() == attrName)
         {
-            *value = prop->GetValue();
+            *value = attr->GetValue();
             return true;
         }
-        prop = prop->GetNext();
+        attr = attr->GetNext();
     }
 
     return false;
 }
 
-wxString wxXmlNode::GetPropVal(const wxString& propName, const wxString& defaultVal) const
+wxString wxXmlNode::GetAttribute(const wxString& attrName, const wxString& defaultVal) const
 {
     wxString tmp;
-    if (GetPropVal(propName, &tmp))
+    if (GetAttribute(attrName, &tmp))
         return tmp;
 
     return defaultVal;
@@ -183,50 +202,53 @@ void wxXmlNode::AddChild(wxXmlNode *child)
     child->m_parent = this;
 }
 
-bool wxXmlNode::InsertChild(wxXmlNode *child, wxXmlNode *before_node)
+// inserts a new node in front of 'followingNode'
+bool wxXmlNode::InsertChild(wxXmlNode *child, wxXmlNode *followingNode)
 {
-    wxCHECK_MSG(before_node == NULL || before_node->GetParent() == this, false,
-                 wxT("wxXmlNode::InsertChild - the node has incorrect parent"));
-    wxCHECK_MSG(child, false, wxT("Cannot insert a NULL pointer!"));
+    wxCHECK_MSG( child, false, "cannot insert a NULL node!" );
+    wxCHECK_MSG( child->m_parent == NULL, false, "node already has a parent" );
+    wxCHECK_MSG( child->m_next == NULL, false, "node already has m_next" );
+    wxCHECK_MSG( followingNode == NULL || followingNode->GetParent() == this,
+                 false,
+                 "wxXmlNode::InsertChild - followingNode has incorrect parent" );
 
-    if (m_children == before_node)
-       m_children = child;
-    else if (m_children == NULL)
+    // this is for backward compatibility, NULL was allowed here thanks to
+    // the confusion about followingNode's meaning
+    if ( followingNode == NULL )
+        followingNode = m_children;
+
+    if ( m_children == followingNode )
     {
-        if (before_node != NULL)
-            return false;       // we have no children so we don't need to search
-        m_children = child;
-    }
-    else if (before_node == NULL)
-    {
-        // prepend child
-        child->m_parent = this;
         child->m_next = m_children;
         m_children = child;
-        return true;
     }
     else
     {
         wxXmlNode *ch = m_children;
-        while (ch && ch->m_next != before_node) ch = ch->m_next;
-        if (!ch)
-            return false;       // before_node not found
+        while ( ch && ch->m_next != followingNode )
+            ch = ch->m_next;
+        if ( !ch )
+        {
+            wxFAIL_MSG( "followingNode has this node as parent, but couldn't be found among children" );
+            return false;
+        }
+
+        child->m_next = followingNode;
         ch->m_next = child;
     }
 
     child->m_parent = this;
-    child->m_next = before_node;
     return true;
 }
 
 // inserts a new node right after 'precedingNode'
 bool wxXmlNode::InsertChildAfter(wxXmlNode *child, wxXmlNode *precedingNode)
 {
-    wxCHECK_MSG( child, false, wxT("cannot insert a NULL node!") );
-    wxCHECK_MSG( child->m_parent == NULL, false, wxT("node already has a parent") );
-    wxCHECK_MSG( child->m_next == NULL, false, wxT("node already has m_next") );
+    wxCHECK_MSG( child, false, "cannot insert a NULL node!" );
+    wxCHECK_MSG( child->m_parent == NULL, false, "node already has a parent" );
+    wxCHECK_MSG( child->m_next == NULL, false, "node already has m_next" );
     wxCHECK_MSG( precedingNode == NULL || precedingNode->m_parent == this, false,
-                 wxT("precedingNode has wrong parent") );
+                 "precedingNode has wrong parent" );
 
     if ( precedingNode )
     {
@@ -236,7 +258,7 @@ bool wxXmlNode::InsertChildAfter(wxXmlNode *child, wxXmlNode *precedingNode)
     else // precedingNode == NULL
     {
         wxCHECK_MSG( m_children == NULL, false,
-                     wxT("NULL precedingNode only makes sense when there are no children") );
+                     "NULL precedingNode only makes sense when there are no children" );
 
         child->m_next = m_children;
         m_children = child;
@@ -245,7 +267,6 @@ bool wxXmlNode::InsertChildAfter(wxXmlNode *child, wxXmlNode *precedingNode)
     child->m_parent = this;
     return true;
 }
-
 
 bool wxXmlNode::RemoveChild(wxXmlNode *child)
 {
@@ -276,50 +297,65 @@ bool wxXmlNode::RemoveChild(wxXmlNode *child)
     }
 }
 
-void wxXmlNode::AddProperty(const wxString& name, const wxString& value)
+void wxXmlNode::AddAttribute(const wxString& name, const wxString& value)
 {
-    AddProperty(new wxXmlProperty(name, value, NULL));
+    AddProperty(name, value);
 }
 
-void wxXmlNode::AddProperty(wxXmlProperty *prop)
+void wxXmlNode::AddAttribute(wxXmlAttribute *attr)
 {
-    if (m_properties == NULL)
-        m_properties = prop;
+    AddProperty(attr);
+}
+
+bool wxXmlNode::DeleteAttribute(const wxString& name)
+{
+    return DeleteProperty(name);
+}
+
+void wxXmlNode::AddProperty(const wxString& name, const wxString& value)
+{
+    AddProperty(new wxXmlAttribute(name, value, NULL));
+}
+
+void wxXmlNode::AddProperty(wxXmlAttribute *attr)
+{
+    if (m_attrs == NULL)
+        m_attrs = attr;
     else
     {
-        wxXmlProperty *p = m_properties;
+        wxXmlAttribute *p = m_attrs;
         while (p->GetNext()) p = p->GetNext();
-        p->SetNext(prop);
+        p->SetNext(attr);
     }
 }
 
 bool wxXmlNode::DeleteProperty(const wxString& name)
 {
-    wxXmlProperty *prop;
+    wxXmlAttribute *attr;
 
-    if (m_properties == NULL)
+    if (m_attrs == NULL)
         return false;
 
-    else if (m_properties->GetName() == name)
+    else if (m_attrs->GetName() == name)
     {
-        prop = m_properties;
-        m_properties = prop->GetNext();
-        prop->SetNext(NULL);
-        delete prop;
+        attr = m_attrs;
+        m_attrs = attr->GetNext();
+        attr->SetNext(NULL);
+        delete attr;
         return true;
     }
 
     else
     {
-        wxXmlProperty *p = m_properties;
+        wxXmlAttribute *p = m_attrs;
         while (p->GetNext())
         {
             if (p->GetNext()->GetName() == name)
             {
-                prop = p->GetNext();
-                p->SetNext(prop->GetNext());
-                prop->SetNext(NULL);
-                delete prop;
+                attr = p->GetNext();
+                p->SetNext(attr->GetNext());
+                attr->SetNext(NULL);
+                delete attr;
                 return true;
             }
             p = p->GetNext();
@@ -371,28 +407,28 @@ bool wxXmlNode::IsWhitespaceOnly() const
 //-----------------------------------------------------------------------------
 
 wxXmlDocument::wxXmlDocument()
-    : m_version(wxT("1.0")), m_fileEncoding(wxT("utf-8")), m_root(NULL)
+    : m_version(wxS("1.0")), m_fileEncoding(wxS("UTF-8")), m_docNode(NULL)
 {
 #if !wxUSE_UNICODE
-    m_encoding = wxT("UTF-8");
+    m_encoding = wxS("UTF-8");
 #endif
 }
 
 wxXmlDocument::wxXmlDocument(const wxString& filename, const wxString& encoding)
-              :wxObject(), m_root(NULL)
+              :wxObject(), m_docNode(NULL)
 {
     if ( !Load(filename, encoding) )
     {
-        wxDELETE(m_root);
+        wxDELETE(m_docNode);
     }
 }
 
 wxXmlDocument::wxXmlDocument(wxInputStream& stream, const wxString& encoding)
-              :wxObject(), m_root(NULL)
+              :wxObject(), m_docNode(NULL)
 {
     if ( !Load(stream, encoding) )
     {
-        wxDELETE(m_root);
+        wxDELETE(m_docNode);
     }
 }
 
@@ -404,7 +440,7 @@ wxXmlDocument::wxXmlDocument(const wxXmlDocument& doc)
 
 wxXmlDocument& wxXmlDocument::operator=(const wxXmlDocument& doc)
 {
-    wxDELETE(m_root);
+    wxDELETE(m_docNode);
     DoCopy(doc);
     return *this;
 }
@@ -417,16 +453,16 @@ void wxXmlDocument::DoCopy(const wxXmlDocument& doc)
 #endif
     m_fileEncoding = doc.m_fileEncoding;
 
-    if (doc.m_root)
-        m_root = new wxXmlNode(*doc.m_root);
+    if (doc.m_docNode)
+        m_docNode = new wxXmlNode(*doc.m_docNode);
     else
-        m_root = NULL;
+        m_docNode = NULL;
 }
 
 bool wxXmlDocument::Load(const wxString& filename, const wxString& encoding, int flags)
 {
     wxFileInputStream stream(filename);
-    if (!stream.Ok())
+    if (!stream.IsOk())
         return false;
     return Load(stream, encoding, flags);
 }
@@ -434,12 +470,96 @@ bool wxXmlDocument::Load(const wxString& filename, const wxString& encoding, int
 bool wxXmlDocument::Save(const wxString& filename, int indentstep) const
 {
     wxFileOutputStream stream(filename);
-    if (!stream.Ok())
+    if (!stream.IsOk())
         return false;
     return Save(stream, indentstep);
 }
 
+wxXmlNode *wxXmlDocument::GetRoot() const
+{
+    wxXmlNode *node = m_docNode;
+    if (node)
+    {
+        node = m_docNode->GetChildren();
+        while (node != NULL && node->GetType() != wxXML_ELEMENT_NODE)
+            node = node->GetNext();
+    }
+    return node;
+}
 
+wxXmlNode *wxXmlDocument::DetachRoot()
+{
+    wxXmlNode *node = m_docNode;
+    if (node)
+    {
+        node = m_docNode->GetChildren();
+        wxXmlNode *prev = NULL;
+        while (node != NULL && node->GetType() != wxXML_ELEMENT_NODE)
+        {
+            prev = node;
+            node = node->GetNext();
+        }
+        if (node)
+        {
+            if (node == m_docNode->GetChildren())
+                m_docNode->SetChildren(node->GetNext());
+
+            if (prev)
+                prev->SetNext(node->GetNext());
+
+            node->SetParent(NULL);
+            node->SetNext(NULL);
+        }
+    }
+    return node;
+}
+
+void wxXmlDocument::SetRoot(wxXmlNode *root)
+{
+    if (root)
+    {
+        wxASSERT_MSG( root->GetType() == wxXML_ELEMENT_NODE,
+                      "Can only set an element type node as root" );
+    }
+
+    wxXmlNode *node = m_docNode;
+    if (node)
+    {
+        node = m_docNode->GetChildren();
+        wxXmlNode *prev = NULL;
+        while (node != NULL && node->GetType() != wxXML_ELEMENT_NODE)
+        {
+            prev = node;
+            node = node->GetNext();
+        }
+        if (node && root)
+        {
+            root->SetNext( node->GetNext() );
+            wxDELETE(node);
+        }
+        if (prev)
+            prev->SetNext(root);
+        else
+            m_docNode->SetChildren(root);
+    }
+    else
+    {
+        m_docNode = new wxXmlNode(wxXML_DOCUMENT_NODE, wxEmptyString);
+        m_docNode->SetChildren(root);
+    }
+    if (root)
+        root->SetParent(m_docNode);
+}
+
+void wxXmlDocument::AppendToProlog(wxXmlNode *node)
+{
+    if (!m_docNode)
+        m_docNode = new wxXmlNode(wxXML_DOCUMENT_NODE, wxEmptyString);
+    if (IsOk())
+        m_docNode->InsertChild( node, GetRoot() );
+    else
+        m_docNode->AddChild( node );
+}
 
 //-----------------------------------------------------------------------------
 //  wxXmlDocument loading routines
@@ -448,13 +568,9 @@ bool wxXmlDocument::Save(const wxString& filename, int indentstep) const
 // converts Expat-produced string in UTF-8 into wxString using the specified
 // conv or keep in UTF-8 if conv is NULL
 static wxString CharToString(wxMBConv *conv,
-                                    const char *s, size_t len = wxString::npos)
+                             const char *s, size_t len = wxString::npos)
 {
-#if wxUSE_UNICODE
-    wxUnusedVar(conv);
-
-    return wxString(s, wxConvUTF8, len);
-#else // !wxUSE_UNICODE
+#if !wxUSE_UNICODE
     if ( conv )
     {
         // there can be no embedded NULs in this string so we don't need the
@@ -464,19 +580,22 @@ static wxString CharToString(wxMBConv *conv,
 
         return wxString(wbuf, *conv);
     }
-    else // already in UTF-8, no conversion needed
-    {
-        return wxString(s, len != wxString::npos ? len : strlen(s));
-    }
-#endif // wxUSE_UNICODE/!wxUSE_UNICODE
+    // else: the string is wanted in UTF-8
+#endif // !wxUSE_UNICODE
+
+    wxUnusedVar(conv);
+    return wxString::FromUTF8Unchecked(s, len);
 }
 
 // returns true if the given string contains only whitespaces
-bool wxIsWhiteOnly(const wxChar *buf)
+bool wxIsWhiteOnly(const wxString& buf)
 {
-    for (const wxChar *c = buf; *c != wxT('\0'); c++)
-        if (*c != wxT(' ') && *c != wxT('\t') && *c != wxT('\n') && *c != wxT('\r'))
+    for ( wxString::const_iterator i = buf.begin(); i != buf.end(); ++i )
+    {
+        wxChar c = *i;
+        if ( c != wxS(' ') && c != wxS('\t') && c != wxS('\n') && c != wxS('\r'))
             return false;
+    }
     return true;
 }
 
@@ -485,15 +604,14 @@ struct wxXmlParsingContext
 {
     wxXmlParsingContext()
         : conv(NULL),
-          root(NULL),
           node(NULL),
           lastChild(NULL),
           lastAsText(NULL),
           removeWhiteOnlyNodes(false)
     {}
 
+    XML_Parser parser;
     wxMBConv  *conv;
-    wxXmlNode *root;
     wxXmlNode *node;                    // the node being parsed
     wxXmlNode *lastChild;               // the last child of "node"
     wxXmlNode *lastAsText;              // the last _text_ child of "node"
@@ -513,31 +631,27 @@ extern "C" {
 static void StartElementHnd(void *userData, const char *name, const char **atts)
 {
     wxXmlParsingContext *ctx = (wxXmlParsingContext*)userData;
-    wxXmlNode *node = new wxXmlNode(wxXML_ELEMENT_NODE, CharToString(ctx->conv, name));
+    wxXmlNode *node = new wxXmlNode(wxXML_ELEMENT_NODE,
+                                    CharToString(ctx->conv, name),
+                                    wxEmptyString,
+                                    XML_GetCurrentLineNumber(ctx->parser));
     const char **a = atts;
+
+    // add node attributes
     while (*a)
     {
-        node->AddProperty(CharToString(ctx->conv, a[0]), CharToString(ctx->conv, a[1]));
+        node->AddAttribute(CharToString(ctx->conv, a[0]), CharToString(ctx->conv, a[1]));
         a += 2;
     }
-    if (ctx->root == NULL)
-    {
-        ctx->root = node;
-    }
-    else
-    {
-        ASSERT_LAST_CHILD_OK(ctx);
-        ctx->node->InsertChildAfter(node, ctx->lastChild);
-    }
 
+    ASSERT_LAST_CHILD_OK(ctx);
+    ctx->node->InsertChildAfter(node, ctx->lastChild);
     ctx->lastAsText = NULL;
     ctx->lastChild = NULL; // our new node "node" has no children yet
 
     ctx->node = node;
 }
-}
 
-extern "C" {
 static void EndElementHnd(void *userData, const char* WXUNUSED(name))
 {
     wxXmlParsingContext *ctx = (wxXmlParsingContext*)userData;
@@ -550,9 +664,7 @@ static void EndElementHnd(void *userData, const char* WXUNUSED(name))
     ctx->node = ctx->node->GetParent();
     ctx->lastAsText = NULL;
 }
-}
 
-extern "C" {
 static void TextHnd(void *userData, const char *s, int len)
 {
     wxXmlParsingContext *ctx = (wxXmlParsingContext*)userData;
@@ -571,7 +683,8 @@ static void TextHnd(void *userData, const char *s, int len)
         if (!whiteOnly)
         {
             wxXmlNode *textnode =
-                new wxXmlNode(wxXML_TEXT_NODE, wxT("text"), str);
+                new wxXmlNode(wxXML_TEXT_NODE, wxS("text"), str,
+                              XML_GetCurrentLineNumber(ctx->parser));
 
             ASSERT_LAST_CHILD_OK(ctx);
             ctx->node->InsertChildAfter(textnode, ctx->lastChild);
@@ -579,44 +692,61 @@ static void TextHnd(void *userData, const char *s, int len)
         }
     }
 }
-}
 
-extern "C" {
 static void StartCdataHnd(void *userData)
 {
     wxXmlParsingContext *ctx = (wxXmlParsingContext*)userData;
 
     wxXmlNode *textnode =
-        new wxXmlNode(wxXML_CDATA_SECTION_NODE, wxT("cdata"),wxT(""));
+        new wxXmlNode(wxXML_CDATA_SECTION_NODE, wxS("cdata"), wxS(""),
+                      XML_GetCurrentLineNumber(ctx->parser));
 
     ASSERT_LAST_CHILD_OK(ctx);
     ctx->node->InsertChildAfter(textnode, ctx->lastChild);
     ctx->lastChild= ctx->lastAsText = textnode;
 }
+
+static void EndCdataHnd(void *userData)
+{
+    wxXmlParsingContext *ctx = (wxXmlParsingContext*)userData;
+
+    // we need to reset this pointer so that subsequent text nodes don't append
+    // their contents to this one but create new wxXML_TEXT_NODE objects (or
+    // not create anything at all if only white space follows the CDATA section
+    // and wxXMLDOC_KEEP_WHITESPACE_NODES is not used as is commonly the case)
+    ctx->lastAsText = NULL;
 }
 
-extern "C" {
 static void CommentHnd(void *userData, const char *data)
 {
     wxXmlParsingContext *ctx = (wxXmlParsingContext*)userData;
 
-    if (ctx->node)
-    {
-        // VS: ctx->node == NULL happens if there is a comment before
-        //     the root element (e.g. wxDesigner's output). We ignore such
-        //     comments, no big deal...
-        wxXmlNode *commentnode =
-            new wxXmlNode(wxXML_COMMENT_NODE,
-                          wxT("comment"), CharToString(ctx->conv, data));
-        ASSERT_LAST_CHILD_OK(ctx);
-        ctx->node->InsertChildAfter(commentnode, ctx->lastChild);
-        ctx->lastChild = commentnode;
-    }
+    wxXmlNode *commentnode =
+        new wxXmlNode(wxXML_COMMENT_NODE,
+                      wxS("comment"), CharToString(ctx->conv, data),
+                      XML_GetCurrentLineNumber(ctx->parser));
+
+    ASSERT_LAST_CHILD_OK(ctx);
+    ctx->node->InsertChildAfter(commentnode, ctx->lastChild);
+    ctx->lastChild = commentnode;
     ctx->lastAsText = NULL;
 }
+
+static void PIHnd(void *userData, const char *target, const char *data)
+{
+    wxXmlParsingContext *ctx = (wxXmlParsingContext*)userData;
+
+    wxXmlNode *pinode =
+        new wxXmlNode(wxXML_PI_NODE, CharToString(ctx->conv, target),
+                      CharToString(ctx->conv, data),
+                      XML_GetCurrentLineNumber(ctx->parser));
+
+    ASSERT_LAST_CHILD_OK(ctx);
+    ctx->node->InsertChildAfter(pinode, ctx->lastChild);
+    ctx->lastChild = pinode;
+    ctx->lastAsText = NULL;
 }
 
-extern "C" {
 static void DefaultHnd(void *userData, const char *s, int len)
 {
     // XML header:
@@ -626,25 +756,22 @@ static void DefaultHnd(void *userData, const char *s, int len)
 
         wxString buf = CharToString(ctx->conv, s, (size_t)len);
         int pos;
-        pos = buf.Find(wxT("encoding="));
+        pos = buf.Find(wxS("encoding="));
         if (pos != wxNOT_FOUND)
             ctx->encoding = buf.Mid(pos + 10).BeforeFirst(buf[(size_t)pos+9]);
-        pos = buf.Find(wxT("version="));
+        pos = buf.Find(wxS("version="));
         if (pos != wxNOT_FOUND)
             ctx->version = buf.Mid(pos + 9).BeforeFirst(buf[(size_t)pos+8]);
     }
 }
-}
 
-extern "C" {
 static int UnknownEncodingHnd(void * WXUNUSED(encodingHandlerData),
                               const XML_Char *name, XML_Encoding *info)
 {
     // We must build conversion table for expat. The easiest way to do so
     // is to let wxCSConv convert as string containing all characters to
     // wide character representation:
-    wxString str(name, wxConvLibc);
-    wxCSConv conv(str);
+    wxCSConv conv(name);
     char mbBuf[2];
     wchar_t wcBuf[10];
     size_t i;
@@ -668,7 +795,8 @@ static int UnknownEncodingHnd(void * WXUNUSED(encodingHandlerData),
 
     return 1;
 }
-}
+
+} // extern "C"
 
 bool wxXmlDocument::Load(wxInputStream& stream, const wxString& encoding, int flags)
 {
@@ -683,21 +811,24 @@ bool wxXmlDocument::Load(wxInputStream& stream, const wxString& encoding, int fl
     wxXmlParsingContext ctx;
     bool done;
     XML_Parser parser = XML_ParserCreate(NULL);
+    wxXmlNode *root = new wxXmlNode(wxXML_DOCUMENT_NODE, wxEmptyString);
 
-    ctx.root = ctx.node = NULL;
-    ctx.encoding = wxT("UTF-8"); // default in absence of encoding=""
+    ctx.encoding = wxS("UTF-8"); // default in absence of encoding=""
     ctx.conv = NULL;
 #if !wxUSE_UNICODE
-    if ( encoding.CmpNoCase(wxT("UTF-8")) != 0 )
+    if ( encoding.CmpNoCase(wxS("UTF-8")) != 0 )
         ctx.conv = new wxCSConv(encoding);
 #endif
     ctx.removeWhiteOnlyNodes = (flags & wxXMLDOC_KEEP_WHITESPACE_NODES) == 0;
+    ctx.parser = parser;
+    ctx.node = root;
 
     XML_SetUserData(parser, (void*)&ctx);
     XML_SetElementHandler(parser, StartElementHnd, EndElementHnd);
     XML_SetCharacterDataHandler(parser, TextHnd);
-    XML_SetStartCdataSectionHandler(parser, StartCdataHnd);
+    XML_SetCdataSectionHandler(parser, StartCdataHnd, EndCdataHnd);;
     XML_SetCommentHandler(parser, CommentHnd);
+    XML_SetProcessingInstructionHandler(parser, PIHnd);
     XML_SetDefaultHandler(parser, DefaultHnd);
     XML_SetUnknownEncodingHandler(parser, UnknownEncodingHnd, NULL);
 
@@ -712,7 +843,7 @@ bool wxXmlDocument::Load(wxInputStream& stream, const wxString& encoding, int fl
                            *wxConvCurrent);
             wxLogError(_("XML parsing error: '%s' at line %d"),
                        error.c_str(),
-                       XML_GetCurrentLineNumber(parser));
+                       (int)XML_GetCurrentLineNumber(parser));
             ok = false;
             break;
         }
@@ -724,11 +855,11 @@ bool wxXmlDocument::Load(wxInputStream& stream, const wxString& encoding, int fl
             SetVersion(ctx.version);
         if (!ctx.encoding.empty())
             SetFileEncoding(ctx.encoding);
-        SetRoot(ctx.root);
+        SetDocumentNode(root);
     }
     else
     {
-        delete ctx.root;
+        delete root;
     }
 
     XML_ParserFree(parser);
@@ -747,34 +878,47 @@ bool wxXmlDocument::Load(wxInputStream& stream, const wxString& encoding, int fl
 //  wxXmlDocument saving routines
 //-----------------------------------------------------------------------------
 
+// helpers for XML generation
+namespace
+{
+
 // write string to output:
-inline static void OutputString(wxOutputStream& stream, const wxString& str,
-                                wxMBConv *convMem = NULL,
-                                wxMBConv *convFile = NULL)
+bool OutputString(wxOutputStream& stream,
+                  const wxString& str,
+                  wxMBConv *convMem,
+                  wxMBConv *convFile)
 {
     if (str.empty())
-        return;
+        return true;
 
 #if wxUSE_UNICODE
     wxUnusedVar(convMem);
+    if ( !convFile )
+        convFile = &wxConvUTF8;
 
-    const wxWX2MBbuf buf(str.mb_str(*(convFile ? convFile : &wxConvUTF8)));
-    if ( !buf )
-        return;
-    stream.Write((const char*)buf, strlen((const char*)buf));
+    const wxScopedCharBuffer buf(str.mb_str(*convFile));
+    if ( !buf.length() )
+    {
+        // conversion failed, can't write this string in an XML file in this
+        // (presumably non-UTF-8) encoding
+        return false;
+    }
+
+    stream.Write(buf, buf.length());
 #else // !wxUSE_UNICODE
     if ( convFile && convMem )
     {
         wxString str2(str.wc_str(*convMem), *convFile);
-        stream.Write(str2.mb_str(), str2.Len());
+        stream.Write(str2.mb_str(), str2.length());
     }
     else // no conversions to do
     {
-        stream.Write(str.mb_str(), str.Len());
+        stream.Write(str.mb_str(), str.length());
     }
 #endif // wxUSE_UNICODE/!wxUSE_UNICODE
-}
 
+    return stream.IsOk();
+}
 
 enum EscapingMode
 {
@@ -785,52 +929,51 @@ enum EscapingMode
 // Same as above, but create entities first.
 // Translates '<' to "&lt;", '>' to "&gt;" and so on, according to the spec:
 // http://www.w3.org/TR/2000/WD-xml-c14n-20000119.html#charescaping
-static void OutputEscapedString(wxOutputStream& stream,
-                                const wxString& str,
-                                wxMBConv *convMem,
-                                wxMBConv *convFile,
-                                EscapingMode mode)
+bool OutputEscapedString(wxOutputStream& stream,
+                         const wxString& str,
+                         wxMBConv *convMem,
+                         wxMBConv *convFile,
+                         EscapingMode mode)
 {
-    const size_t len = str.Len();
-
     wxString escaped;
-    escaped.reserve( len );
+    escaped.reserve(str.length());
 
-    for (size_t i = 0; i < len; i++)
+    for ( wxString::const_iterator i = str.begin(); i != str.end(); ++i )
     {
-        const wxChar c = str.GetChar(i);
+        const wxChar c = *i;
 
         switch ( c )
         {
-            case '<':
-                escaped.append(wxT("&lt;"));
+            case wxS('<'):
+                escaped.append(wxS("&lt;"));
                 break;
-            case '>':
-                escaped.append(wxT("&gt;"));
+            case wxS('>'):
+                escaped.append(wxS("&gt;"));
                 break;
-            case '&':
-                escaped.append(wxT("&amp;"));
+            case wxS('&'):
+                escaped.append(wxS("&amp;"));
                 break;
-            case '\r':
-                escaped.append(wxT("&#xD;"));
+            case wxS('\r'):
+                escaped.append(wxS("&#xD;"));
                 break;
             default:
                 if ( mode == Escape_Attribute )
                 {
                     switch ( c )
                     {
-                        case '"':
-                            escaped.append(wxT("&quot;"));
+                        case wxS('"'):
+                            escaped.append(wxS("&quot;"));
                             break;
-                        case '\t':
-                            escaped.append(wxT("&#x9;"));
+                        case wxS('\t'):
+                            escaped.append(wxS("&#x9;"));
                             break;
-                        case '\n':
-                            escaped.append(wxT("&#xA;"));
+                        case wxS('\n'):
+                            escaped.append(wxS("&#xA;"));
                             break;
                         default:
                             escaped.append(c);
                     }
+
                 }
                 else
                 {
@@ -838,123 +981,178 @@ static void OutputEscapedString(wxOutputStream& stream,
                 }
         }
     }
-    OutputString(stream, escaped, convMem, convFile);
+
+    return OutputString(stream, escaped, convMem, convFile);
 }
 
-inline static void OutputIndentation(wxOutputStream& stream, int indent)
+bool OutputIndentation(wxOutputStream& stream,
+                       int indent,
+                       wxMBConv *convMem,
+                       wxMBConv *convFile)
 {
-    wxString str = wxT("\n");
-    for (int i = 0; i < indent; i++)
-        str << wxT(' ') << wxT(' ');
-    OutputString(stream, str);
+    wxString str(wxS("\n"));
+    str += wxString(indent, wxS(' '));
+    return OutputString(stream, str, convMem, convFile);
 }
 
-static void OutputNode(wxOutputStream& stream, wxXmlNode *node, int indent,
-                       wxMBConv *convMem, wxMBConv *convFile, int indentstep)
+bool OutputNode(wxOutputStream& stream,
+                wxXmlNode *node,
+                int indent,
+                wxMBConv *convMem,
+                wxMBConv *convFile,
+                int indentstep)
 {
-    wxXmlNode *n, *prev;
-    wxXmlProperty *prop;
-
+    bool rc;
     switch (node->GetType())
     {
         case wxXML_CDATA_SECTION_NODE:
-            OutputString( stream, wxT("<![CDATA["));
-            OutputString( stream, node->GetContent() );
-            OutputString( stream, wxT("]]>") );
+            rc = OutputString(stream, wxS("<![CDATA["), convMem, convFile) &&
+                 OutputString(stream, node->GetContent(), convMem, convFile) &&
+                 OutputString(stream, wxS("]]>"), convMem, convFile);
             break;
 
         case wxXML_TEXT_NODE:
-            OutputEscapedString(stream, node->GetContent(),
-                                convMem, convFile,
-                                Escape_Text);
+            if (node->GetNoConversion())
+            {
+                stream.Write(node->GetContent().c_str(), node->GetContent().Length());
+                rc = true;
+            }
+            else
+                rc = OutputEscapedString(stream, node->GetContent(),
+                                     convMem, convFile,
+                                     Escape_Text);
             break;
 
         case wxXML_ELEMENT_NODE:
-            OutputString(stream, wxT("<"));
-            OutputString(stream, node->GetName());
+            rc = OutputString(stream, wxS("<"), convMem, convFile) &&
+                 OutputString(stream, node->GetName(), convMem, convFile);
 
-            prop = node->GetProperties();
-            while (prop)
+            if ( rc )
             {
-                OutputString(stream, wxT(" ") + prop->GetName() +  wxT("=\""));
-                OutputEscapedString(stream, prop->GetValue(),
-                                    convMem, convFile,
-                                    Escape_Attribute);
-                OutputString(stream, wxT("\""));
-                prop = prop->GetNext();
-            }
-
-            if (node->GetChildren())
-            {
-                OutputString(stream, wxT(">"));
-                prev = NULL;
-                n = node->GetChildren();
-                while (n)
+                for ( wxXmlAttribute *attr = node->GetAttributes();
+                      attr && rc;
+                      attr = attr->GetNext() )
                 {
-                    if (indentstep >= 0 && n && n->GetType() != wxXML_TEXT_NODE)
-                        OutputIndentation(stream, indent + indentstep);
-                    OutputNode(stream, n, indent + indentstep, convMem, convFile, indentstep);
-                    prev = n;
-                    n = n->GetNext();
+                    rc = OutputString(stream,
+                                      wxS(" ") + attr->GetName() +  wxS("=\""),
+                                      convMem, convFile) &&
+                         OutputEscapedString(stream, attr->GetValue(),
+                                             convMem, convFile,
+                                             Escape_Attribute) &&
+                         OutputString(stream, wxS("\""), convMem, convFile);
                 }
-                if (indentstep >= 0 && prev && prev->GetType() != wxXML_TEXT_NODE)
-                    OutputIndentation(stream, indent);
-                OutputString(stream, wxT("</"));
-                OutputString(stream, node->GetName());
-                OutputString(stream, wxT(">"));
             }
-            else
-                OutputString(stream, wxT("/>"));
+
+            if ( node->GetChildren() )
+            {
+                rc = OutputString(stream, wxS(">"), convMem, convFile);
+
+                wxXmlNode *prev = NULL;
+                for ( wxXmlNode *n = node->GetChildren();
+                      n && rc;
+                      n = n->GetNext() )
+                {
+                    if ( indentstep >= 0 && n->GetType() != wxXML_TEXT_NODE )
+                    {
+                        rc = OutputIndentation(stream, indent + indentstep,
+                                               convMem, convFile);
+                    }
+
+                    if ( rc )
+                        rc = OutputNode(stream, n, indent + indentstep,
+                                        convMem, convFile, indentstep);
+
+                    prev = n;
+                }
+
+                if ( rc && indentstep >= 0 &&
+                        prev && prev->GetType() != wxXML_TEXT_NODE )
+                {
+                    rc = OutputIndentation(stream, indent, convMem, convFile);
+                }
+
+                if ( rc )
+                {
+                    rc = OutputString(stream, wxS("</"), convMem, convFile) &&
+                         OutputString(stream, node->GetName(),
+                                      convMem, convFile) &&
+                         OutputString(stream, wxS(">"), convMem, convFile);
+                }
+            }
+            else // no children, output "<foo/>"
+            {
+                rc = OutputString(stream, wxS("/>"), convMem, convFile);
+            }
             break;
 
         case wxXML_COMMENT_NODE:
-            OutputString(stream, wxT("<!--"));
-            OutputString(stream, node->GetContent(), convMem, convFile);
-            OutputString(stream, wxT("-->"));
+            rc = OutputString(stream, wxS("<!--"), convMem, convFile) &&
+                 OutputString(stream, node->GetContent(), convMem, convFile) &&
+                 OutputString(stream, wxS("-->"), convMem, convFile);
+            break;
+
+        case wxXML_PI_NODE:
+            rc = OutputString(stream, wxT("<?"), convMem, convFile) &&
+                 OutputString(stream, node->GetName(), convMem, convFile) &&
+                 OutputString(stream, wxT(" "), convMem, convFile) &&
+                 OutputString(stream, node->GetContent(), convMem, convFile) &&
+                 OutputString(stream, wxT("?>"), convMem, convFile);
             break;
 
         default:
-            wxFAIL_MSG(wxT("unsupported node type"));
+            wxFAIL_MSG("unsupported node type");
+            rc = false;
     }
+
+    return rc;
 }
+
+} // anonymous namespace
 
 bool wxXmlDocument::Save(wxOutputStream& stream, int indentstep) const
 {
     if ( !IsOk() )
         return false;
 
-    wxString s;
-
-    wxMBConv *convMem = NULL,
-             *convFile;
+    wxScopedPtr<wxMBConv> convMem, convFile;
 
 #if wxUSE_UNICODE
-    convFile = new wxCSConv(GetFileEncoding());
-    convMem = NULL;
+    convFile.reset(new wxCSConv(GetFileEncoding()));
 #else
     if ( GetFileEncoding().CmpNoCase(GetEncoding()) != 0 )
     {
-        convFile = new wxCSConv(GetFileEncoding());
-        convMem = new wxCSConv(GetEncoding());
+        convFile.reset(new wxCSConv(GetFileEncoding()));
+        convMem.reset(new wxCSConv(GetEncoding()));
     }
-    else // file and in-memory encodings are the same, no conversion needed
-    {
-        convFile =
-        convMem = NULL;
-    }
+    //else: file and in-memory encodings are the same, no conversion needed
 #endif
 
-    s.Printf(wxT("<?xml version=\"%s\" encoding=\"%s\"?>\n"),
-             GetVersion().c_str(), GetFileEncoding().c_str());
-    OutputString(stream, s);
+    wxString dec = wxString::Format(
+                                    wxS("<?xml version=\"%s\" encoding=\"%s\"?>\n"),
+                                    GetVersion(), GetFileEncoding()
+                                   );
+    bool rc = OutputString(stream, dec, convMem.get(), convFile.get());
 
-    OutputNode(stream, GetRoot(), 0, convMem, convFile, indentstep);
-    OutputString(stream, wxT("\n"));
+    wxXmlNode *node = GetDocumentNode();
+    if ( node )
+        node = node->GetChildren();
 
-    delete convFile;
-    delete convMem;
+    while( rc && node )
+    {
+        rc = OutputNode(stream, node, 0, convMem.get(),
+                        convFile.get(), indentstep) &&
+             OutputString(stream, wxS("\n"), convMem.get(), convFile.get());
+        node = node->GetNext();
+    }
+    return rc;
+}
 
-    return true;
+/*static*/ wxVersionInfo wxXmlDocument::GetLibraryVersionInfo()
+{
+    return wxVersionInfo("expat",
+                         XML_MAJOR_VERSION,
+                         XML_MINOR_VERSION,
+                         XML_MICRO_VERSION);
 }
 
 #endif // wxUSE_XML

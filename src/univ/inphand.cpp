@@ -1,10 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Name:        univ/inphand.cpp
+// Name:        src/univ/inphand.cpp
 // Purpose:     (trivial) wxInputHandler implementation
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     18.08.00
-// RCS-ID:      $Id: inphand.cpp 35650 2005-09-23 12:56:45Z MR $
 // Copyright:   (c) 2000 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////

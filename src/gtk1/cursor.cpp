@@ -2,7 +2,6 @@
 // Name:        src/gtk1/cursor.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: cursor.cpp 42752 2006-10-30 19:26:48Z VZ $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -31,19 +30,23 @@ extern bool g_isIdle;
 // wxCursor
 //-----------------------------------------------------------------------------
 
-class wxCursorRefData: public wxObjectRefData
+class wxCursorRefData : public wxGDIRefData
 {
-  public:
-
+public:
     wxCursorRefData();
     virtual ~wxCursorRefData();
 
     GdkCursor *m_cursor;
+
+private:
+    // There is no way to copy m_cursor so we can't implement a copy ctor
+    // properly.
+    wxDECLARE_NO_COPY_CLASS(wxCursorRefData);
 };
 
 wxCursorRefData::wxCursorRefData()
 {
-    m_cursor = (GdkCursor *) NULL;
+    m_cursor = NULL;
 }
 
 wxCursorRefData::~wxCursorRefData()
@@ -62,7 +65,7 @@ wxCursor::wxCursor()
 
 }
 
-wxCursor::wxCursor( int cursorId )
+void wxCursor::InitFromStock( wxStockCursor cursorId )
 {
     m_refData = new wxCursorRefData();
 
@@ -316,14 +319,22 @@ wxCursor::~wxCursor()
 {
 }
 
-bool wxCursor::IsOk() const
-{
-    return (m_refData != NULL);
-}
-
 GdkCursor *wxCursor::GetCursor() const
 {
     return M_CURSORDATA->m_cursor;
+}
+
+wxGDIRefData *wxCursor::CreateGDIRefData() const
+{
+    return new wxCursorRefData;
+}
+
+wxGDIRefData *
+wxCursor::CloneGDIRefData(const wxGDIRefData * WXUNUSED(data)) const
+{
+    wxFAIL_MSG( wxS("Cloning cursors is not implemented in wxGTK.") );
+
+    return new wxCursorRefData;
 }
 
 //-----------------------------------------------------------------------------
@@ -362,7 +373,7 @@ void wxBeginBusyCursor( const wxCursor *WXUNUSED(cursor) )
     if (gs_busyCount++ > 0)
         return;
 
-    wxASSERT_MSG( !gs_savedCursor.Ok(),
+    wxASSERT_MSG( !gs_savedCursor.IsOk(),
                   wxT("forgot to call wxEndBusyCursor, will leak memory") );
 
     gs_savedCursor = g_globalCursor;

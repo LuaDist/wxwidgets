@@ -4,9 +4,8 @@
 //              GtkFixed. It makes use of the gravity window property and
 //              therefore does not work with GTK 1.0.
 // Author:      Robert Roebling
-// Id:          $Id: win_gtk.c 37181 2006-01-27 17:32:03Z ABX $
 // Copyright:   (c) 1998 Robert Roebling
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////// */
 
 #ifdef VMS

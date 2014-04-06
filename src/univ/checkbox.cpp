@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     25.08.00
-// RCS-ID:      $Id: checkbox.cpp 42816 2006-10-31 08:50:17Z RD $
 // Copyright:   (c) 2000 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -59,8 +58,6 @@ public:
 // implementation
 // ============================================================================
 
-IMPLEMENT_DYNAMIC_CLASS(wxCheckBox, wxControl)
-
 // ----------------------------------------------------------------------------
 // wxCheckBox
 // ----------------------------------------------------------------------------
@@ -80,6 +77,7 @@ bool wxCheckBox::Create(wxWindow *parent,
                         const wxValidator& validator,
                         const wxString &name)
 {
+    WXValidateStyle( &style );
     if ( !wxControl::Create(parent, id, pos, size, style, validator, name) )
         return false;
 
@@ -117,7 +115,7 @@ void wxCheckBox::OnCheck()
 wxBitmap wxCheckBox::GetBitmap(State state, Status status) const
 {
     wxBitmap bmp = m_bitmaps[state][status];
-    if ( !bmp.Ok() )
+    if ( !bmp.IsOk() )
         bmp = m_bitmaps[State_Normal][status];
 
     return bmp;
@@ -179,7 +177,7 @@ void wxCheckBox::DoDraw(wxControlRenderer *renderer)
 wxSize wxCheckBox::GetBitmapSize() const
 {
     wxBitmap bmp = GetBitmap(State_Normal, Status_Checked);
-    return bmp.Ok() ? wxSize(bmp.GetWidth(), bmp.GetHeight())
+    return bmp.IsOk() ? wxSize(bmp.GetWidth(), bmp.GetHeight())
                     : GetRenderer()->GetCheckBitmapSize();
 }
 
@@ -217,7 +215,7 @@ void wxCheckBox::DoSet3StateValue(wxCheckBoxState state)
     {
         case wxCHK_UNCHECKED:    status = Status_Unchecked;   break;
         case wxCHK_CHECKED:      status = Status_Checked; break;
-        default:                 wxFAIL_MSG(_T("Unknown checkbox state"));
+        default:                 wxFAIL_MSG(wxT("Unknown checkbox state"));
         case wxCHK_UNDETERMINED: status = Status_3rdState;  break;
     }
     if ( status != m_status )
@@ -299,7 +297,7 @@ void wxCheckBox::ChangeValue(bool value)
 
 void wxCheckBox::SendEvent()
 {
-    wxCommandEvent event(wxEVT_COMMAND_CHECKBOX_CLICKED, GetId());
+    wxCommandEvent event(wxEVT_CHECKBOX, GetId());
     InitCommandEvent(event);
     wxCheckBoxState state = Get3StateValue();
 

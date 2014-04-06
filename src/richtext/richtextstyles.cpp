@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     2005-09-30
-// RCS-ID:      $Id: richtextstyles.cpp 67222 2011-03-17 09:23:18Z JS $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -35,6 +34,7 @@ IMPLEMENT_CLASS(wxRichTextStyleDefinition, wxObject)
 IMPLEMENT_CLASS(wxRichTextCharacterStyleDefinition, wxRichTextStyleDefinition)
 IMPLEMENT_CLASS(wxRichTextParagraphStyleDefinition, wxRichTextStyleDefinition)
 IMPLEMENT_CLASS(wxRichTextListStyleDefinition, wxRichTextParagraphStyleDefinition)
+IMPLEMENT_CLASS(wxRichTextBoxStyleDefinition, wxRichTextStyleDefinition)
 
 /*!
  * A definition
@@ -46,11 +46,12 @@ void wxRichTextStyleDefinition::Copy(const wxRichTextStyleDefinition& def)
     m_baseStyle = def.m_baseStyle;
     m_style = def.m_style;
     m_description = def.m_description;
+    m_properties = def.m_properties;
 }
 
 bool wxRichTextStyleDefinition::Eq(const wxRichTextStyleDefinition& def) const
 {
-    return (m_name == def.m_name && m_baseStyle == def.m_baseStyle && m_style == def.m_style);
+    return (m_name == def.m_name && m_baseStyle == def.m_baseStyle && m_style == def.m_style && m_properties == def.m_properties);
 }
 
 /// Gets the style combined with the base style
@@ -59,9 +60,10 @@ wxRichTextAttr wxRichTextStyleDefinition::GetStyleMergedWithBase(const wxRichTex
     if (m_baseStyle.IsEmpty())
         return m_style;
 
-    bool isParaStyle = IsKindOf(CLASSINFO(wxRichTextParagraphStyleDefinition));
-    bool isCharStyle = IsKindOf(CLASSINFO(wxRichTextCharacterStyleDefinition));
-    bool isListStyle = IsKindOf(CLASSINFO(wxRichTextListStyleDefinition));
+    bool isParaStyle = IsKindOf(wxCLASSINFO(wxRichTextParagraphStyleDefinition));
+    bool isCharStyle = IsKindOf(wxCLASSINFO(wxRichTextCharacterStyleDefinition));
+    bool isListStyle = IsKindOf(wxCLASSINFO(wxRichTextListStyleDefinition));
+    bool isBoxStyle  = IsKindOf(wxCLASSINFO(wxRichTextBoxStyleDefinition));
 
     // Collect the styles, detecting loops
     wxArrayString styleNames;
@@ -81,6 +83,8 @@ wxRichTextAttr wxRichTextStyleDefinition::GetStyleMergedWithBase(const wxRichTex
                 def = sheet->FindCharacterStyle(baseStyleName);
             else if (isListStyle)
                 def = sheet->FindListStyle(baseStyleName);
+            else if (isBoxStyle)
+                def = sheet->FindBoxStyle(baseStyleName);
             else
                 def = sheet->FindStyle(baseStyleName);
         }
@@ -114,6 +118,20 @@ void wxRichTextParagraphStyleDefinition::Copy(const wxRichTextParagraphStyleDefi
 bool wxRichTextParagraphStyleDefinition::operator ==(const wxRichTextParagraphStyleDefinition& def) const
 {
     return (Eq(def) && m_nextStyle == def.m_nextStyle);
+}
+
+/*!
+ * Box style definition
+ */
+
+void wxRichTextBoxStyleDefinition::Copy(const wxRichTextBoxStyleDefinition& def)
+{
+    wxRichTextStyleDefinition::Copy(def);
+}
+
+bool wxRichTextBoxStyleDefinition::operator ==(const wxRichTextBoxStyleDefinition& def) const
+{
+    return (Eq(def));
 }
 
 /*!
@@ -328,6 +346,8 @@ bool wxRichTextStyleSheet::RemoveStyle(wxRichTextStyleDefinition* def, bool dele
         return true;
     if (RemoveListStyle(def, deleteStyle))
         return true;
+    if (RemoveBoxStyle(def, deleteStyle))
+        return true;
     return false;
 }
 
@@ -337,7 +357,7 @@ wxRichTextStyleDefinition* wxRichTextStyleSheet::FindStyle(const wxList& list, c
     for (wxList::compatibility_iterator node = list.GetFirst(); node; node = node->GetNext())
     {
         wxRichTextStyleDefinition* def = (wxRichTextStyleDefinition*) node->GetData();
-        if (def->GetName().Lower() == name.Lower())
+        if (def->GetName() == name)
             return def;
     }
 
@@ -353,6 +373,7 @@ void wxRichTextStyleSheet::DeleteStyles()
     WX_CLEAR_LIST(wxList, m_characterStyleDefinitions);
     WX_CLEAR_LIST(wxList, m_paragraphStyleDefinitions);
     WX_CLEAR_LIST(wxList, m_listStyleDefinitions);
+    WX_CLEAR_LIST(wxList, m_boxStyleDefinitions);
 }
 
 /// Insert into list of style sheets
@@ -418,6 +439,13 @@ bool wxRichTextStyleSheet::AddListStyle(wxRichTextListStyleDefinition* def)
     return AddStyle(m_listStyleDefinitions, def);
 }
 
+/// Add a definition to the box style list
+bool wxRichTextStyleSheet::AddBoxStyle(wxRichTextBoxStyleDefinition* def)
+{
+    def->GetStyle().GetTextBoxAttr().SetBoxStyleName(def->GetName());
+    return AddStyle(m_boxStyleDefinitions, def);
+}
+
 /// Add a definition to the appropriate style list
 bool wxRichTextStyleSheet::AddStyle(wxRichTextStyleDefinition* def)
 {
@@ -432,6 +460,10 @@ bool wxRichTextStyleSheet::AddStyle(wxRichTextStyleDefinition* def)
     wxRichTextCharacterStyleDefinition* charDef = wxDynamicCast(def, wxRichTextCharacterStyleDefinition);
     if (charDef)
         return AddCharacterStyle(charDef);
+
+    wxRichTextBoxStyleDefinition* boxDef = wxDynamicCast(def, wxRichTextBoxStyleDefinition);
+    if (boxDef)
+        return AddBoxStyle(boxDef);
 
     return false;
 }
@@ -450,6 +482,10 @@ wxRichTextStyleDefinition* wxRichTextStyleSheet::FindStyle(const wxString& name,
     wxRichTextCharacterStyleDefinition* charDef = FindCharacterStyle(name, recurse);
     if (charDef)
         return charDef;
+
+    wxRichTextBoxStyleDefinition* boxDef = FindBoxStyle(name, recurse);
+    if (boxDef)
+        return boxDef;
 
     return NULL;
 }
@@ -479,8 +515,15 @@ void wxRichTextStyleSheet::Copy(const wxRichTextStyleSheet& sheet)
         AddListStyle(new wxRichTextListStyleDefinition(*def));
     }
 
+    for (node = sheet.m_boxStyleDefinitions.GetFirst(); node; node = node->GetNext())
+    {
+        wxRichTextBoxStyleDefinition* def = (wxRichTextBoxStyleDefinition*) node->GetData();
+        AddBoxStyle(new wxRichTextBoxStyleDefinition(*def));
+    }
+
     SetName(sheet.GetName());
     SetDescription(sheet.GetDescription());
+    m_properties = sheet.m_properties;
 }
 
 /// Equality
@@ -494,7 +537,7 @@ bool wxRichTextStyleSheet::operator==(const wxRichTextStyleSheet& WXUNUSED(sheet
 #if wxUSE_HTML
 
 // Functions for dealing with clashing names for different kinds of style.
-// Returns "P", "C", or "L" (paragraph, character, list) for
+// Returns "P", "C", "L" or "B" (paragraph, character, list or box) for
 // style name | type.
 static wxString wxGetRichTextStyleType(const wxString& style)
 {
@@ -505,6 +548,7 @@ static wxString wxGetRichTextStyle(const wxString& style)
 {
     return style.BeforeLast(wxT('|'));
 }
+
 
 /*!
  * wxRichTextStyleListBox: a listbox to display styles.
@@ -565,6 +609,8 @@ wxRichTextStyleDefinition* wxRichTextStyleListBox::GetStyle(size_t i) const
         return GetStyleSheet()->FindCharacterStyle(style);
     else if (styleType == wxT("L"))
         return GetStyleSheet()->FindListStyle(style);
+    else if (styleType == wxT("B"))
+        return GetStyleSheet()->FindBoxStyle(style);
     else
         return GetStyleSheet()->FindStyle(style);
 }
@@ -596,6 +642,11 @@ void wxRichTextStyleListBox::UpdateStyles()
             for (i = 0; i < GetStyleSheet()->GetListStyleCount(); i++)
                 m_styleNames.Add(GetStyleSheet()->GetListStyle(i)->GetName() + wxT("|L"));
         }
+        if (GetStyleType() == wxRICHTEXT_STYLE_ALL || GetStyleType() == wxRICHTEXT_STYLE_BOX)
+        {
+            for (i = 0; i < GetStyleSheet()->GetBoxStyleCount(); i++)
+                m_styleNames.Add(GetStyleSheet()->GetBoxStyle(i)->GetName() + wxT("|B"));
+        }
 
         m_styleNames.Sort();
         SetItemCount(m_styleNames.GetCount());
@@ -614,6 +665,13 @@ void wxRichTextStyleListBox::UpdateStyles()
             SendSelectedEvent();
         }
     }
+    else
+    {
+        m_styleNames.Clear();
+        SetSelection(wxNOT_FOUND);
+        SetItemCount(0);
+        Refresh();
+    }
 }
 
 // Get index for style name
@@ -626,6 +684,8 @@ int wxRichTextStyleListBox::GetIndexForStyle(const wxString& name) const
         s += wxT("|C");
     else if (GetStyleType() == wxRICHTEXT_STYLE_LIST)
         s += wxT("|L");
+    else if (GetStyleType() == wxRICHTEXT_STYLE_BOX)
+        s += wxT("|B");
     else
     {
         if (m_styleNames.Index(s + wxT("|P")) != wxNOT_FOUND)
@@ -634,6 +694,8 @@ int wxRichTextStyleListBox::GetIndexForStyle(const wxString& name) const
             s += wxT("|C");
         else if (m_styleNames.Index(s + wxT("|L")) != wxNOT_FOUND)
             s += wxT("|L");
+        else if (m_styleNames.Index(s + wxT("|B")) != wxNOT_FOUND)
+            s += wxT("|B");
     }
     return m_styleNames.Index(s);
 }
@@ -643,7 +705,11 @@ int wxRichTextStyleListBox::SetStyleSelection(const wxString& name)
 {
     int i = GetIndexForStyle(name);
     if (i > -1)
+    {
         SetSelection(i);
+        if (!IsVisible(i))
+            ScrollToRow(i);
+    }
     return i;
 }
 
@@ -673,11 +739,20 @@ wxString wxRichTextStyleListBox::CreateHTML(wxRichTextStyleDefinition* def) cons
     if (attr.HasAlignment() && attr.GetAlignment() == wxTEXT_ALIGNMENT_CENTRE)
         isCentred = true;
 
+    str << wxT("<html><head></head>");
+    str << wxT("<body");
+    if (attr.GetBackgroundColour().Ok())
+        str << wxT(" bgcolor=\"#") << ColourToHexString(attr.GetBackgroundColour()) << wxT("\"");
+    str << wxT(">");
+
     if (isCentred)
         str << wxT("<center>");
 
+    str << wxT("<table");
+    if (attr.GetBackgroundColour().Ok())
+        str << wxT(" bgcolor=\"#") << ColourToHexString(attr.GetBackgroundColour()) << wxT("\"");
 
-    str << wxT("<table><tr>");
+    str << wxT("><tr>");
 
     if (attr.GetLeftIndent() > 0)
     {
@@ -712,7 +787,7 @@ wxString wxRichTextStyleListBox::CreateHTML(wxRichTextStyleDefinition* def) cons
             name.Find(wxT("default")) != wxNOT_FOUND || name.Find(defaultTranslated) != wxNOT_FOUND)
         {
             wxRichTextAttr attr2(d->GetStyleMergedWithBase(GetStyleSheet()));
-            if (attr2.HasFontSize())
+            if (attr2.HasFontPointSize())
             {
                 stdFontSize = attr2.GetFontSize();
                 break;
@@ -733,7 +808,7 @@ wxString wxRichTextStyleListBox::CreateHTML(wxRichTextStyleDefinition* def) cons
             if (d)
             {
                 wxRichTextAttr attr2(d->GetStyleMergedWithBase(GetStyleSheet()));
-                if (attr2.HasFontSize())
+                if (attr2.HasFontPointSize())
                 {
                     if (attr2.GetFontSize() <= (int) maxSize)
                         sizes[attr2.GetFontSize()] ++;
@@ -753,7 +828,7 @@ wxString wxRichTextStyleListBox::CreateHTML(wxRichTextStyleDefinition* def) cons
     if (stdFontSize == 0)
         stdFontSize = 12;
 
-    int thisFontSize = ((attr.GetFlags() & wxTEXT_ATTR_FONT_SIZE) != 0) ? attr.GetFontSize() : stdFontSize;
+    int thisFontSize = attr.HasFontPointSize() ? attr.GetFontSize() : stdFontSize;
 
     if (thisFontSize < stdFontSize)
         size --;
@@ -767,8 +842,11 @@ wxString wxRichTextStyleListBox::CreateHTML(wxRichTextStyleDefinition* def) cons
     if (!attr.GetFontFaceName().IsEmpty())
         str << wxT(" face=\"") << attr.GetFontFaceName() << wxT("\"");
 
-    if (attr.GetTextColour().Ok())
+    if (attr.GetTextColour().IsOk())
         str << wxT(" color=\"#") << ColourToHexString(attr.GetTextColour()) << wxT("\"");
+
+    if (attr.GetBackgroundColour().Ok())
+        str << wxT(" bgcolor=\"#") << ColourToHexString(attr.GetBackgroundColour()) << wxT("\"");
 
     str << wxT(">");
 
@@ -776,9 +854,9 @@ wxString wxRichTextStyleListBox::CreateHTML(wxRichTextStyleDefinition* def) cons
     bool hasItalic = false;
     bool hasUnderline = false;
 
-    if (attr.GetFontWeight() == wxBOLD)
+    if (attr.GetFontWeight() == wxFONTWEIGHT_BOLD)
         hasBold = true;
-    if (attr.GetFontStyle() == wxITALIC)
+    if (attr.GetFontStyle() == wxFONTSTYLE_ITALIC)
         hasItalic = true;
     if (attr.GetFontUnderlined())
         hasUnderline = true;
@@ -809,6 +887,7 @@ wxString wxRichTextStyleListBox::CreateHTML(wxRichTextStyleDefinition* def) cons
     if (isCentred)
         str << wxT("</center>");
 
+    str << wxT("</body></html>");
     return str;
 }
 
@@ -828,7 +907,7 @@ void wxRichTextStyleListBox::OnLeftDown(wxMouseEvent& event)
 {
     wxVListBox::OnLeftDown(event);
 
-    int item = HitTest(event.GetPosition());
+    int item = VirtualHitTest(event.GetPosition().y);
     if (item != wxNOT_FOUND && GetApplyOnSelection())
         ApplyStyle(item);
 }
@@ -837,7 +916,7 @@ void wxRichTextStyleListBox::OnLeftDoubleClick(wxMouseEvent& event)
 {
     wxVListBox::OnLeftDown(event);
 
-    int item = HitTest(event.GetPosition());
+    int item = VirtualHitTest(event.GetPosition().y);
     if (item != wxNOT_FOUND && !GetApplyOnSelection())
         ApplyStyle(item);
 }
@@ -849,7 +928,7 @@ wxString wxRichTextStyleListBox::GetStyleToShowInIdleTime(wxRichTextCtrl* ctrl, 
 
     wxString styleName;
 
-    wxTextAttrEx attr;
+    wxRichTextAttr attr;
     ctrl->GetStyle(adjustedCaretPos, attr);
 
     // Take into account current default style just chosen by user
@@ -866,6 +945,13 @@ wxString wxRichTextStyleListBox::GetStyleToShowInIdleTime(wxRichTextCtrl* ctrl, 
         else if ((styleType == wxRICHTEXT_STYLE_ALL || styleType == wxRICHTEXT_STYLE_LIST) &&
                           !attr.GetListStyleName().IsEmpty())
             styleName = attr.GetListStyleName();
+        // TODO: when we have a concept of focused object (text box), we'll
+        // use the paragraph style name of the focused object as the frame style name.
+#if 0
+        else if ((styleType == wxRICHTEXT_STYLE_ALL || styleType == wxRICHTEXT_STYLE_BOX) &&
+                          !attr.GetBoxStyleName().IsEmpty())
+            styleName = attr.GetBoxStyleName();
+#endif
     }
     else if ((styleType == wxRICHTEXT_STYLE_ALL || styleType == wxRICHTEXT_STYLE_CHARACTER) &&
              !attr.GetCharacterStyleName().IsEmpty())
@@ -945,11 +1031,7 @@ bool wxRichTextStyleListCtrl::Create(wxWindow* parent, wxWindowID id, const wxPo
         const wxSize& size, long style)
 {
     if ((style & wxBORDER_MASK) == wxBORDER_DEFAULT)
-#ifdef __WXMSW__
-        style |= GetThemedBorderStyle();
-#else
-        style |= wxBORDER_SUNKEN;
-#endif
+        style |= wxBORDER_THEME;
 
     wxControl::Create(parent, id, pos, size, style);
 
@@ -961,13 +1043,7 @@ bool wxRichTextStyleListCtrl::Create(wxWindow* parent, wxWindowID id, const wxPo
 
     wxBorder listBoxStyle;
     if (showSelector)
-    {
-#ifdef __WXMSW__
-        listBoxStyle = GetThemedBorderStyle();
-#else
-        listBoxStyle = wxBORDER_SUNKEN;
-#endif
-    }
+        listBoxStyle = wxBORDER_THEME;
     else
         listBoxStyle = wxBORDER_NONE;
 
@@ -982,11 +1058,12 @@ bool wxRichTextStyleListCtrl::Create(wxWindow* parent, wxWindowID id, const wxPo
         choices.Add(_("Paragraph styles"));
         choices.Add(_("Character styles"));
         choices.Add(_("List styles"));
+        choices.Add(_("Box styles"));
 
         m_styleChoice = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, choices);
 
         boxSizer->Add(m_styleListBox, 1, wxALL|wxEXPAND, 5);
-        boxSizer->Add(m_styleChoice, 0, wxALL|wxEXPAND, 5);
+        boxSizer->Add(m_styleChoice, 0, wxLEFT|wxRIGHT|wxBOTTOM|wxEXPAND, 5);
     }
     else
     {
@@ -1056,6 +1133,10 @@ int wxRichTextStyleListCtrl::StyleTypeToIndex(wxRichTextStyleListBox::wxRichText
     {
         return 3;
     }
+    else if (styleType == wxRichTextStyleListBox::wxRICHTEXT_STYLE_BOX)
+    {
+        return 4;
+    }
     return 0;
 }
 
@@ -1068,6 +1149,8 @@ wxRichTextStyleListBox::wxRichTextStyleType wxRichTextStyleListCtrl::StyleIndexT
         return wxRichTextStyleListBox::wxRICHTEXT_STYLE_CHARACTER;
     else if (i == 3)
         return wxRichTextStyleListBox::wxRICHTEXT_STYLE_LIST;
+    else if (i == 4)
+        return wxRichTextStyleListBox::wxRICHTEXT_STYLE_BOX;
 
     return wxRichTextStyleListBox::wxRICHTEXT_STYLE_ALL;
 }
@@ -1105,8 +1188,10 @@ wxRichTextCtrl* wxRichTextStyleListCtrl::GetRichTextCtrl() const
 /// Set/get the style type to display
 void wxRichTextStyleListCtrl::SetStyleType(wxRichTextStyleListBox::wxRichTextStyleType styleType)
 {
-    if (m_styleListBox)
-        m_styleListBox->SetStyleType(styleType);
+    if ( !m_styleListBox )
+        return;
+
+    m_styleListBox->SetStyleType(styleType);
 
     m_dontUpdate = true;
 
@@ -1146,6 +1231,17 @@ BEGIN_EVENT_TABLE(wxRichTextStyleComboPopup, wxRichTextStyleListBox)
     EVT_LEFT_DOWN(wxRichTextStyleComboPopup::OnMouseClick)
 END_EVENT_TABLE()
 
+bool wxRichTextStyleComboPopup::Create( wxWindow* parent )
+{
+    int borderStyle = GetDefaultBorder();
+    if (borderStyle == wxBORDER_SUNKEN || borderStyle == wxBORDER_NONE)
+        borderStyle = wxBORDER_THEME;
+
+    return wxRichTextStyleListBox::Create(parent, wxID_ANY,
+                                  wxPoint(0,0), wxDefaultSize,
+                                  borderStyle);
+}
+
 void wxRichTextStyleComboPopup::SetStringValue( const wxString& s )
 {
     m_value = SetStyleSelection(s);
@@ -1172,7 +1268,7 @@ void wxRichTextStyleComboPopup::OnMouseMove(wxMouseEvent& event)
 {
     // Move selection to cursor if it is inside the popup
 
-    int itemHere = wxRichTextStyleListBox::HitTest(event.GetPosition());
+    int itemHere = wxRichTextStyleListBox::VirtualHitTest(event.GetPosition().y);
     if ( itemHere >= 0 )
     {
         wxRichTextStyleListBox::SetSelection(itemHere);
@@ -1236,9 +1332,19 @@ bool wxRichTextStyleComboCtrl::Create(wxWindow* parent, wxWindowID id, const wxP
 
 void wxRichTextStyleComboCtrl::OnIdle(wxIdleEvent& event)
 {
-    if (GetRichTextCtrl() && !IsPopupShown() && m_stylePopup && IsShownOnScreen() && wxWindow::FindFocus() != this)
+    event.Skip();
+
+    if ( !m_stylePopup )
+        return;
+
+    wxRichTextCtrl * const richtext = GetRichTextCtrl();
+    if ( !richtext )
+        return;
+
+    if ( !IsPopupShown() && IsShownOnScreen() && wxWindow::FindFocus() != this )
     {
-        wxString styleName = wxRichTextStyleListBox::GetStyleToShowInIdleTime(GetRichTextCtrl(), m_stylePopup->GetStyleType());
+        wxString styleName =
+            wxRichTextStyleListBox::GetStyleToShowInIdleTime(richtext, m_stylePopup->GetStyleType());
 
         wxString currentValue = GetValue();
         if (!styleName.IsEmpty())
@@ -1252,7 +1358,6 @@ void wxRichTextStyleComboCtrl::OnIdle(wxIdleEvent& event)
         else if (!currentValue.IsEmpty())
             SetValue(wxEmptyString);
     }
-    event.Skip();
 }
 
 #endif

@@ -4,7 +4,6 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2007/04/20 (move from NSWindow.mm)
-// RCS-ID:      $Id: NSWindow.h 47989 2007-08-09 18:17:18Z DE $
 // Copyright:   (c) 2003 David Elliott
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////

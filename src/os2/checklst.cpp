@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/13/99
-// RCS-ID:      $Id: checklst.cpp 39734 2006-06-14 19:51:14Z ABX $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -33,10 +32,17 @@
     #include "wx/font.h"
 #endif
 
+#include "wx/os2/dc.h"
 #include "wx/ownerdrw.h"
 
 #define INCL_PM
 #include <os2.h>
+
+// ----------------------------------------------------------------------------
+// constants for base class
+// ----------------------------------------------------------------------------
+
+static const int CHECK_MARK_WIDTH = 15;
 
 // ----------------------------------------------------------------------------
 // private functions
@@ -48,8 +54,6 @@
 // ============================================================================
 // implementation
 // ============================================================================
-
-IMPLEMENT_DYNAMIC_CLASS(wxCheckListBox, wxListBox)
 
 // ----------------------------------------------------------------------------
 // declaration and implementation of wxCheckListBoxItem class
@@ -80,6 +84,8 @@ public:
     void Check(bool bCheck);
     void Toggle(void) { Check(!IsChecked()); }
 
+    virtual wxString GetName() const { return m_pParent->GetString(m_nIndex); }
+
 private:
     bool            m_bChecked;
     wxCheckListBox* m_pParent;
@@ -100,7 +106,7 @@ wxCheckListBoxItem::wxCheckListBoxItem(wxCheckListBox* pParent, size_t nIndex)
     // done in OnMeasure while they are used only in OnDraw and we
     // know that there will always be OnMeasure before OnDraw
     //
-    SetMarginWidth(GetDefaultMarginWidth());
+    SetMarginWidth(CHECK_MARK_WIDTH);
 } // end of wxCheckListBoxItem::wxCheckListBoxItem
 
 
@@ -112,7 +118,9 @@ bool wxCheckListBoxItem::OnDrawItem ( wxDC& rDc,
 {
     wxRect vRect = rRect;
 
-    ::WinQueryWindowRect( m_pParent->GetHWND(), &rDc.m_vRclPaint );
+
+    wxPMDCImpl *impl = (wxPMDCImpl*) rDc.GetImpl();
+    ::WinQueryWindowRect( m_pParent->GetHWND(), &impl->m_vRclPaint );
     if (IsChecked())
         eStat = (wxOwnerDrawn::wxODStatus)(eStat | wxOwnerDrawn::wxODChecked);
 
@@ -125,7 +133,7 @@ bool wxCheckListBoxItem::OnDrawItem ( wxDC& rDc,
     vRect.y -= 3;
     if (wxOwnerDrawn::OnDrawItem( rDc, vRect, eAct, eStat))
     {
-        size_t    nCheckWidth  = GetDefaultMarginWidth();
+        size_t    nCheckWidth  = CHECK_MARK_WIDTH;
         size_t    nCheckHeight = m_pParent->GetItemHeight();
         int       nParentHeight;
         int       nX = rRect.GetX();
@@ -167,8 +175,8 @@ bool wxCheckListBoxItem::OnDrawItem ( wxDC& rDc,
             //
             HBITMAP hChkBmp = ::WinGetSysBitmap( HWND_DESKTOP, SBMP_MENUCHECK );
             POINTL  vPoint = {nX, nOldY + 3};
-
-            ::WinDrawBitmap( rDc.GetHPS(),
+            wxPMDCImpl *impl = (wxPMDCImpl*) rDc.GetImpl();
+            ::WinDrawBitmap( impl->GetHPS(),
                              hChkBmp,
                              NULL,
                              &vPoint,
@@ -205,7 +213,7 @@ void wxCheckListBoxItem::Check( bool bCheck )
     }
 
 
-    wxCommandEvent vEvent( wxEVT_COMMAND_CHECKLISTBOX_TOGGLED,m_pParent->GetId());
+    wxCommandEvent vEvent( wxEVT_CHECKLISTBOX,m_pParent->GetId());
 
     vEvent.SetInt(m_nIndex);
     vEvent.SetEventObject(m_pParent);
@@ -284,25 +292,6 @@ void wxCheckListBox::Delete(unsigned int n)
     m_aItems.RemoveAt(n);
 } // end of wxCheckListBox::Delete
 
-void wxCheckListBox::DoInsertItems(const wxArrayString& items, unsigned int pos)
-{
-    // pos is validated in wxListBox
-    wxListBox::DoInsertItems( items, pos );
-    unsigned int n = items.GetCount();
-    for (unsigned int i = 0; i < n; i++)
-    {
-        wxOwnerDrawn* pNewItem = CreateItem((size_t)(pos + i));
-
-        pNewItem->SetName(items[i]);
-        m_aItems.Insert(pNewItem, (size_t)(pos + i));
-        ::WinSendMsg( (HWND)GetHWND(),
-                      LM_SETITEMHANDLE,
-                      (MPARAM)(i + pos),
-                      MPFROMP(pNewItem)
-                    );
-    }
-} // end of wxCheckListBox::InsertItems
-
 bool wxCheckListBox::SetFont ( const wxFont& rFont )
 {
     for (unsigned int i = 0; i < m_aItems.GetCount(); i++)
@@ -349,7 +338,7 @@ long wxCheckListBox::OS2OnMeasure ( WXMEASUREITEMSTRUCT* pItem )
         //
         // Add place for the check mark
         //
-        pStruct->rclItem.xRight += wxOwnerDrawn::GetDefaultMarginWidth();
+        pStruct->rclItem.xRight += CHECK_MARK_WIDTH;
         return long(MRFROM2SHORT((USHORT)m_nItemHeight, (USHORT)(pStruct->rclItem.xRight - pStruct->rclItem.xLeft)));
     }
     return 0L;
@@ -390,7 +379,7 @@ void wxCheckListBox::OnLeftClick ( wxMouseEvent& rEvent )
     //
     // Clicking on the item selects it, clicking on the checkmark toggles
     //
-    if (rEvent.GetX() <= wxOwnerDrawn::GetDefaultMarginWidth())
+    if (rEvent.GetX() <= CHECK_MARK_WIDTH)
     {
         int                         nParentHeight;
         wxScreenDC                  vDc;

@@ -1,7 +1,7 @@
                     How to write unit tests for wxWidgets
                     =====================================
 
- Unit tests for wxWidgets are written using small cppunit framework. To compile
+Unit tests for wxWidgets are written using small cppunit framework. To compile
 (but not to run) them you need to have it installed. Hence the first part of
 this note explains how to do it while the second one explains how to write the
 test.
@@ -10,14 +10,14 @@ I. CppUnit Installation
 -----------------------
 
 1. Get it from http://www.sourceforge.net/projects/cppunit
-   (latest version as of the time of this writing is 1.8.0)
+   (latest version as of the time of this writing is 1.10.2)
 
 2. Build the library:
- a) Under Windows using VC++ (both versions 6 and 7 work):
+ a) Under Windows using VC++ (versions 6, 7, 8 & 9 work):
     - build everything in CppUnitLibraries.dsw work space
     - add include and lib subdirectories of the directory
       where you installed cppunit to the compiler search path
-      using "Tools|Options" menu in VC IDEA
+      using "Tools|Options" menu in VC IDE
 
  b) Under Unix: run configure && make && make install as usual
 
@@ -38,12 +38,33 @@ II. Writing tests with CppUnit
     // register in the unnamed registry so that these tests are run by default
     CPPUNIT_TEST_SUITE_REGISTRATION(MBConvTestCase);
 
-    // also include in it's own registry so that these tests can be run alone
+    // also include in its own registry so that these tests can be run alone
     CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(MBConvTestCase, "MBConvTestCase");
 
-   Read CppUnit documentation for more.
+    Read CppUnit documentation for more.
+ d) wxUIActionSimulator can be used when user input is required, for example
+    clicking buttons or typing text. A simple example of this can be found
+    in controls/buttontest.cpp. After simulating some user input always
+    wxYield to allow event processing. When writing a test using
+    wxUIActionSimulator always add the test using WXUISIM_TEST rather than
+    CPPUNIT_TEST as then it won't run on unsupported platforms. The test itself
+    must also be wrapped in a #if wxUSE_UIACTIONSIMULATOR block.
+ e) There are a number of classes that are available to help with testing GUI
+    elements. Firstly throughout the test run there is a frame of type
+    wxTestableFrame that you can access through wxTheApp->GetTopWindow(). This
+    class adds two new functions, GetEventCount, which takes an optional
+    wxEventType. It then returns the number of events of that type that it has
+    received since the last call. Passing nothing returns the total number of
+    event received since the last call. Also there is OnEvent, which counts the
+    events based on type that are passed to it. To make it easy to count events
+    there is also a new class called EventCounter which takes a window and event
+    type and connects the window to the top level wxTestableFrame with the specific
+    event type. It disconnects again once it is out of scope. It simply reduces
+    the amount of typing required to count events.
 
-3. add a '<sources>' tag for your source file to tests/test.bkl
+3. add a '<sources>' tag for your source file to tests/test.bkl. Make sure it's
+   in the correct section: the one starting '<exe id="test_gui"' for a gui test,
+   the one starting '<exe id="test" template="wx_sample_console' otherwise.
 
 
 III. Running the tests
@@ -57,16 +78,17 @@ III. Running the tests
 2. Build the test program using one of the make/project files in the tests
    subdirectory.
 
-3. Run the test program with no arguments to run the default set of tests
-   (which are all those registered with CPPUNIT_TEST_SUITE_REGISTRATION).
+3. Run the test program by using the command 'test' for the console tests,
+   'test_gui' for the gui ones. With no arguments, all the default set of tests
+   (all those registered with CPPUNIT_TEST_SUITE_REGISTRATION) are run.
    Or to list the test suites without running them:
-      test -l
+      test -l   or   test_gui -l
 
 4. Tests that have been registered under a name using
    CPPUNIT_TEST_SUITE_NAMED_REGISTRATION can also be run separately. For
    example:
-      test MBConvTestCase
-   or to list the tests:
+      test_gui ButtonTestCase
+   or to list the tests done by a particular testcase:
       test -L MBConvTestCase
 
 5. Fault navigation.
@@ -108,7 +130,7 @@ IV. Notes
     //CPPUNIT_TEST_SUITE_REGISTRATION(wxRegExTestCase);
     CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(wxRegExTestCase, "fixme");
 
-    // also include in it's own registry so that these tests can be run alone
+    // also include in its own registry so that these tests can be run alone
     CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(wxRegExTestCase, "wxRegExTestCase");
 
 4. Tests which take a long time to execute can be registered under "advanced"
@@ -120,4 +142,3 @@ IV. Notes
 === EOF ===
 
 Author:  VZ & MW
-Version: $Id: tn0017.txt 33984 2005-05-08 16:16:34Z MW $

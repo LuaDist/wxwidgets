@@ -5,7 +5,6 @@
 # Author:      Ron <ron@debian.org>
 # Modified by:
 # Created:     8/9/2004
-# RCS-ID:      $Id: wx-config.in 63003 2009-12-28 01:56:31Z PC $
 # Copyright:   (c) 2004 Ron <ron@debian.org>
 #              Essentially a fresh start this time around, but for maximum
 #              compatibility basic code was taken from, and heavy reference
@@ -45,29 +44,40 @@ usage()
 
  wx-config [--prefix[=DIR]] [--exec-prefix[=DIR]] [--release] [--version-full]
            [--list] [--selected-config] [--host=HOST] [--toolkit=TOOLKIT]
-	   [--universal[=yes|no]] [--unicode[=yes|no]] [--debug[=yes|no]]
-	   [--static[=yes|no]] [--version[=VERSION]] [--basename] [--cc]
-	   [--cppflags] [--cflags] [--cxxflags] [--rescomp] [--libs] [--cxx]
-	   [--ld] [--linkdeps] [--utility=UTIL] [LIB ...] 
+           [--universal[=yes|no]] [--unicode[=yes|no]] [--static[=yes|no]]
+           [--debug[=yes|no]] [--version[=VERSION]] [--basename] [--cc] [--cxx]
+           [--cppflags [base]] [--cxxflags [base]] [--cflags]
+           [--rescomp] [--linkdeps] [--ld] [--utility=UTIL]
+           [--libs [LIBS...]] [--optional-libs [LIBS...]]
 
     wx-config returns information about the wxWidgets libraries available on
   your system.  It may be used to retrieve the information required to build
-  applications using these libraries using --cppflags, --cflags,  --cxxflags
+  applications using these libraries using --cppflags, --cxxflags, --cflags,
   and --libs options. And you may query the properties of this configuration
   using --query-{host,toolkit,widgetset,chartype,debugtype,version,linkage}.
 
+    NOTE:    Usage of --debug and --query-debugtype are only relevant if you
+  have any  versions prior to 2.9 installed  and use the --version option to
+  select an earlier version.
+
     If multiple builds of wxWidgets  are available,  you can use the options
-  --prefix, --host, --toolkit, --unicode, --debug, --static, --universal and
-  --version to select from them. The --selected-config option shows the name
-  of the current configuration and --list shows available alternatives which
-  match specified criteria. The --utility option returns the correct version
-  of UTIL to use with the selected build. The --linkdeps option returns only
+  --prefix, --host, --toolkit, --unicode, --static, --universal or --version
+  to select from them.  The  --selected-config  option shows the name of the
+  current configuration and --list  shows available alternatives which match
+  specified criteria.  The  --utility  option returns the correct version of
+  UTIL to use with the selected build.  The  --linkdeps  option returns only
   static libraries for your makefile link rule dependencies.
 
-    Optional LIB arguments (comma or space separated) may be used to specify
-  the wxWidgets libraries that  you wish  to use.  The magic "std" label may
-  be used to import all libraries that would be used by default if none were
-  specified explicitly, e.g. wx-config --libs core,base.
+    The LIBS arguments (comma or space separated) may be used to specify the
+  wxWidgets libraries that  you wish to use. The "std" label may be used  to
+  import all libraries that would be used by default if none were  specified
+  explicitly, e.g. wx-config --libs core,base. The "all" label may  be  used
+  to  import  all libraries that have been compiled which are shown  in  the
+  list  below.  The  --optional-libs parameter should be followed by  a list
+  of  libs that should be linked to, but only if they are available.
+
+  Available libraries in this build are:
+  @BUILT_WX_LIBS@
 
 EOF
 
@@ -118,6 +128,7 @@ wxconfig_output_options="prefix exec_prefix
                          rescomp
                          rezflags
                          libs
+                         optional_libs
                          linkdeps
                          cc cxx ld
                          gl_libs"
@@ -127,6 +138,10 @@ wxconfig_output_options="prefix exec_prefix
 wxconfig_input_options="prefix exec_prefix utility $wxconfig_schema"
 
 # Input options that accept only a yes or no argument.
+#
+# Notice that this includes "debug" but it is done only for compatibility, this
+# options (i.e. --debug[=yes] or --debug=no) is completely ignored as there is
+# no distinction between debug and release builds in wx any more
 wxconfig_yesno_options="universal unicode debug static"
 
 # Boolean options that do something or not.
@@ -141,7 +156,7 @@ wxconfig_flag_options="$wxconfig_yesno_options selected_config no_rpath inplace"
 # Returns NAME if _string is of the form: --NAME[=...]
 option_name()
 {
-    echo "$1" | sed 's/^--//;s/=.*//' | tr '-' '_'
+    echo "$1" | sed -e 's/^--//' -e 's/=.*//' -e s/-/_/g
 }
 
 # option_value _string
@@ -182,7 +197,7 @@ remove_field()
 }
 
 # validate_arg _domain _set _name _value
-# Boilerplate to validate an argument and initialise a psuedo-hash.
+# Boilerplate to validate an argument and initialise a pseudo-hash.
 # This one is almost reduction into absurdity, and perhaps makes the
 # precise action of the argument parser below just a little more
 # obscure, but oh so neat and compact to use for multiple option
@@ -229,13 +244,16 @@ check_yesno_option()
 }
 
 
+MAC_FRAMEWORK=
+MAC_FRAMEWORK_PREFIX=
+
 
 # Now we are ready to find out what the user wants from us.
 # --------------------------------------------------------------
 
 # With just a little more complexity here we could have shortest
 # unique string matching for options, but that is probably overkill
-# today, so lets just get the job done.
+# today, so let's just get the job done.
 #
 # The important thing now then is that we simply read all input from
 # the user and don't try to act prematurely on partial information.
@@ -278,8 +296,24 @@ for arg do
         ;;
 
     *)
-        # FIXME Surely we can validate the parameters too ...
-        input_parameters="${input_parameters:+$input_parameters }$arg"
+        # We validate the parameters later ...
+
+        if [ "$_name" = "cxxflags" ] || [ "$_name" = "cppflags" ] || [ "$_name" = "cflags" ]; then
+            cxx_parameters="${cxx_parameters:+$cxx_parameters }$arg"
+        elif [ "$_name" = "libs" ]; then
+            libs_parameters="${libs_parameters:+$libs_parameters }$arg"
+        elif [ "$_name" = "optional_libs" ]; then
+            optional_libs_parameters="${optional_libs_parameters:+$optional_libs_parameters }$arg"
+        else
+            # normally anything here are unattached arguments and signify an
+            # error but for compatibility with the 2.8 wx-config and,
+            # especially, configure scripts generated using 2.8 wxwin.m4 and
+            # hence doing `wx-config --version base,std`, we ignore anything
+            # following this option, just as 2.8 version used to do
+            if [ "$_name" != "version" ]; then
+                input_parameters="${input_parameters:+$input_parameters }$arg"
+            fi
+        fi
         continue
         ;;
   esac
@@ -293,15 +327,16 @@ done
 
 check_yesno_option universal widgetset univ
 check_yesno_option unicode chartype unicode ansi
-check_yesno_option debug debugtype debug release
 check_yesno_option static linkage static
-
+check_yesno_option debug debugtype debug release
 
 # Dump everything we just read in debug mode.
 if [ -n "$WXDEBUG" ]; then
 
     decho
-    decho "  input parameters  = $input_parameters"
+    decho "  input parameters          = $input_parameters"
+    decho "  libs parameters           = $libs_parameters"
+    decho "  optional-libs parameters  = $optional_libs_parameters"
     decho "  input options     = $input_options"
     for i in $input_options; do
         decho "    $i = `eval echo \"\\\$input_option_$i\"`"
@@ -324,7 +359,7 @@ fi
 
 
 
-# Everything came in as a legal argument then, lets put some of
+# Everything came in as a legal argument then, let's put some of
 # the pieces together with a little self knowledge to see what
 # we should do next.
 # --------------------------------------------------------------
@@ -353,10 +388,10 @@ get_mask()
 
     # use 2.8 or 2.9 version of the mask: the difference is the presence of
     # debug type in pre-2.9
-    if [ $is29orlater = 0 ]; then
-        eval echo "\${$1_host:+\$$1_host-}\${$1_toolkit}\${$1_widgetset}-\${$1_chartype}-\${$1_debugtype}\${$1_linkage:+-\$$1_linkage}-\${$1_version}\${$1_flavour}"
-    else
+    if [ $is29orlater = 1 ]; then
         eval echo "\${$1_host:+\$$1_host-}\${$1_toolkit}\${$1_widgetset}-\${$1_chartype}\${$1_linkage:+-\$$1_linkage}-\${$1_version}\${$1_flavour}"
+    else
+        eval echo "\${$1_host:+\$$1_host-}\${$1_toolkit}\${$1_widgetset}-\${$1_chartype}-\${$1_debugtype}\${$1_linkage:+-\$$1_linkage}-\${$1_version}\${$1_flavour}"
     fi
 }
 
@@ -379,7 +414,7 @@ this_host="${target:+${target}}"
 this_toolkit="@TOOLKIT_DIR@@TOOLKIT_VERSION@"
 this_widgetset="@WIDGET_SET@"
 this_chartype="@WX_CHARTYPE@"
-this_debugtype="@WX_DEBUGTYPE@"
+this_debugtype="release"
 this_flavour="@WX_FLAVOUR@"
 this_version="@WX_RELEASE@"
 this_linkage=`[ "x@SHARED@" = "x1" ] || echo 'static'`
@@ -403,7 +438,7 @@ m_linkage=${input_option_linkage-'?(static)?'}
 # since it is version-dependent
 
 if [ -z "$input_option_version" ]; then
-    m_ourversion="2.8"
+    m_ourversion="2.9"
 else
     m_ourversion=$m_version
 fi
@@ -527,7 +562,7 @@ not()               { if "$@"; then false; else true; fi; }
 # and its downhill fast from here if we have to ride that boat.
 # Early pruning still gets that down to under half a second (up from about
 # .25), so we have some breathing space yet before a different search method
-# will be called for, but lets not squander it.
+# will be called for, but let's not squander it.
 do_find_best_delegate()
 {
   (
@@ -554,7 +589,7 @@ do_find_best_delegate()
                 for d in `find_eligible_delegates "$_mask"`; do
                     decho "  ${_fbd_indent}    $d"
                 done
-            fi 
+            fi
 
             count_delegates "$_mask"
             _still_eligible=$?
@@ -611,8 +646,7 @@ get_legacy_mask()
 {
     [ $# -gt 0 ] || set m
     eval [ "x\${$1_chartype}" != "xunicode" ] || _unicode_flag=u
-    eval [ "x\${$1_debugtype}" != "xdebug" ] || _debug_flag=d
-    eval echo "wx\${$1_toolkit}${_unicode_flag}${_debug_flag}-\${$1_version}\${$1_host}-config"
+    eval echo "wx\${$1_toolkit}${_unicode_flag}-\${$1_version}\${$1_host}-config"
 }
 
 # find_legacy_configs
@@ -708,16 +742,16 @@ if [ -n "$output_option_list" ]; then
             echo "  Specification matches legacy config: $_last_chance"
 
         else
-        
+
             cat <<-EOF
-	  No config found to match: $config_spec
-	  in $wxconfdir
+          No config found to match: $config_spec
+          in $wxconfdir
 
-	  Please install the desired library build, or specify a different
-	  prefix where it may be found.  If the library is not installed
-	  you may call its wx-config directly by specifying its full path.
+          Please install the desired library build, or specify a different
+          prefix where it may be found.  If the library is not installed
+          you may call its wx-config directly by specifying its full path.
 
-	EOF
+EOF
 
         fi
 
@@ -764,7 +798,7 @@ fi
 
 if not user_mask_fits "$this_config" ; then
 
-    # No?  Then lets see if it knows anybody who can.
+    # No?  Then let's see if it knows anybody who can.
     # But first, just be sure someone hasn't typo'd us into a loop.
     # In present day wx, correct delegation should never need more
     # than one hop so this is trivial to detect.
@@ -807,7 +841,7 @@ if not user_mask_fits "$this_config" ; then
                     --rezflags|--inplace)
                         _legacy_args="$_legacy_args $arg"
                         ;;
-                    
+
                     --static|--static=y*|--static=Y*)
                         _legacy_args="$_legacy_args --static"
                         ;;
@@ -828,15 +862,15 @@ if not user_mask_fits "$this_config" ; then
 
             cat 1>&2 <<-EOF
 
-	  Warning: No config found to match: $config_spec
-	           in $wxconfdir
-	  If you require this configuration, please install the desired
-	  library build.  If this is part of an automated configuration
-	  test and no other errors occur, you may safely ignore it.
-	  You may use wx-config --list to see all configs available in
-	  the default prefix.
+          Warning: No config found to match: $config_spec
+                   in $wxconfdir
+          If you require this configuration, please install the desired
+          library build.  If this is part of an automated configuration
+          test and no other errors occur, you may safely ignore it.
+          You may use wx-config --list to see all configs available in
+          the default prefix.
 
-	EOF
+EOF
 
             # PIPEDREAM: from here we are actually just a teensy step
             # from simply building the missing config for the user
@@ -853,7 +887,7 @@ if not user_mask_fits "$this_config" ; then
         best_delegate=`find_best_delegate`
 
         if [ -n "$best_delegate" ]; then
-            
+
             if [ -n "$WXDEBUG" ]; then
                 decho "  found a suitable delegate: $best_delegate"
                 decho "--> $wxconfdir/$best_delegate $*"
@@ -916,7 +950,7 @@ bindir="@bindir@"
 [ -z "$output_option_basename"      ] || echo "@WX_LIBRARY_BASENAME_GUI@"
 [ -z "$output_option_cc"            ] || echo "@CC@"
 [ -z "$output_option_cxx"           ] || echo "@CXX@"
-[ -z "$output_option_ld"            ] || echo "@EXE_LINKER@"
+[ -z "$output_option_ld"            ] || echo "@CXX@ -o"
 [ -z "$flag_option_selected_config" ] || echo "$this_config"
 
 for q in $query_options; do
@@ -928,7 +962,7 @@ if [ -n "$output_option_rezflags" ]; then
     echo "@true"
     decho "Warning: --rezflags, along with Mac OS classic resource building" \
           "is deprecated.  You should remove this from your Makefile and" \
-	  "build .app bundles instead."
+          "build .app bundles instead."
 fi
 
 
@@ -996,9 +1030,44 @@ ldlibs_core="@EXTRALIBS_GUI@"
 ldlibs_gl="@OPENGL_LIBS@"
 ldlibs_html="@EXTRALIBS_HTML@"
 ldlibs_xml="@EXTRALIBS_XML@"
-ldlibs_odbc="@EXTRALIBS_ODBC@"
 ldlibs_adv="@EXTRALIBS_SDL@"
+ldlibs_stc="@EXTRALIBS_STC@"
 
+
+# Order the libraries passed to us correctly for static linking.
+#
+# While the libraries order doesn't matter when linking dynamically, we must
+# put the libraries depending on other libraries in front of their dependencies
+# when linking statically or the dependencies wouldn't be resolved by the
+# standard UNIX linkers.
+order_libs()
+{
+    if is_static; then
+        for lib do
+            # Distinguish between the libraries that may need to be moved to
+            # the end of the list (because other ones may depend on them) and
+            # those that can be output immediately because no other libraries
+            # depend on them.
+            case "$lib" in
+                base|core|html|xml|adv) eval "use_$lib=1" ;;
+                *)                      libs="$libs $lib" ;;
+            esac
+        done
+
+        # Add the libraries that we postponed adding above.
+        # Order of the checks here is important.
+        [ -z "$use_html" ] || libs="$libs html"
+        [ -z "$use_adv" ] || libs="$libs adv"
+        [ -z "$use_core" ] || libs="$libs core"
+        [ -z "$use_xml" ] || libs="$libs xml"
+        [ -z "$use_base" ] || libs="$libs base"
+    else
+        # No need to order them.
+        libs="$@"
+    fi
+
+    echo $libs
+}
 
 # lib_flags_for _liblist
 # This function returns a list of flags suitable to return with the
@@ -1037,7 +1106,7 @@ lib_flags_for()
             match_field "$f" $_all_ldflags || _all_ldflags="$_all_ldflags $f"
         done
 
-        if match_field "$lib" @CORE_BASE_LIBS@ ; then
+        if match_field "$lib" @STD_BASE_LIBS@ ; then
             _libname="@WX_LIBRARY_BASENAME_NOGUI@"
         else
             _libname="@WX_LIBRARY_BASENAME_GUI@"
@@ -1096,7 +1165,7 @@ link_deps_for()
     is_cross && _target="-${target}"
 
     for lib do
-        if match_field "$lib" @CORE_BASE_LIBS@ ; then
+        if match_field "$lib" @STD_BASE_LIBS@ ; then
             _libname="@WX_LIBRARY_BASENAME_NOGUI@"
         else
             _libname="@WX_LIBRARY_BASENAME_GUI@"
@@ -1113,59 +1182,87 @@ link_deps_for()
 # Sanity check the list of libs the user provided us, if any.
 # --------------------------------------------------------------
 
-wx_libs=`echo "$input_parameters" | tr ',' ' '`
+wx_libs=`echo "$libs_parameters" | tr ',' ' '`
+wx_optional_libs=`echo "$optional_libs_parameters" | tr ',' ' '`
+
+# Add the --optional-libs, if they've been compiled and aren't already added
+for i in $wx_optional_libs; do
+    if match_field $i @BUILT_WX_LIBS@; then
+        if not match_field $i $wx_libs; then
+            wx_libs="${wx_libs:+$wx_libs }$i"
+        fi
+    fi
+done
 
 [ -z "$WXDEBUG" ] || decho "  user supplied libs: '$wx_libs'"
 
+# Assume we are using the GUI, unless --libs was specified with no GUI libs
+using_gui=yes
+
 if is_monolithic; then
 
-    # Core libs are already built into the blob.
-    for i in std @CORE_GUI_LIBS@ @CORE_BASE_LIBS@; do
-        wx_libs=`remove_field $i $wx_libs`
-    done
+    # Only add additional info if --libs was specified and not just --optional-libs
+    if [ -n "$output_option_libs" ]; then
+        # Core libs are already built into the blob.
+        for i in std @STD_GUI_LIBS@ @STD_BASE_LIBS@; do
+            wx_libs=`remove_field $i $wx_libs`
+        done
 
-    wx_libs="@WXCONFIG_LDFLAGS_GUI@ `lib_flags_for $wx_libs`"
+        wx_libs=`order_libs $wx_libs`
+        wx_libs="@WXCONFIG_LDFLAGS_GUI@ `lib_flags_for $wx_libs`"
 
-    # We still need the core lib deps for a static build though
-    if is_static; then
-        link_deps="${libdir}/libwx_@TOOLCHAIN_NAME@.a" 
-        wx_libs="$wx_libs $link_deps $ldlibs_core $ldlibs_base"
-    else
-        wx_libs="$wx_libs -lwx_@TOOLCHAIN_NAME@"
+        # We still need the core lib deps for a static build though
+        if is_static; then
+            link_deps="${libdir}/libwx_@TOOLCHAIN_NAME@.a"
+            wx_libs="$wx_libs $link_deps $ldlibs_core $ldlibs_base"
+        else
+            wx_libs="$wx_libs -lwx_@TOOLCHAIN_NAME@"
+        fi
     fi
-
-    using_gui=yes
-
 else    # MONOLITHIC = 0
 
-    # Import everything by default, expand std if specified, or add base if omitted.
-    if [ -z "$wx_libs" ]; then
-        wx_libs="@CORE_GUI_LIBS@ @CORE_BASE_LIBS@"
+    # Import core libs by default, expand std if specified, or add base if omitted.
+    if [ -n "$output_option_libs" ] && [ -z "$libs_parameters" ]; then
+        wx_libs="@STD_GUI_LIBS@ @STD_BASE_LIBS@"
+    elif match_field all $wx_libs; then
+        wx_libs="@BUILT_WX_LIBS@"
     elif match_field std $wx_libs; then
         # Bubble any libs that were already specified to the end
         # of the list and ensure static linking order is retained.
         wx_libs=`remove_field std $wx_libs`
-        for i in @CORE_GUI_LIBS@ @CORE_BASE_LIBS@; do
+        for i in @STD_GUI_LIBS@ @STD_BASE_LIBS@; do
             wx_libs="`remove_field $i $wx_libs` $i"
         done
     elif not match_field base $wx_libs ; then
-        wx_libs="$wx_libs base"
+        # Only add base if --libs was specified and not just --optional-libs
+        if [ -n "$output_option_libs" ]; then
+            wx_libs="$wx_libs base"
+        fi
     fi
 
-    using_gui=no
-    for i in $wx_libs ; do
-        if match_field "$i" @CORE_GUI_LIBS@ ; then
-            _guildflags="@WXCONFIG_LDFLAGS_GUI@"
-            using_gui=yes
-            break
-        fi
-        match_field "$i" @CORE_BASE_LIBS@ || using_gui=yes
-    done
+    if [ -n "$output_option_libs" ]; then
+        using_gui=no
+        for i in $wx_libs ; do
+            if match_field "$i" @STD_GUI_LIBS@; then
+                _guildflags="@WXCONFIG_LDFLAGS_GUI@"
+                using_gui=yes
+                break
+            fi
+            match_field "$i" @STD_BASE_LIBS@ || using_gui=yes
+        done
+    fi
 
     if is_static; then
         link_deps=`link_deps_for $wx_libs`
     fi
+    wx_libs=`order_libs $wx_libs`
     wx_libs="$_guildflags `lib_flags_for $wx_libs`"
+fi
+
+
+# If they explicitly set "--cxx(pp)flags base" then they don't want the GUI
+if [ "$cxx_parameters" = "base" ]; then
+    using_gui=no
 fi
 
 
@@ -1185,7 +1282,7 @@ fi
 if is_installed; then
     _include_cppflags="-I${includedir}/wx-@WX_RELEASE@@WX_FLAVOUR@"
 else
-    _include_cppflags="-I${includedir} -I${prefix}/contrib/include"
+    _include_cppflags="-I${includedir}"
 fi
 
 _cppflags=`echo "-I${libdir}/wx/include/@TOOLCHAIN_FULLNAME@" $_include_cppflags "@WXCONFIG_CPPFLAGS@" $_gui_cppflags`
@@ -1198,15 +1295,30 @@ _cppflags=`echo "-I${libdir}/wx/include/@TOOLCHAIN_FULLNAME@" $_include_cppflags
 [ -z "$output_option_linkdeps" ] || echo $link_deps
 
 if [ -n "$output_option_libs" ]; then
+    # if --libs [--optional-libs] then output the full linker information
 
     is_cross                                    &&
         [ "x$libdir" = "x/usr/${target}/lib" ]  ||
         [ "x$libdir" = "x/usr/lib" ]            ||
         _ldflags="-L$libdir"
 
+    if [ -n "$MAC_FRAMEWORK" ]; then
+	wx_libs="-framework $MAC_FRAMEWORK"
+	if [ -n "$MAC_FRAMEWORK_PREFIX" ]; then
+	    _ldflags="-F$MAC_FRAMEWORK_PREFIX"
+	else
+	    _ldflags=""
+	fi
+    fi
+
     is_installed || [ -n "$flag_option_no_rpath" ] || _rpath="@WXCONFIG_RPATH@"
 
-    echo $_ldflags "@LDFLAGS@" $_rpath $wx_libs "@DMALLOC_LIBS@"
+    echo $_ldflags "@WXCONFIG_LDFLAGS@" $_rpath $wx_libs "@DMALLOC_LIBS@"
+
+elif [ -n "$output_option_optional_libs" ]; then
+    # if only --optional-libs then output just the libs
+
+    echo $wx_libs
 fi
 
 
@@ -1248,16 +1360,15 @@ if [ -n "$output_option_rescomp" ]; then
     case "@RESCOMP@" in
       *windres|wrc)
         # Note that with late model windres, we could just insert
-	# _include_cppflags here, but use the old notation for now
-	# as it is more universally accepted.
+        # _include_cppflags here, but use the old notation for now
+        # as it is more universally accepted.
         if is_installed; then
             echo "@RESCOMP@ --include-dir" \
                            "${includedir}/wx-@WX_RELEASE@@WX_FLAVOUR@" \
                            "@WXCONFIG_RESFLAGS@"
         else
             echo "@RESCOMP@ --include-dir ${includedir}" \
-                           "--include-dir ${prefix}/contrib/include" \
-		           "@WXCONFIG_RESFLAGS@"
+                           "@WXCONFIG_RESFLAGS@"
         fi
         ;;
 
@@ -1276,5 +1387,3 @@ fi
 # And so that's it, we're done.  Have a nice build.
 
 exit 0
-
-

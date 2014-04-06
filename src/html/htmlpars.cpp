@@ -2,7 +2,6 @@
 // Name:        src/html/htmlpars.cpp
 // Purpose:     wxHtmlParser class (generic parser)
 // Author:      Vaclav Slavik
-// RCS-ID:      $Id: htmlpars.cpp 66413 2010-12-20 17:40:05Z JS $
 // Copyright:   (c) 1999 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -15,11 +14,12 @@
 
 #if wxUSE_HTML && wxUSE_STREAMS
 
-#ifndef WXPRECOMP
+#ifndef WX_PRECOMP
     #include "wx/dynarray.h"
     #include "wx/log.h"
     #include "wx/intl.h"
     #include "wx/app.h"
+    #include "wx/wxcrtvararg.h"
 #endif
 
 #include "wx/tokenzr.h"
@@ -28,7 +28,7 @@
 #include "wx/fontmap.h"
 #include "wx/html/htmldefs.h"
 #include "wx/html/htmlpars.h"
-#include "wx/arrimpl.cpp"
+#include "wx/vector.h"
 
 #ifdef __WXWINCE__
     #include "wx/msw/wince/missing.h"       // for bsearch()
@@ -37,7 +37,7 @@
 // DLL options compatibility check:
 WX_CHECK_BUILD_OPTIONS("wxHTML")
 
-const wxChar *wxTRACE_HTML_DEBUG = _T("htmldebug");
+const wxChar *wxTRACE_HTML_DEBUG = wxT("htmldebug");
 
 //-----------------------------------------------------------------------------
 // wxHtmlParser helpers
@@ -46,12 +46,17 @@ const wxChar *wxTRACE_HTML_DEBUG = _T("htmldebug");
 class wxHtmlTextPiece
 {
 public:
-    wxHtmlTextPiece(int pos, int lng) : m_pos(pos), m_lng(lng) {}
-    int m_pos, m_lng;
+    wxHtmlTextPiece() {}
+    wxHtmlTextPiece(const wxString::const_iterator& start,
+                    const wxString::const_iterator& end)
+        : m_start(start), m_end(end) {}
+    wxString::const_iterator m_start, m_end;
 };
 
-WX_DECLARE_OBJARRAY(wxHtmlTextPiece, wxHtmlTextPieces);
-WX_DEFINE_OBJARRAY(wxHtmlTextPieces)
+// NB: this is an empty class and not typedef because of forward declaration
+class wxHtmlTextPieces : public wxVector<wxHtmlTextPiece>
+{
+};
 
 class wxHtmlParserState
 {
@@ -60,7 +65,7 @@ public:
     wxHtmlTag         *m_tags;
     wxHtmlTextPieces  *m_textPieces;
     int                m_curTextPiece;
-    wxString           m_source;
+    const wxString    *m_source;
     wxHtmlParserState *m_nextState;
 };
 
@@ -71,9 +76,10 @@ public:
 IMPLEMENT_ABSTRACT_CLASS(wxHtmlParser,wxObject)
 
 wxHtmlParser::wxHtmlParser()
-    : wxObject(), m_HandlersHash(wxKEY_STRING),
-      m_FS(NULL), m_HandlersStack(NULL)
+    : wxObject(),
+      m_FS(NULL)
 {
+    m_Source = NULL;
     m_entitiesParser = new wxHtmlEntitiesParser;
     m_Tags = NULL;
     m_CurTag = NULL;
@@ -87,18 +93,10 @@ wxHtmlParser::~wxHtmlParser()
     while (RestoreState()) {}
     DestroyDOMTree();
 
-    if (m_HandlersStack)
-    {
-        wxList& tmp = *m_HandlersStack;
-        wxList::iterator it, en;
-        for( it = tmp.begin(), en = tmp.end(); it != en; ++it )
-            delete (wxHashTable*)*it;
-        tmp.clear();
-    }
-    delete m_HandlersStack;
-    m_HandlersHash.Clear();
-    WX_CLEAR_LIST(wxList, m_HandlersList);
+    WX_CLEAR_ARRAY(m_HandlersStack);
+    WX_CLEAR_HASH_SET(wxHtmlTagHandlersSet, m_HandlersSet);
     delete m_entitiesParser;
+    delete m_Source;
 }
 
 wxObject* wxHtmlParser::Parse(const wxString& source)
@@ -124,7 +122,15 @@ void wxHtmlParser::DoneParser()
 void wxHtmlParser::SetSource(const wxString& src)
 {
     DestroyDOMTree();
-    m_Source = src;
+    // NB: This is allocated on heap because wxHtmlTag uses iterators and
+    //     making a copy of m_Source string in SetSourceAndSaveState() and
+    //     RestoreState() would invalidate them (because wxString::m_impl's
+    //     memory would change completely twice and iterators use pointers
+    //     into it). So instead, we keep the string object intact and only
+    //     store/restore pointer to it, for which we need it to be allocated
+    //     on the heap.
+    delete m_Source;
+    m_Source = new wxString(src);
     CreateDOMTree();
     m_CurTag = NULL;
     m_CurTextPiece = 0;
@@ -132,72 +138,53 @@ void wxHtmlParser::SetSource(const wxString& src)
 
 void wxHtmlParser::CreateDOMTree()
 {
-    wxHtmlTagsCache cache(m_Source);
+    wxHtmlTagsCache cache(*m_Source);
     m_TextPieces = new wxHtmlTextPieces;
-    CreateDOMSubTree(NULL, 0, m_Source.length(), &cache);
+    CreateDOMSubTree(NULL, m_Source->begin(), m_Source->end(), &cache);
     m_CurTextPiece = 0;
 }
 
-extern bool wxIsCDATAElement(const wxChar *tag);
+extern bool wxIsCDATAElement(const wxString& tag);
 
 void wxHtmlParser::CreateDOMSubTree(wxHtmlTag *cur,
-                                    int begin_pos, int end_pos,
+                                    const wxString::const_iterator& begin_pos,
+                                    const wxString::const_iterator& end_pos,
                                     wxHtmlTagsCache *cache)
 {
-    if (end_pos <= begin_pos) return;
+    if (end_pos <= begin_pos)
+        return;
 
     wxChar c;
-    int i = begin_pos;
-    int textBeginning = begin_pos;
+    wxString::const_iterator i = begin_pos;
+    wxString::const_iterator textBeginning = begin_pos;
 
     // If the tag contains CDATA text, we include the text between beginning
     // and ending tag verbosely. Setting i=end_pos will skip to the very
     // end of this function where text piece is added, bypassing any child
     // tags parsing (CDATA element can't have child elements by definition):
-    if (cur != NULL && wxIsCDATAElement(cur->GetName().c_str()))
+    if (cur != NULL && wxIsCDATAElement(cur->GetName()))
     {
         i = end_pos;
     }
 
     while (i < end_pos)
     {
-        c = m_Source.GetChar(i);
+        c = *i;
 
         if (c == wxT('<'))
         {
             // add text to m_TextPieces:
-            if (i - textBeginning > 0)
-                m_TextPieces->Add(
-                    wxHtmlTextPiece(textBeginning, i - textBeginning));
+            if (i > textBeginning)
+                m_TextPieces->push_back(wxHtmlTextPiece(textBeginning, i));
 
             // if it is a comment, skip it:
-            if (i < end_pos-6 && m_Source.GetChar(i+1) == wxT('!') &&
-                                 m_Source.GetChar(i+2) == wxT('-') &&
-                                 m_Source.GetChar(i+3) == wxT('-'))
+            if ( SkipCommentTag(i, m_Source->end()) )
             {
-                // Comments begin with "<!--" and end with "--[ \t\r\n]*>"
-                // according to HTML 4.0
-                int dashes = 0;
-                i += 4;
-                while (i < end_pos)
-                {
-                    c = m_Source.GetChar(i++);
-                    if ((c == wxT(' ') || c == wxT('\n') ||
-                        c == wxT('\r') || c == wxT('\t')) && dashes >= 2) {}
-                    else if (c == wxT('>') && dashes >= 2)
-                    {
-                        textBeginning = i;
-                        break;
-                    }
-                    else if (c == wxT('-'))
-                        dashes++;
-                    else
-                        dashes = 0;
-                }
+                textBeginning = i = i + 1; // skip closing '>' too
             }
 
             // add another tag to the tree:
-            else if (i < end_pos-1 && m_Source.GetChar(i+1) != wxT('/'))
+            else if (i < end_pos-1 && *(i+1) != wxT('/'))
             {
                 wxHtmlTag *chd;
                 if (cur)
@@ -225,12 +212,12 @@ void wxHtmlParser::CreateDOMSubTree(wxHtmlTag *cur,
                 if (chd->HasEnding())
                 {
                     CreateDOMSubTree(chd,
-                                     chd->GetBeginPos(), chd->GetEndPos1(),
+                                     chd->GetBeginIter(), chd->GetEndIter1(),
                                      cache);
-                    i = chd->GetEndPos2();
+                    i = chd->GetEndIter2();
                 }
                 else
-                    i = chd->GetBeginPos();
+                    i = chd->GetBeginIter();
 
                 textBeginning = i;
             }
@@ -238,17 +225,16 @@ void wxHtmlParser::CreateDOMSubTree(wxHtmlTag *cur,
             // ... or skip ending tag:
             else
             {
-                while (i < end_pos && m_Source.GetChar(i) != wxT('>')) i++;
-                textBeginning = i+1;
+                while (i < end_pos && *i != wxT('>')) ++i;
+                textBeginning = i < end_pos ? i+1 : i;
             }
         }
-        else i++;
+        else ++i;
     }
 
     // add remaining text to m_TextPieces:
-    if (end_pos - textBeginning > 0)
-        m_TextPieces->Add(
-            wxHtmlTextPiece(textBeginning, end_pos - textBeginning));
+    if (end_pos > textBeginning)
+        m_TextPieces->push_back(wxHtmlTextPiece(textBeginning, end_pos));
 }
 
 void wxHtmlParser::DestroyDOMTree()
@@ -263,50 +249,52 @@ void wxHtmlParser::DestroyDOMTree()
     }
     m_Tags = m_CurTag = NULL;
 
-    delete m_TextPieces;
-    m_TextPieces = NULL;
+    wxDELETE(m_TextPieces);
 }
 
 void wxHtmlParser::DoParsing()
 {
     m_CurTag = m_Tags;
     m_CurTextPiece = 0;
-    DoParsing(0, m_Source.length());
+    DoParsing(m_Source->begin(), m_Source->end());
 }
 
-void wxHtmlParser::DoParsing(int begin_pos, int end_pos)
+void wxHtmlParser::DoParsing(const wxString::const_iterator& begin_pos_,
+                             const wxString::const_iterator& end_pos)
 {
-    if (end_pos <= begin_pos) return;
+    wxString::const_iterator begin_pos(begin_pos_);
+
+    if (end_pos <= begin_pos)
+        return;
 
     wxHtmlTextPieces& pieces = *m_TextPieces;
-    size_t piecesCnt = pieces.GetCount();
+    size_t piecesCnt = pieces.size();
 
     while (begin_pos < end_pos)
     {
-        while (m_CurTag && m_CurTag->GetBeginPos() < begin_pos)
+        while (m_CurTag && m_CurTag->GetBeginIter() < begin_pos)
             m_CurTag = m_CurTag->GetNextTag();
         while (m_CurTextPiece < piecesCnt &&
-               pieces[m_CurTextPiece].m_pos < begin_pos)
+               pieces[m_CurTextPiece].m_start < begin_pos)
             m_CurTextPiece++;
 
         if (m_CurTextPiece < piecesCnt &&
             (!m_CurTag ||
-             pieces[m_CurTextPiece].m_pos < m_CurTag->GetBeginPos()))
+             pieces[m_CurTextPiece].m_start < m_CurTag->GetBeginIter()))
         {
             // Add text:
             AddText(GetEntitiesParser()->Parse(
-                       m_Source.Mid(pieces[m_CurTextPiece].m_pos,
-                                    pieces[m_CurTextPiece].m_lng)));
-            begin_pos = pieces[m_CurTextPiece].m_pos +
-                        pieces[m_CurTextPiece].m_lng;
+                       wxString(pieces[m_CurTextPiece].m_start,
+                                pieces[m_CurTextPiece].m_end)));
+            begin_pos = pieces[m_CurTextPiece].m_end;
             m_CurTextPiece++;
         }
         else if (m_CurTag)
         {
             if (m_CurTag->HasEnding())
-                begin_pos = m_CurTag->GetEndPos2();
+                begin_pos = m_CurTag->GetEndIter2();
             else
-                begin_pos = m_CurTag->GetBeginPos();
+                begin_pos = m_CurTag->GetBeginIter();
             wxHtmlTag *t = m_CurTag;
             m_CurTag = m_CurTag->GetNextTag();
             AddTag(*t);
@@ -319,20 +307,19 @@ void wxHtmlParser::DoParsing(int begin_pos, int end_pos)
 
 void wxHtmlParser::AddTag(const wxHtmlTag& tag)
 {
-    wxHtmlTagHandler *h;
     bool inner = false;
 
-    h = (wxHtmlTagHandler*) m_HandlersHash.Get(tag.GetName());
-    if (h)
+    wxHtmlTagHandlersHash::const_iterator h = m_HandlersHash.find(tag.GetName());
+    if (h != m_HandlersHash.end())
     {
-        inner = h->HandleTag(tag);
+        inner = h->second->HandleTag(tag);
         if (m_stopParsing)
             return;
     }
     if (!inner)
     {
         if (tag.HasEnding())
-            DoParsing(tag.GetBeginPos(), tag.GetEndPos1());
+            DoParsing(tag.GetBeginIter(), tag.GetEndIter1());
     }
 }
 
@@ -342,10 +329,9 @@ void wxHtmlParser::AddTagHandler(wxHtmlTagHandler *handler)
     wxStringTokenizer tokenizer(s, wxT(", "));
 
     while (tokenizer.HasMoreTokens())
-        m_HandlersHash.Put(tokenizer.GetNextToken(), handler);
+        m_HandlersHash[tokenizer.GetNextToken()] = handler;
 
-    if (m_HandlersList.IndexOf(handler) == wxNOT_FOUND)
-        m_HandlersList.Append(handler);
+    m_HandlersSet.insert(handler);
 
     handler->SetParser(this);
 }
@@ -355,39 +341,24 @@ void wxHtmlParser::PushTagHandler(wxHtmlTagHandler *handler, const wxString& tag
     wxStringTokenizer tokenizer(tags, wxT(", "));
     wxString key;
 
-    if (m_HandlersStack == NULL)
-    {
-        m_HandlersStack = new wxList;
-    }
-
-    m_HandlersStack->Insert((wxObject*)new wxHashTable(m_HandlersHash));
+    m_HandlersStack.push_back(new wxHtmlTagHandlersHash(m_HandlersHash));
 
     while (tokenizer.HasMoreTokens())
     {
         key = tokenizer.GetNextToken();
-        m_HandlersHash.Delete(key);
-        m_HandlersHash.Put(key, handler);
+        m_HandlersHash[key] = handler;
     }
 }
 
 void wxHtmlParser::PopTagHandler()
 {
-    wxList::compatibility_iterator first;
+    wxCHECK_RET( !m_HandlersStack.empty(),
+                 "attempt to remove HTML tag handler from empty stack" );
 
-    if ( !m_HandlersStack ||
-#if wxUSE_STL
-         !(first = m_HandlersStack->GetFirst())
-#else // !wxUSE_STL
-         ((first = m_HandlersStack->GetFirst()) == NULL)
-#endif // wxUSE_STL/!wxUSE_STL
-        )
-    {
-        wxLogWarning(_("Warning: attempt to remove HTML tag handler from empty stack."));
-        return;
-    }
-    m_HandlersHash = *((wxHashTable*) first->GetData());
-    delete (wxHashTable*) first->GetData();
-    m_HandlersStack->Erase(first);
+    wxHtmlTagHandlersHash *prev = m_HandlersStack.back();
+    m_HandlersStack.pop_back();
+    m_HandlersHash = *prev;
+    delete prev;
 }
 
 void wxHtmlParser::SetSourceAndSaveState(const wxString& src)
@@ -407,7 +378,7 @@ void wxHtmlParser::SetSourceAndSaveState(const wxString& src)
     m_Tags = NULL;
     m_TextPieces = NULL;
     m_CurTextPiece = 0;
-    m_Source = wxEmptyString;
+    m_Source = NULL;
 
     SetSource(src);
 }
@@ -417,6 +388,7 @@ bool wxHtmlParser::RestoreState()
     if (!m_SavedStates) return false;
 
     DestroyDOMTree();
+    delete m_Source;
 
     wxHtmlParserState *s = m_SavedStates;
     m_SavedStates = s->m_nextState;
@@ -433,8 +405,7 @@ bool wxHtmlParser::RestoreState()
 
 wxString wxHtmlParser::GetInnerSource(const wxHtmlTag& tag)
 {
-    return GetSource()->Mid(tag.GetBeginPos(),
-                            tag.GetEndPos1() - tag.GetBeginPos());
+    return wxString(tag.GetBeginIter(), tag.GetEndIter1());
 }
 
 //-----------------------------------------------------------------------------
@@ -460,7 +431,7 @@ void wxHtmlTagHandler::ParseInnerSource(const wxString& source)
 IMPLEMENT_DYNAMIC_CLASS(wxHtmlEntitiesParser,wxObject)
 
 wxHtmlEntitiesParser::wxHtmlEntitiesParser()
-#if wxUSE_WCHAR_T && !wxUSE_UNICODE
+#if !wxUSE_UNICODE
     : m_conv(NULL), m_encoding(wxFONTENCODING_SYSTEM)
 #endif
 {
@@ -468,14 +439,14 @@ wxHtmlEntitiesParser::wxHtmlEntitiesParser()
 
 wxHtmlEntitiesParser::~wxHtmlEntitiesParser()
 {
-#if wxUSE_WCHAR_T && !wxUSE_UNICODE
+#if !wxUSE_UNICODE
     delete m_conv;
 #endif
 }
 
+#if !wxUSE_UNICODE
 void wxHtmlEntitiesParser::SetEncoding(wxFontEncoding encoding)
 {
-#if wxUSE_WCHAR_T && !wxUSE_UNICODE
     if (encoding == m_encoding)
         return;
 
@@ -486,18 +457,18 @@ void wxHtmlEntitiesParser::SetEncoding(wxFontEncoding encoding)
         m_conv = NULL;
     else
         m_conv = new wxCSConv(wxFontMapper::GetEncodingName(m_encoding));
-#else
-    (void) encoding;
-#endif
 }
+#endif // !wxUSE_UNICODE
 
-wxString wxHtmlEntitiesParser::Parse(const wxString& input)
+wxString wxHtmlEntitiesParser::Parse(const wxString& input) const
 {
-    const wxChar *c, *last;
-    const wxChar *in_str = input.c_str();
     wxString output;
 
-    for (c = in_str, last = in_str; *c != wxT('\0'); c++)
+    const wxString::const_iterator end(input.end());
+    wxString::const_iterator c(input.begin());
+    wxString::const_iterator last(c);
+
+    for ( ; c < end; ++c )
     {
         if (*c == wxT('&'))
         {
@@ -505,55 +476,49 @@ wxString wxHtmlEntitiesParser::Parse(const wxString& input)
                 output.reserve(input.length());
 
             if (c - last > 0)
-                output.append(last, c - last);
-            if ( *++c == wxT('\0') )
+                output.append(last, c);
+            if ( ++c == end )
                 break;
 
             wxString entity;
-            const wxChar *ent_s = c;
+            const wxString::const_iterator ent_s = c;
             wxChar entity_char;
 
-            for (; (*c >= wxT('a') && *c <= wxT('z')) ||
-                   (*c >= wxT('A') && *c <= wxT('Z')) ||
-                   (*c >= wxT('0') && *c <= wxT('9')) ||
-                   *c == wxT('_') || *c == wxT('#'); c++) {}
-            entity.append(ent_s, c - ent_s);
-            if (*c != wxT(';')) c--;
+            for ( ; c != end; ++c )
+            {
+                wxChar ch = *c;
+                if ( !((ch >= wxT('a') && ch <= wxT('z')) ||
+                       (ch >= wxT('A') && ch <= wxT('Z')) ||
+                       (ch >= wxT('0') && ch <= wxT('9')) ||
+                        ch == wxT('_') || ch == wxT('#')) )
+                    break;
+            }
+
+            entity.append(ent_s, c);
+            if (c == end || *c != wxT(';')) --c;
             last = c+1;
             entity_char = GetEntityChar(entity);
             if (entity_char)
                 output << entity_char;
             else
             {
-                output.append(ent_s-1, c-ent_s+2);
+                output.append(ent_s-1, c+1);
                 wxLogTrace(wxTRACE_HTML_DEBUG,
-                           wxT("Unrecognized HTML entity: '%s'"),
-                           entity.c_str());
+                           "Unrecognized HTML entity: '%s'",
+                           entity);
             }
         }
     }
-    if (last == in_str) // common case: no entity
+    if ( last == input.begin() ) // common case: no entity
         return input;
-    if (*last != wxT('\0'))
-        output.append(last);
+    if ( last != end )
+        output.append(last, end);
     return output;
 }
 
-struct wxHtmlEntityInfo
-{
-    const wxChar *name;
-    unsigned code;
-};
-
-extern "C" int LINKAGEMODE wxHtmlEntityCompare(const void *key, const void *item)
-{
-    return wxStrcmp((wxChar*)key, ((wxHtmlEntityInfo*)item)->name);
-}
-
 #if !wxUSE_UNICODE
-wxChar wxHtmlEntitiesParser::GetCharForCode(unsigned code)
+wxChar wxHtmlEntitiesParser::GetCharForCode(unsigned code) const
 {
-#if wxUSE_WCHAR_T
     char buf[2];
     wchar_t wbuf[2];
     wbuf[0] = (wchar_t)code;
@@ -562,13 +527,25 @@ wxChar wxHtmlEntitiesParser::GetCharForCode(unsigned code)
     if (conv->WC2MB(buf, wbuf, 2) == (size_t)-1)
         return '?';
     return buf[0];
-#else
-    return (code < 256) ? (wxChar)code : '?';
-#endif
 }
 #endif
 
-wxChar wxHtmlEntitiesParser::GetEntityChar(const wxString& entity)
+struct wxHtmlEntityInfo
+{
+    const wxStringCharType *name;
+    unsigned code;
+};
+
+extern "C" int LINKAGEMODE wxHtmlEntityCompare(const void *key, const void *item)
+{
+#if wxUSE_UNICODE_UTF8
+    return strcmp((char*)key, ((wxHtmlEntityInfo*)item)->name);
+#else
+    return wxStrcmp((wxChar*)key, ((wxHtmlEntityInfo*)item)->name);
+#endif
+}
+
+wxChar wxHtmlEntitiesParser::GetEntityChar(const wxString& entity) const
 {
     unsigned code = 0;
 
@@ -577,16 +554,18 @@ wxChar wxHtmlEntitiesParser::GetEntityChar(const wxString& entity)
 
     if (entity[0] == wxT('#'))
     {
-        const wxChar *ent_s = entity.c_str();
-        const wxChar *format;
+        // NB: parsed value is a number, so it's OK to use wx_str(), internal
+        //     representation is the same for numbers
+        const wxStringCharType *ent_s = entity.wx_str();
+        const wxStringCharType *format;
 
-        if (ent_s[1] == wxT('x') || ent_s[1] == wxT('X'))
+        if (ent_s[1] == wxS('x') || ent_s[1] == wxS('X'))
         {
-            format = wxT("%x");
+            format = wxS("%x");
             ent_s++;
         }
         else
-            format = wxT("%u");
+            format = wxS("%u");
         ent_s++;
 
         if (wxSscanf(ent_s, format, &code) != 1)
@@ -594,270 +573,276 @@ wxChar wxHtmlEntitiesParser::GetEntityChar(const wxString& entity)
     }
     else
     {
+        // store the literals in wx's internal representation (either char*
+        // in UTF-8 or wchar_t*) for best performance:
+        #define ENTITY(name, code) { wxS(name), code }
+
         static wxHtmlEntityInfo substitutions[] = {
-            { wxT("AElig"),198 },
-            { wxT("Aacute"),193 },
-            { wxT("Acirc"),194 },
-            { wxT("Agrave"),192 },
-            { wxT("Alpha"),913 },
-            { wxT("Aring"),197 },
-            { wxT("Atilde"),195 },
-            { wxT("Auml"),196 },
-            { wxT("Beta"),914 },
-            { wxT("Ccedil"),199 },
-            { wxT("Chi"),935 },
-            { wxT("Dagger"),8225 },
-            { wxT("Delta"),916 },
-            { wxT("ETH"),208 },
-            { wxT("Eacute"),201 },
-            { wxT("Ecirc"),202 },
-            { wxT("Egrave"),200 },
-            { wxT("Epsilon"),917 },
-            { wxT("Eta"),919 },
-            { wxT("Euml"),203 },
-            { wxT("Gamma"),915 },
-            { wxT("Iacute"),205 },
-            { wxT("Icirc"),206 },
-            { wxT("Igrave"),204 },
-            { wxT("Iota"),921 },
-            { wxT("Iuml"),207 },
-            { wxT("Kappa"),922 },
-            { wxT("Lambda"),923 },
-            { wxT("Mu"),924 },
-            { wxT("Ntilde"),209 },
-            { wxT("Nu"),925 },
-            { wxT("OElig"),338 },
-            { wxT("Oacute"),211 },
-            { wxT("Ocirc"),212 },
-            { wxT("Ograve"),210 },
-            { wxT("Omega"),937 },
-            { wxT("Omicron"),927 },
-            { wxT("Oslash"),216 },
-            { wxT("Otilde"),213 },
-            { wxT("Ouml"),214 },
-            { wxT("Phi"),934 },
-            { wxT("Pi"),928 },
-            { wxT("Prime"),8243 },
-            { wxT("Psi"),936 },
-            { wxT("Rho"),929 },
-            { wxT("Scaron"),352 },
-            { wxT("Sigma"),931 },
-            { wxT("THORN"),222 },
-            { wxT("Tau"),932 },
-            { wxT("Theta"),920 },
-            { wxT("Uacute"),218 },
-            { wxT("Ucirc"),219 },
-            { wxT("Ugrave"),217 },
-            { wxT("Upsilon"),933 },
-            { wxT("Uuml"),220 },
-            { wxT("Xi"),926 },
-            { wxT("Yacute"),221 },
-            { wxT("Yuml"),376 },
-            { wxT("Zeta"),918 },
-            { wxT("aacute"),225 },
-            { wxT("acirc"),226 },
-            { wxT("acute"),180 },
-            { wxT("aelig"),230 },
-            { wxT("agrave"),224 },
-            { wxT("alefsym"),8501 },
-            { wxT("alpha"),945 },
-            { wxT("amp"),38 },
-            { wxT("and"),8743 },
-            { wxT("ang"),8736 },
-            { wxT("apos"),39 },
-            { wxT("aring"),229 },
-            { wxT("asymp"),8776 },
-            { wxT("atilde"),227 },
-            { wxT("auml"),228 },
-            { wxT("bdquo"),8222 },
-            { wxT("beta"),946 },
-            { wxT("brvbar"),166 },
-            { wxT("bull"),8226 },
-            { wxT("cap"),8745 },
-            { wxT("ccedil"),231 },
-            { wxT("cedil"),184 },
-            { wxT("cent"),162 },
-            { wxT("chi"),967 },
-            { wxT("circ"),710 },
-            { wxT("clubs"),9827 },
-            { wxT("cong"),8773 },
-            { wxT("copy"),169 },
-            { wxT("crarr"),8629 },
-            { wxT("cup"),8746 },
-            { wxT("curren"),164 },
-            { wxT("dArr"),8659 },
-            { wxT("dagger"),8224 },
-            { wxT("darr"),8595 },
-            { wxT("deg"),176 },
-            { wxT("delta"),948 },
-            { wxT("diams"),9830 },
-            { wxT("divide"),247 },
-            { wxT("eacute"),233 },
-            { wxT("ecirc"),234 },
-            { wxT("egrave"),232 },
-            { wxT("empty"),8709 },
-            { wxT("emsp"),8195 },
-            { wxT("ensp"),8194 },
-            { wxT("epsilon"),949 },
-            { wxT("equiv"),8801 },
-            { wxT("eta"),951 },
-            { wxT("eth"),240 },
-            { wxT("euml"),235 },
-            { wxT("euro"),8364 },
-            { wxT("exist"),8707 },
-            { wxT("fnof"),402 },
-            { wxT("forall"),8704 },
-            { wxT("frac12"),189 },
-            { wxT("frac14"),188 },
-            { wxT("frac34"),190 },
-            { wxT("frasl"),8260 },
-            { wxT("gamma"),947 },
-            { wxT("ge"),8805 },
-            { wxT("gt"),62 },
-            { wxT("hArr"),8660 },
-            { wxT("harr"),8596 },
-            { wxT("hearts"),9829 },
-            { wxT("hellip"),8230 },
-            { wxT("iacute"),237 },
-            { wxT("icirc"),238 },
-            { wxT("iexcl"),161 },
-            { wxT("igrave"),236 },
-            { wxT("image"),8465 },
-            { wxT("infin"),8734 },
-            { wxT("int"),8747 },
-            { wxT("iota"),953 },
-            { wxT("iquest"),191 },
-            { wxT("isin"),8712 },
-            { wxT("iuml"),239 },
-            { wxT("kappa"),954 },
-            { wxT("lArr"),8656 },
-            { wxT("lambda"),955 },
-            { wxT("lang"),9001 },
-            { wxT("laquo"),171 },
-            { wxT("larr"),8592 },
-            { wxT("lceil"),8968 },
-            { wxT("ldquo"),8220 },
-            { wxT("le"),8804 },
-            { wxT("lfloor"),8970 },
-            { wxT("lowast"),8727 },
-            { wxT("loz"),9674 },
-            { wxT("lrm"),8206 },
-            { wxT("lsaquo"),8249 },
-            { wxT("lsquo"),8216 },
-            { wxT("lt"),60 },
-            { wxT("macr"),175 },
-            { wxT("mdash"),8212 },
-            { wxT("micro"),181 },
-            { wxT("middot"),183 },
-            { wxT("minus"),8722 },
-            { wxT("mu"),956 },
-            { wxT("nabla"),8711 },
-            { wxT("nbsp"),160 },
-            { wxT("ndash"),8211 },
-            { wxT("ne"),8800 },
-            { wxT("ni"),8715 },
-            { wxT("not"),172 },
-            { wxT("notin"),8713 },
-            { wxT("nsub"),8836 },
-            { wxT("ntilde"),241 },
-            { wxT("nu"),957 },
-            { wxT("oacute"),243 },
-            { wxT("ocirc"),244 },
-            { wxT("oelig"),339 },
-            { wxT("ograve"),242 },
-            { wxT("oline"),8254 },
-            { wxT("omega"),969 },
-            { wxT("omicron"),959 },
-            { wxT("oplus"),8853 },
-            { wxT("or"),8744 },
-            { wxT("ordf"),170 },
-            { wxT("ordm"),186 },
-            { wxT("oslash"),248 },
-            { wxT("otilde"),245 },
-            { wxT("otimes"),8855 },
-            { wxT("ouml"),246 },
-            { wxT("para"),182 },
-            { wxT("part"),8706 },
-            { wxT("permil"),8240 },
-            { wxT("perp"),8869 },
-            { wxT("phi"),966 },
-            { wxT("pi"),960 },
-            { wxT("piv"),982 },
-            { wxT("plusmn"),177 },
-            { wxT("pound"),163 },
-            { wxT("prime"),8242 },
-            { wxT("prod"),8719 },
-            { wxT("prop"),8733 },
-            { wxT("psi"),968 },
-            { wxT("quot"),34 },
-            { wxT("rArr"),8658 },
-            { wxT("radic"),8730 },
-            { wxT("rang"),9002 },
-            { wxT("raquo"),187 },
-            { wxT("rarr"),8594 },
-            { wxT("rceil"),8969 },
-            { wxT("rdquo"),8221 },
-            { wxT("real"),8476 },
-            { wxT("reg"),174 },
-            { wxT("rfloor"),8971 },
-            { wxT("rho"),961 },
-            { wxT("rlm"),8207 },
-            { wxT("rsaquo"),8250 },
-            { wxT("rsquo"),8217 },
-            { wxT("sbquo"),8218 },
-            { wxT("scaron"),353 },
-            { wxT("sdot"),8901 },
-            { wxT("sect"),167 },
-            { wxT("shy"),173 },
-            { wxT("sigma"),963 },
-            { wxT("sigmaf"),962 },
-            { wxT("sim"),8764 },
-            { wxT("spades"),9824 },
-            { wxT("sub"),8834 },
-            { wxT("sube"),8838 },
-            { wxT("sum"),8721 },
-            { wxT("sup"),8835 },
-            { wxT("sup1"),185 },
-            { wxT("sup2"),178 },
-            { wxT("sup3"),179 },
-            { wxT("supe"),8839 },
-            { wxT("szlig"),223 },
-            { wxT("tau"),964 },
-            { wxT("there4"),8756 },
-            { wxT("theta"),952 },
-            { wxT("thetasym"),977 },
-            { wxT("thinsp"),8201 },
-            { wxT("thorn"),254 },
-            { wxT("tilde"),732 },
-            { wxT("times"),215 },
-            { wxT("trade"),8482 },
-            { wxT("uArr"),8657 },
-            { wxT("uacute"),250 },
-            { wxT("uarr"),8593 },
-            { wxT("ucirc"),251 },
-            { wxT("ugrave"),249 },
-            { wxT("uml"),168 },
-            { wxT("upsih"),978 },
-            { wxT("upsilon"),965 },
-            { wxT("uuml"),252 },
-            { wxT("weierp"),8472 },
-            { wxT("xi"),958 },
-            { wxT("yacute"),253 },
-            { wxT("yen"),165 },
-            { wxT("yuml"),255 },
-            { wxT("zeta"),950 },
-            { wxT("zwj"),8205 },
-            { wxT("zwnj"),8204 },
+            ENTITY("AElig", 198),
+            ENTITY("Aacute", 193),
+            ENTITY("Acirc", 194),
+            ENTITY("Agrave", 192),
+            ENTITY("Alpha", 913),
+            ENTITY("Aring", 197),
+            ENTITY("Atilde", 195),
+            ENTITY("Auml", 196),
+            ENTITY("Beta", 914),
+            ENTITY("Ccedil", 199),
+            ENTITY("Chi", 935),
+            ENTITY("Dagger", 8225),
+            ENTITY("Delta", 916),
+            ENTITY("ETH", 208),
+            ENTITY("Eacute", 201),
+            ENTITY("Ecirc", 202),
+            ENTITY("Egrave", 200),
+            ENTITY("Epsilon", 917),
+            ENTITY("Eta", 919),
+            ENTITY("Euml", 203),
+            ENTITY("Gamma", 915),
+            ENTITY("Iacute", 205),
+            ENTITY("Icirc", 206),
+            ENTITY("Igrave", 204),
+            ENTITY("Iota", 921),
+            ENTITY("Iuml", 207),
+            ENTITY("Kappa", 922),
+            ENTITY("Lambda", 923),
+            ENTITY("Mu", 924),
+            ENTITY("Ntilde", 209),
+            ENTITY("Nu", 925),
+            ENTITY("OElig", 338),
+            ENTITY("Oacute", 211),
+            ENTITY("Ocirc", 212),
+            ENTITY("Ograve", 210),
+            ENTITY("Omega", 937),
+            ENTITY("Omicron", 927),
+            ENTITY("Oslash", 216),
+            ENTITY("Otilde", 213),
+            ENTITY("Ouml", 214),
+            ENTITY("Phi", 934),
+            ENTITY("Pi", 928),
+            ENTITY("Prime", 8243),
+            ENTITY("Psi", 936),
+            ENTITY("Rho", 929),
+            ENTITY("Scaron", 352),
+            ENTITY("Sigma", 931),
+            ENTITY("THORN", 222),
+            ENTITY("Tau", 932),
+            ENTITY("Theta", 920),
+            ENTITY("Uacute", 218),
+            ENTITY("Ucirc", 219),
+            ENTITY("Ugrave", 217),
+            ENTITY("Upsilon", 933),
+            ENTITY("Uuml", 220),
+            ENTITY("Xi", 926),
+            ENTITY("Yacute", 221),
+            ENTITY("Yuml", 376),
+            ENTITY("Zeta", 918),
+            ENTITY("aacute", 225),
+            ENTITY("acirc", 226),
+            ENTITY("acute", 180),
+            ENTITY("aelig", 230),
+            ENTITY("agrave", 224),
+            ENTITY("alefsym", 8501),
+            ENTITY("alpha", 945),
+            ENTITY("amp", 38),
+            ENTITY("and", 8743),
+            ENTITY("ang", 8736),
+            ENTITY("apos", 39),
+            ENTITY("aring", 229),
+            ENTITY("asymp", 8776),
+            ENTITY("atilde", 227),
+            ENTITY("auml", 228),
+            ENTITY("bdquo", 8222),
+            ENTITY("beta", 946),
+            ENTITY("brvbar", 166),
+            ENTITY("bull", 8226),
+            ENTITY("cap", 8745),
+            ENTITY("ccedil", 231),
+            ENTITY("cedil", 184),
+            ENTITY("cent", 162),
+            ENTITY("chi", 967),
+            ENTITY("circ", 710),
+            ENTITY("clubs", 9827),
+            ENTITY("cong", 8773),
+            ENTITY("copy", 169),
+            ENTITY("crarr", 8629),
+            ENTITY("cup", 8746),
+            ENTITY("curren", 164),
+            ENTITY("dArr", 8659),
+            ENTITY("dagger", 8224),
+            ENTITY("darr", 8595),
+            ENTITY("deg", 176),
+            ENTITY("delta", 948),
+            ENTITY("diams", 9830),
+            ENTITY("divide", 247),
+            ENTITY("eacute", 233),
+            ENTITY("ecirc", 234),
+            ENTITY("egrave", 232),
+            ENTITY("empty", 8709),
+            ENTITY("emsp", 8195),
+            ENTITY("ensp", 8194),
+            ENTITY("epsilon", 949),
+            ENTITY("equiv", 8801),
+            ENTITY("eta", 951),
+            ENTITY("eth", 240),
+            ENTITY("euml", 235),
+            ENTITY("euro", 8364),
+            ENTITY("exist", 8707),
+            ENTITY("fnof", 402),
+            ENTITY("forall", 8704),
+            ENTITY("frac12", 189),
+            ENTITY("frac14", 188),
+            ENTITY("frac34", 190),
+            ENTITY("frasl", 8260),
+            ENTITY("gamma", 947),
+            ENTITY("ge", 8805),
+            ENTITY("gt", 62),
+            ENTITY("hArr", 8660),
+            ENTITY("harr", 8596),
+            ENTITY("hearts", 9829),
+            ENTITY("hellip", 8230),
+            ENTITY("iacute", 237),
+            ENTITY("icirc", 238),
+            ENTITY("iexcl", 161),
+            ENTITY("igrave", 236),
+            ENTITY("image", 8465),
+            ENTITY("infin", 8734),
+            ENTITY("int", 8747),
+            ENTITY("iota", 953),
+            ENTITY("iquest", 191),
+            ENTITY("isin", 8712),
+            ENTITY("iuml", 239),
+            ENTITY("kappa", 954),
+            ENTITY("lArr", 8656),
+            ENTITY("lambda", 955),
+            ENTITY("lang", 9001),
+            ENTITY("laquo", 171),
+            ENTITY("larr", 8592),
+            ENTITY("lceil", 8968),
+            ENTITY("ldquo", 8220),
+            ENTITY("le", 8804),
+            ENTITY("lfloor", 8970),
+            ENTITY("lowast", 8727),
+            ENTITY("loz", 9674),
+            ENTITY("lrm", 8206),
+            ENTITY("lsaquo", 8249),
+            ENTITY("lsquo", 8216),
+            ENTITY("lt", 60),
+            ENTITY("macr", 175),
+            ENTITY("mdash", 8212),
+            ENTITY("micro", 181),
+            ENTITY("middot", 183),
+            ENTITY("minus", 8722),
+            ENTITY("mu", 956),
+            ENTITY("nabla", 8711),
+            ENTITY("nbsp", 160),
+            ENTITY("ndash", 8211),
+            ENTITY("ne", 8800),
+            ENTITY("ni", 8715),
+            ENTITY("not", 172),
+            ENTITY("notin", 8713),
+            ENTITY("nsub", 8836),
+            ENTITY("ntilde", 241),
+            ENTITY("nu", 957),
+            ENTITY("oacute", 243),
+            ENTITY("ocirc", 244),
+            ENTITY("oelig", 339),
+            ENTITY("ograve", 242),
+            ENTITY("oline", 8254),
+            ENTITY("omega", 969),
+            ENTITY("omicron", 959),
+            ENTITY("oplus", 8853),
+            ENTITY("or", 8744),
+            ENTITY("ordf", 170),
+            ENTITY("ordm", 186),
+            ENTITY("oslash", 248),
+            ENTITY("otilde", 245),
+            ENTITY("otimes", 8855),
+            ENTITY("ouml", 246),
+            ENTITY("para", 182),
+            ENTITY("part", 8706),
+            ENTITY("permil", 8240),
+            ENTITY("perp", 8869),
+            ENTITY("phi", 966),
+            ENTITY("pi", 960),
+            ENTITY("piv", 982),
+            ENTITY("plusmn", 177),
+            ENTITY("pound", 163),
+            ENTITY("prime", 8242),
+            ENTITY("prod", 8719),
+            ENTITY("prop", 8733),
+            ENTITY("psi", 968),
+            ENTITY("quot", 34),
+            ENTITY("rArr", 8658),
+            ENTITY("radic", 8730),
+            ENTITY("rang", 9002),
+            ENTITY("raquo", 187),
+            ENTITY("rarr", 8594),
+            ENTITY("rceil", 8969),
+            ENTITY("rdquo", 8221),
+            ENTITY("real", 8476),
+            ENTITY("reg", 174),
+            ENTITY("rfloor", 8971),
+            ENTITY("rho", 961),
+            ENTITY("rlm", 8207),
+            ENTITY("rsaquo", 8250),
+            ENTITY("rsquo", 8217),
+            ENTITY("sbquo", 8218),
+            ENTITY("scaron", 353),
+            ENTITY("sdot", 8901),
+            ENTITY("sect", 167),
+            ENTITY("shy", 173),
+            ENTITY("sigma", 963),
+            ENTITY("sigmaf", 962),
+            ENTITY("sim", 8764),
+            ENTITY("spades", 9824),
+            ENTITY("sub", 8834),
+            ENTITY("sube", 8838),
+            ENTITY("sum", 8721),
+            ENTITY("sup", 8835),
+            ENTITY("sup1", 185),
+            ENTITY("sup2", 178),
+            ENTITY("sup3", 179),
+            ENTITY("supe", 8839),
+            ENTITY("szlig", 223),
+            ENTITY("tau", 964),
+            ENTITY("there4", 8756),
+            ENTITY("theta", 952),
+            ENTITY("thetasym", 977),
+            ENTITY("thinsp", 8201),
+            ENTITY("thorn", 254),
+            ENTITY("tilde", 732),
+            ENTITY("times", 215),
+            ENTITY("trade", 8482),
+            ENTITY("uArr", 8657),
+            ENTITY("uacute", 250),
+            ENTITY("uarr", 8593),
+            ENTITY("ucirc", 251),
+            ENTITY("ugrave", 249),
+            ENTITY("uml", 168),
+            ENTITY("upsih", 978),
+            ENTITY("upsilon", 965),
+            ENTITY("uuml", 252),
+            ENTITY("weierp", 8472),
+            ENTITY("xi", 958),
+            ENTITY("yacute", 253),
+            ENTITY("yen", 165),
+            ENTITY("yuml", 255),
+            ENTITY("zeta", 950),
+            ENTITY("zwj", 8205),
+            ENTITY("zwnj", 8204),
             {NULL, 0}};
+        #undef ENTITY
         static size_t substitutions_cnt = 0;
 
         if (substitutions_cnt == 0)
             while (substitutions[substitutions_cnt].code != 0)
                 substitutions_cnt++;
 
-        wxHtmlEntityInfo *info = NULL;
+        wxHtmlEntityInfo *info;
 #ifdef __WXWINCE__
         // bsearch crashes under WinCE for some reason
+        info = NULL;
         size_t i;
         for (i = 0; i < substitutions_cnt; i++)
         {
@@ -868,7 +853,7 @@ wxChar wxHtmlEntitiesParser::GetEntityChar(const wxString& entity)
             }
         }
 #else
-        info = (wxHtmlEntityInfo*) bsearch(entity.c_str(), substitutions,
+        info = (wxHtmlEntityInfo*) bsearch(entity.wx_str(), substitutions,
                                            substitutions_cnt,
                                            sizeof(wxHtmlEntityInfo),
                                            wxHtmlEntityCompare);
@@ -883,10 +868,14 @@ wxChar wxHtmlEntitiesParser::GetEntityChar(const wxString& entity)
         return GetCharForCode(code);
 }
 
-wxFSFile *wxHtmlParser::OpenURL(wxHtmlURLType WXUNUSED(type),
+wxFSFile *wxHtmlParser::OpenURL(wxHtmlURLType type,
                                 const wxString& url) const
 {
-    return m_FS ? m_FS->OpenFile(url) : NULL;
+    int flags = wxFS_READ;
+    if (type == wxHTML_URL_IMAGE)
+        flags |= wxFS_SEEKABLE;
+
+    return m_FS ? m_FS->OpenFile(url, flags) : NULL;
 
 }
 
@@ -903,9 +892,9 @@ public:
     wxObject* GetProduct() { return NULL; }
 
 protected:
-    virtual void AddText(const wxChar* WXUNUSED(txt)) {}
+    virtual void AddText(const wxString& WXUNUSED(txt)) {}
 
-    DECLARE_NO_COPY_CLASS(wxMetaTagParser)
+    wxDECLARE_NO_COPY_CLASS(wxMetaTagParser);
 };
 
 class wxMetaTagHandler : public wxHtmlTagHandler
@@ -918,23 +907,25 @@ public:
 private:
     wxString *m_retval;
 
-    DECLARE_NO_COPY_CLASS(wxMetaTagHandler)
+    wxDECLARE_NO_COPY_CLASS(wxMetaTagHandler);
 };
 
 bool wxMetaTagHandler::HandleTag(const wxHtmlTag& tag)
 {
-    if (tag.GetName() == _T("BODY"))
+    if (tag.GetName() == wxT("BODY"))
     {
         m_Parser->StopParsing();
         return false;
     }
 
-    if (tag.HasParam(_T("HTTP-EQUIV")) &&
-        tag.GetParam(_T("HTTP-EQUIV")).IsSameAs(_T("Content-Type"), false) &&
-        tag.HasParam(_T("CONTENT")))
+    wxString httpEquiv,
+             content;
+    if (tag.GetParamAsString(wxT("HTTP-EQUIV"), &httpEquiv) &&
+        httpEquiv.IsSameAs(wxT("Content-Type"), false) &&
+        tag.GetParamAsString(wxT("CONTENT"), &content))
     {
-        wxString content = tag.GetParam(_T("CONTENT")).Lower();
-        if (content.Left(19) == _T("text/html; charset="))
+        content.MakeLower();
+        if (content.Left(19) == wxT("text/html; charset="))
         {
             *m_retval = content.Mid(19);
             m_Parser->StopParsing();
@@ -958,4 +949,57 @@ wxString wxHtmlParser::ExtractCharsetInformation(const wxString& markup)
     return charset;
 }
 
-#endif
+/* static */
+bool
+wxHtmlParser::SkipCommentTag(wxString::const_iterator& start,
+                             wxString::const_iterator end)
+{
+    wxASSERT_MSG( *start == '<', wxT("should be called on the tag start") );
+
+    wxString::const_iterator p = start;
+
+    // Comments begin with "<!--" in HTML 4.0; anything shorter or not containing
+    // these characters is not a comment and we're not going to skip it.
+    if ( ++p == end || *p != '!' )
+      return false;
+    if ( ++p == end || *p != '-' )
+      return false;
+    if ( ++p == end || *p != '-' )
+      return false;
+
+    // skip the start of the comment tag in any case, if we don't find the
+    // closing tag we should ignore broken markup
+    start = p;
+
+    // comments end with "--[ \t\r\n]*>", i.e. white space is allowed between
+    // comment delimiter and the closing tag character (section 3.2.4 of
+    // http://www.w3.org/TR/html401/)
+    int dashes = 0;
+    while ( ++p < end )
+    {
+        const wxChar c = *p;
+
+        if ( (c == wxT(' ') || c == wxT('\n') ||
+              c == wxT('\r') || c == wxT('\t')) && dashes >= 2 )
+        {
+            // ignore white space before potential tag end
+            continue;
+        }
+
+        if ( c == wxT('>') && dashes >= 2 )
+        {
+            // found end of comment
+            start = p;
+            break;
+        }
+
+        if ( c == wxT('-') )
+            dashes++;
+        else
+            dashes = 0;
+    }
+
+    return true;
+}
+
+#endif // wxUSE_HTML

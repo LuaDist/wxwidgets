@@ -1,7 +1,6 @@
 /////////////////////////////////////////////////////////////////////////////
 // Name:        src/univ/topluniv.cpp
 // Author:      Vaclav Slavik
-// Id:          $Id: topluniv.cpp 43616 2006-11-23 14:50:42Z VS $
 // Copyright:   (c) 2001-2002 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -113,8 +112,7 @@ bool wxTopLevelWindow::Create(wxWindow *parent,
         styleOrig = style;
         exstyleOrig = GetExtraStyle();
         style &= ~(wxCAPTION | wxMINIMIZE_BOX | wxMAXIMIZE_BOX |
-                   wxSYSTEM_MENU | wxRESIZE_BORDER | wxFRAME_TOOL_WINDOW |
-                   wxRESIZE_BORDER);
+                   wxSYSTEM_MENU | wxFRAME_TOOL_WINDOW | wxRESIZE_BORDER);
         style |= wxBORDER_NONE;
         SetExtraStyle(exstyleOrig & ~wxWS_EX_CONTEXTHELP);
     }
@@ -163,7 +161,7 @@ void wxTopLevelWindow::UseNativeDecorationsByDefault(bool native)
 
 void wxTopLevelWindow::UseNativeDecorations(bool native)
 {
-    wxASSERT_MSG( !m_windowStyle, _T("must be called before Create()") );
+    wxASSERT_MSG( !m_windowStyle, wxT("must be called before Create()") );
 
     m_usingNativeDecorations = native;
 }
@@ -203,12 +201,12 @@ long wxTopLevelWindow::GetDecorationsStyle() const
     }
     if ( (m_windowStyle & (wxSIMPLE_BORDER | wxNO_BORDER)) == 0 )
         style |= wxTOPLEVEL_BORDER;
-    if ( m_windowStyle & (wxRESIZE_BORDER | wxRESIZE_BORDER) )
+    if ( m_windowStyle & wxRESIZE_BORDER )
         style |= wxTOPLEVEL_RESIZEABLE;
 
     if ( IsMaximized() )
         style |= wxTOPLEVEL_MAXIMIZED;
-    if ( GetIcon().Ok() )
+    if ( GetIcon().IsOk() )
         style |= wxTOPLEVEL_ICON;
     if ( m_isActive )
         style |= wxTOPLEVEL_ACTIVE;
@@ -329,13 +327,13 @@ void wxTopLevelWindow::SetIcons(const wxIconBundle& icons)
         wxSize size = m_renderer->GetFrameIconSize();
         const wxIcon& icon = icons.GetIcon( size );
 
-        if ( !icon.Ok() || size.x == wxDefaultCoord  )
+        if ( !icon.IsOk() || size.x == wxDefaultCoord  )
             m_titlebarIcon = icon;
         else
         {
             wxBitmap bmp1;
             bmp1.CopyFromIcon(icon);
-            if ( !bmp1.Ok() )
+            if ( !bmp1.IsOk() )
                 m_titlebarIcon = wxNullIcon;
             else if ( bmp1.GetWidth() == size.x && bmp1.GetHeight() == size.y )
                 m_titlebarIcon = icon;

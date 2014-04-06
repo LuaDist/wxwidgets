@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/21/99
-// RCS-ID:      $Id: dataobj.cpp 40345 2006-07-27 12:57:16Z ABX $
 // Copyright:   (c) 1999 David Webster
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -57,11 +56,11 @@ wxString wxDataFormat::GetId() const
 } // end of wxDataFormat::GetId()
 
 void wxDataFormat::SetId (
-  const wxChar*                     zId
+  const wxString&                     zId
 )
 {
     m_uFormat = ::WinAddAtom( ::WinQuerySystemAtomTable()
-                             ,(PSZ)zId
+                             ,zId.char_str()
                             );
 } // end of wxDataFormat::SetId
 
@@ -329,12 +328,12 @@ bool wxBitmapDataObject::SetData( size_t nSize, const void* pBuf)
     m_bitmap = wxBitmap(vImage);
 #endif //wxUSE_STREAMS
 
-    return m_bitmap.Ok();
+    return m_bitmap.IsOk();
 }
 
 void wxBitmapDataObject::DoConvertToPng()
 {
-    if (!m_bitmap.Ok())
+    if (!m_bitmap.IsOk())
         return;
 
 #if wxUSE_STREAMS

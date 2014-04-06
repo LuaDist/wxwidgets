@@ -2,7 +2,6 @@
 // Name:        src/gtk/slider.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: slider.cpp 44603 2007-03-03 18:37:08Z PC $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -19,7 +18,8 @@
     #include "wx/math.h"
 #endif
 
-#include "wx/gtk/private.h"
+#include <gtk/gtk.h>
+#include "wx/gtk/private/gtk2-compat.h"
 
 //-----------------------------------------------------------------------------
 // data
@@ -46,7 +46,7 @@ ProcessScrollEvent(wxSlider *win, wxEventType evtType)
     {
         wxScrollEvent event( evtType, win->GetId(), value, orient );
         event.SetEventObject( win );
-        win->GetEventHandler()->ProcessEvent( event );
+        win->HandleWindowEvent( event );
     }
 
     // but, in any case, except if we're dragging the slider (and so the change
@@ -55,14 +55,14 @@ ProcessScrollEvent(wxSlider *win, wxEventType evtType)
     {
         wxScrollEvent event(wxEVT_SCROLL_CHANGED, win->GetId(), value, orient);
         event.SetEventObject( win );
-        win->GetEventHandler()->ProcessEvent( event );
+        win->HandleWindowEvent( event );
     }
 
     // and also generate a command event for compatibility
-    wxCommandEvent event( wxEVT_COMMAND_SLIDER_UPDATED, win->GetId() );
+    wxCommandEvent event( wxEVT_SLIDER, win->GetId() );
     event.SetEventObject( win );
     event.SetInt( value );
-    win->GetEventHandler()->ProcessEvent( event );
+    win->HandleWindowEvent( event );
 }
 
 static inline wxEventType GtkScrollTypeToWx(int scrollType)
@@ -100,7 +100,7 @@ static inline wxEventType GtkScrollTypeToWx(int scrollType)
         eventType = wxEVT_SCROLL_THUMBTRACK;
         break;
     default:
-        wxFAIL_MSG(_T("Unknown GtkScrollType"));
+        wxFAIL_MSG(wxT("Unknown GtkScrollType"));
         eventType = wxEVT_NULL;
         break;
     }
@@ -124,17 +124,14 @@ extern "C" {
 static void
 gtk_value_changed(GtkRange* range, wxSlider* win)
 {
-    if (g_isIdle) wxapp_install_idle_handler();
-
-    GtkAdjustment* adj = gtk_range_get_adjustment (range);
-    const int pos = wxRound(adj->value);
+    const double value = gtk_range_get_value(range);
     const double oldPos = win->m_pos;
-    win->m_pos = adj->value;
+    win->m_pos = value;
 
-    if (!win->m_hasVMT || g_blockEventsOnDrag)
+    if (g_blockEventsOnDrag)
         return;
 
-    if (win->m_blockScrollEvent)
+    if (win->GTKEventsDisabled())
     {
         win->m_scrollEventType = GTK_SCROLL_NONE;
         return;
@@ -153,18 +150,19 @@ gtk_value_changed(GtkRange* range, wxSlider* win)
     else if (win->m_mouseButtonDown)
     {
         // Difference from last change event
-        const double diff = adj->value - oldPos;
+        const double diff = value - oldPos;
         const bool isDown = diff > 0;
 
-        if (IsScrollIncrement(adj->page_increment, diff))
+        GtkAdjustment* adj = gtk_range_get_adjustment(range);
+        if (IsScrollIncrement(gtk_adjustment_get_page_increment(adj), diff))
         {
             eventType = isDown ? wxEVT_SCROLL_PAGEDOWN : wxEVT_SCROLL_PAGEUP;
         }
-        else if (wxIsSameDouble(adj->value, 0))
+        else if (wxIsSameDouble(value, 0))
         {
             eventType = wxEVT_SCROLL_PAGEUP;
         }
-        else if (wxIsSameDouble(adj->value, adj->upper))
+        else if (wxIsSameDouble(value, gtk_adjustment_get_upper(adj)))
         {
             eventType = wxEVT_SCROLL_PAGEDOWN;
         }
@@ -180,7 +178,7 @@ gtk_value_changed(GtkRange* range, wxSlider* win)
     win->m_scrollEventType = GTK_SCROLL_NONE;
 
     // If integral position has changed
-    if (wxRound(oldPos) != pos)
+    if (wxRound(oldPos) != wxRound(value))
     {
         ProcessScrollEvent(win, eventType);
         win->m_needThumbRelease = eventType == wxEVT_SCROLL_THUMBTRACK;
@@ -233,9 +231,9 @@ gtk_event_after(GtkRange* range, GdkEvent* event, wxSlider* win)
             ProcessScrollEvent(win, wxEVT_SCROLL_THUMBRELEASE);
         }
         // Keep slider at an integral position
-        win->BlockScrollEvent();
-        gtk_range_set_value(GTK_RANGE (win->m_widget), win->GetValue());
-        win->UnblockScrollEvent();
+        win->GTKDisableEvents();
+        gtk_range_set_value(GTK_RANGE (win->m_scale), win->GetValue());
+        win->GTKEnableEvents();
     }
 }
 }
@@ -274,22 +272,32 @@ static gchar* gtk_format_value(GtkScale*, double value, void*)
 // wxSlider
 //-----------------------------------------------------------------------------
 
-IMPLEMENT_DYNAMIC_CLASS(wxSlider,wxControl)
-
 wxSlider::wxSlider()
 {
-    m_pos = 0;
-    m_scrollEventType = 0;
-    m_needThumbRelease = false;
+    m_scale = NULL;
 }
 
-bool wxSlider::Create(wxWindow *parent, wxWindowID id,
-        int value, int minValue, int maxValue,
-        const wxPoint& pos, const wxSize& size,
-        long style, const wxValidator& validator, const wxString& name )
+wxSlider::~wxSlider()
 {
-    m_acceptsFocus = true;
-    m_needParent = true;
+    if (m_scale && m_scale != m_widget)
+        GTKDisconnect(m_scale);
+}
+
+bool wxSlider::Create(wxWindow *parent,
+                      wxWindowID id,
+                      int value,
+                      int minValue,
+                      int maxValue,
+                      const wxPoint& pos,
+                      const wxSize& size,
+                      long style,
+                      const wxValidator& validator,
+                      const wxString& name)
+{
+    m_pos = value;
+    m_scrollEventType = GTK_SCROLL_NONE;
+    m_needThumbRelease = false;
+    m_blockScrollEvent = false;
 
     if (!PreCreation( parent, pos, size ) ||
         !CreateBase( parent, id, pos, size, style, validator, name ))
@@ -298,40 +306,107 @@ bool wxSlider::Create(wxWindow *parent, wxWindowID id,
         return false;
     }
 
-    m_pos = 0;
-    m_scrollEventType = 0;
-    m_needThumbRelease = false;
+    const bool isVertical = (style & wxSL_VERTICAL) != 0;
+    m_scale = gtk_scale_new(GtkOrientation(isVertical), NULL);
 
-    if (style & wxSL_VERTICAL)
-        m_widget = gtk_vscale_new( (GtkAdjustment *) NULL );
+    if (style & wxSL_MIN_MAX_LABELS)
+    {
+        gtk_widget_show( m_scale );
+
+        m_widget = gtk_box_new(GtkOrientation(!isVertical), 0);
+        gtk_box_pack_start(GTK_BOX(m_widget), m_scale, true, true, 0);
+
+        GtkWidget* box = gtk_box_new(GtkOrientation(isVertical), 0);
+        gtk_widget_show(box);
+        gtk_box_pack_start(GTK_BOX(m_widget), box, true, true, 0);
+
+        m_minLabel = gtk_label_new(NULL);
+        gtk_widget_show( m_minLabel );
+        gtk_box_pack_start(GTK_BOX(box), m_minLabel, false, false, 0);
+
+        // expanding empty space between the min/max labels
+        GtkWidget *space = gtk_label_new(NULL);
+        gtk_widget_show( space );
+        gtk_box_pack_start(GTK_BOX(box), space, true, false, 0);
+
+        m_maxLabel = gtk_label_new(NULL);
+        gtk_widget_show( m_maxLabel );
+        gtk_box_pack_end(GTK_BOX(box), m_maxLabel, false, false, 0);
+    }
     else
-        m_widget = gtk_hscale_new( (GtkAdjustment *) NULL );
+    {
+        m_widget = m_scale;
+        m_maxLabel = NULL;
+        m_minLabel = NULL;
+    }
+    g_object_ref(m_widget);
 
-    gtk_scale_set_draw_value(GTK_SCALE (m_widget), (style & wxSL_LABELS) != 0);
+    const bool showValueLabel = (style & wxSL_VALUE_LABEL) != 0;
+    gtk_scale_set_draw_value(GTK_SCALE (m_scale), showValueLabel );
+    if ( showValueLabel )
+    {
+        // position the label appropriately: notice that wxSL_DIRECTION flags
+        // specify the position of the ticks, not label, under MSW and so the
+        // label is on the opposite side
+        GtkPositionType posLabel;
+        if ( style & wxSL_VERTICAL )
+        {
+            if ( style & wxSL_LEFT )
+                posLabel = GTK_POS_RIGHT;
+            else // if ( style & wxSL_RIGHT ) -- this is also the default
+                posLabel = GTK_POS_LEFT;
+        }
+        else // horizontal slider
+        {
+            if ( style & wxSL_TOP )
+                posLabel = GTK_POS_BOTTOM;
+            else // if ( style & wxSL_BOTTOM) -- this is again the default
+                posLabel = GTK_POS_TOP;
+        }
+
+        gtk_scale_set_value_pos( GTK_SCALE(m_scale), posLabel );
+    }
+
     // Keep full precision in position value
-    gtk_scale_set_digits(GTK_SCALE (m_widget), -1);
+    gtk_scale_set_digits(GTK_SCALE (m_scale), -1);
 
     if (style & wxSL_INVERSE)
-        gtk_range_set_inverted( GTK_RANGE(m_widget), TRUE );
+        gtk_range_set_inverted( GTK_RANGE(m_scale), TRUE );
 
-    g_signal_connect(m_widget, "button_press_event", G_CALLBACK(gtk_button_press_event), this);
-    g_signal_connect(m_widget, "button_release_event", G_CALLBACK(gtk_button_release_event), this);
-    g_signal_connect(m_widget, "move_slider", G_CALLBACK(gtk_move_slider), this);
-    g_signal_connect(m_widget, "format_value", G_CALLBACK(gtk_format_value), NULL);
-    g_signal_connect(m_widget, "value_changed", G_CALLBACK(gtk_value_changed), this);
-    gulong handler_id;
-    handler_id = g_signal_connect(
-        m_widget, "event_after", G_CALLBACK(gtk_event_after), this);
-    g_signal_handler_block(m_widget, handler_id);
+    g_signal_connect(m_scale, "button_press_event", G_CALLBACK(gtk_button_press_event), this);
+    g_signal_connect(m_scale, "button_release_event", G_CALLBACK(gtk_button_release_event), this);
+    g_signal_connect(m_scale, "move_slider", G_CALLBACK(gtk_move_slider), this);
+    g_signal_connect(m_scale, "format_value", G_CALLBACK(gtk_format_value), NULL);
+    g_signal_connect(m_scale, "value_changed", G_CALLBACK(gtk_value_changed), this);
+    gulong handler_id = g_signal_connect(m_scale, "event_after", G_CALLBACK(gtk_event_after), this);
+    g_signal_handler_block(m_scale, handler_id);
 
     SetRange( minValue, maxValue );
-    SetValue( value );
+
+    // don't call the public SetValue() as it won't do anything unless the
+    // value really changed
+    GTKSetValue( value );
 
     m_parent->DoAddChild( this );
 
     PostCreation(size);
 
     return true;
+}
+
+void wxSlider::GTKDisableEvents()
+{
+    m_blockScrollEvent = true;
+}
+
+void wxSlider::GTKEnableEvents()
+{
+    m_blockScrollEvent = false;
+}
+
+bool wxSlider::GTKEventsDisabled() const
+{
+   return m_blockScrollEvent;
 }
 
 int wxSlider::GetValue() const
@@ -342,41 +417,69 @@ int wxSlider::GetValue() const
 void wxSlider::SetValue( int value )
 {
     if (GetValue() != value)
-    {
-        BlockScrollEvent();
-        gtk_range_set_value(GTK_RANGE (m_widget), value);
-        UnblockScrollEvent();
-    }
+        GTKSetValue(value);
+}
+
+void wxSlider::GTKSetValue(int value)
+{
+    GTKDisableEvents();
+    gtk_range_set_value(GTK_RANGE (m_scale), value);
+    // GTK only updates value label if handle moves at least 1 pixel
+    gtk_widget_queue_draw(m_scale);
+    GTKEnableEvents();
 }
 
 void wxSlider::SetRange( int minValue, int maxValue )
 {
-    BlockScrollEvent();
-    gtk_range_set_range(GTK_RANGE (m_widget), minValue, maxValue);
-    gtk_range_set_increments(GTK_RANGE (m_widget), 1, (maxValue - minValue + 9) / 10);
-    UnblockScrollEvent();
+    GTKDisableEvents();
+    if (minValue == maxValue)
+       maxValue++;
+    gtk_range_set_range(GTK_RANGE (m_scale), minValue, maxValue);
+    gtk_range_set_increments(GTK_RANGE (m_scale), 1, (maxValue - minValue + 9) / 10);
+    GTKEnableEvents();
+
+    if (HasFlag(wxSL_MIN_MAX_LABELS))
+    {
+        wxString str;
+
+        str.Printf( "%d", minValue );
+        if (HasFlag(wxSL_INVERSE))
+            gtk_label_set_text( GTK_LABEL(m_maxLabel), str.utf8_str() );
+        else
+            gtk_label_set_text( GTK_LABEL(m_minLabel), str.utf8_str() );
+
+        str.Printf( "%d", maxValue );
+        if (HasFlag(wxSL_INVERSE))
+            gtk_label_set_text( GTK_LABEL(m_minLabel), str.utf8_str() );
+        else
+            gtk_label_set_text( GTK_LABEL(m_maxLabel), str.utf8_str() );
+
+    }
 }
 
 int wxSlider::GetMin() const
 {
-    return int(gtk_range_get_adjustment (GTK_RANGE (m_widget))->lower);
+    GtkAdjustment* adj = gtk_range_get_adjustment(GTK_RANGE(m_scale));
+    return int(gtk_adjustment_get_lower(adj));
 }
 
 int wxSlider::GetMax() const
 {
-    return int(gtk_range_get_adjustment (GTK_RANGE (m_widget))->upper);
+    GtkAdjustment* adj = gtk_range_get_adjustment(GTK_RANGE(m_scale));
+    return int(gtk_adjustment_get_upper(adj));
 }
 
 void wxSlider::SetPageSize( int pageSize )
 {
-    BlockScrollEvent();
-    gtk_range_set_increments(GTK_RANGE (m_widget), GetLineSize(), pageSize);
-    UnblockScrollEvent();
+    GTKDisableEvents();
+    gtk_range_set_increments(GTK_RANGE (m_scale), GetLineSize(), pageSize);
+    GTKEnableEvents();
 }
 
 int wxSlider::GetPageSize() const
 {
-    return int(gtk_range_get_adjustment (GTK_RANGE (m_widget))->page_increment);
+    GtkAdjustment* adj = gtk_range_get_adjustment(GTK_RANGE(m_scale));
+    return int(gtk_adjustment_get_page_increment(adj));
 }
 
 // GTK does not support changing the size of the slider
@@ -391,26 +494,32 @@ int wxSlider::GetThumbLength() const
 
 void wxSlider::SetLineSize( int lineSize )
 {
-    BlockScrollEvent();
-    gtk_range_set_increments(GTK_RANGE (m_widget), lineSize, GetPageSize());
-    UnblockScrollEvent();
+    GTKDisableEvents();
+    gtk_range_set_increments(GTK_RANGE (m_scale), lineSize, GetPageSize());
+    GTKEnableEvents();
 }
 
 int wxSlider::GetLineSize() const
 {
-    return int(gtk_range_get_adjustment (GTK_RANGE (m_widget))->step_increment);
+    GtkAdjustment* adj = gtk_range_get_adjustment(GTK_RANGE(m_scale));
+    return int(gtk_adjustment_get_step_increment(adj));
 }
 
 GdkWindow *wxSlider::GTKGetWindow(wxArrayGdkWindows& WXUNUSED(windows)) const
 {
-    return GTK_RANGE(m_widget)->event_window;
+#ifdef __WXGTK3__
+    // no access to internal GdkWindows
+    return NULL;
+#else
+    return GTK_RANGE(m_scale)->event_window;
+#endif
 }
 
 // static
 wxVisualAttributes
 wxSlider::GetClassDefaultAttributes(wxWindowVariant WXUNUSED(variant))
 {
-    return GetDefaultAttributesFromGTKWidget(gtk_vscale_new);
+    return GetDefaultAttributesFromGTKWidget(gtk_scale_new(GTK_ORIENTATION_VERTICAL, NULL));
 }
 
 #endif // wxUSE_SLIDER

@@ -3,7 +3,6 @@
 // Purpose:     XRC resource for dialogs
 // Author:      Vaclav Slavik & Aleks.
 // Created:     2000/03/05
-// RCS-ID:      $Id: xh_frame.cpp 39273 2006-05-22 20:54:04Z ABX $
 // Copyright:   (c) 2000 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -79,7 +78,7 @@ wxObject *wxFrameXmlHandler::DoCreateResource()
     if (HasParam(wxT("pos")))
         frame->Move(GetPosition());
     if (HasParam(wxT("icon")))
-        frame->SetIcon(GetIcon(wxT("icon"), wxART_FRAME_ICON));
+        frame->SetIcons(GetIconBundle(wxT("icon"), wxART_FRAME_ICON));
 
     SetupWindow(frame);
 

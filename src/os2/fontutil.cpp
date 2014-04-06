@@ -1,10 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Name:        msw/fontutil.cpp
+// Name:        src/msw/fontutil.cpp
 // Purpose:     font-related helper functions for wxMSW
 // Author:      Modified by David Webster for OS/2
 // Modified by:
 // Created:     01.03.00
-// RCS-ID:      $Id: fontutil.cpp 51287 2008-01-19 14:10:36Z SN $
 // Copyright:   (c) 1999 Vadim Zeitlin <zeitlin@dptmaths.ens-cachan.fr>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -55,7 +54,7 @@
 
 bool wxNativeEncodingInfo::FromString( const wxString& rsStr )
 {
-    wxStringTokenizer               vTokenizer(rsStr, _T(";"));
+    wxStringTokenizer               vTokenizer(rsStr, wxT(";"));
     wxString                        sEncid = vTokenizer.GetNextToken();
     long                            lEnc;
 
@@ -74,7 +73,7 @@ bool wxNativeEncodingInfo::FromString( const wxString& rsStr )
     }
     else
     {
-        if ( wxSscanf(sTmp, _T("%u"), &charset) != 1 )
+        if ( wxSscanf(sTmp, wxT("%u"), &charset) != 1 )
         {
             // should be a number!
             return FALSE;
@@ -87,11 +86,11 @@ wxString wxNativeEncodingInfo::ToString() const
 {
     wxString                        sStr;
 
-    sStr << (long)encoding << _T(';') << facename;
+    sStr << (long)encoding << wxT(';') << facename;
 
     if (charset != 850)
     {
-        sStr << _T(';') << charset;
+        sStr << wxT(';') << charset;
     }
     return sStr;
 } // end of wxNativeEncodingInfo::ToString
@@ -103,7 +102,7 @@ wxString wxNativeEncodingInfo::ToString() const
 bool wxGetNativeFontEncoding( wxFontEncoding vEncoding,
                               wxNativeEncodingInfo* pInfo )
 {
-    wxCHECK_MSG(pInfo, FALSE, _T("bad pointer in wxGetNativeFontEncoding") );
+    wxCHECK_MSG(pInfo, FALSE, wxT("bad pointer in wxGetNativeFontEncoding") );
     if (vEncoding == wxFONTENCODING_DEFAULT)
     {
         vEncoding = wxFont::GetDefaultEncoding();
@@ -233,7 +232,7 @@ bool wxTestFontEncoding( const wxNativeEncodingInfo& rInfo )
     vLogFont.fsFontUse = FATTR_FONTUSE_OUTLINE |      // only outline fonts allowed
                          FATTR_FONTUSE_TRANSFORMABLE; // may be transformed
 
-    wxStrncpy((wxChar*)vLogFont.szFacename, rInfo.facename.c_str(), WXSIZEOF(vLogFont.szFacename));
+    wxStrlcpy((wxChar*)vLogFont.szFacename, rInfo.facename.c_str(), WXSIZEOF(vLogFont.szFacename));
 
     if (!::GpiCreateLogFont( hPS
                             ,NULL
@@ -509,7 +508,7 @@ void wxOS2SelectMatchingFontByName(
     switch (pFont->GetWeight())
     {
         default:
-            wxFAIL_MSG(_T("unknown font weight"));
+            wxFAIL_MSG(wxT("unknown font weight"));
             // fall through
             usWeightClass = FWEIGHT_DONT_CARE;
             break;
@@ -549,7 +548,7 @@ void wxOS2SelectMatchingFontByName(
             break;
     }
 
-    wxStrncpy(zFontFaceName, sFaceName.c_str(), WXSIZEOF(zFontFaceName));
+    wxStrlcpy(zFontFaceName, sFaceName.c_str(), WXSIZEOF(zFontFaceName));
     nPointSize = pFont->GetPointSize();
 
     //
@@ -558,17 +557,12 @@ void wxOS2SelectMatchingFontByName(
     nIndex = 0;
     for(i = 0, nIs = 0; i < nNumFonts; i++)
     {
-        int                         nEmHeight = 0;
-        int                         nXHeight = 0;
-
         anDiff[0] = wxGpiStrcmp((wxChar*)pFM[i].szFacename, zFontFaceName);
         anDiff[1] = abs(pFM[i].lEmHeight - nPointSize);
         anDiff[2] = abs(pFM[i].usWeightClass -  usWeightClass);
         anDiff[3] = abs((pFM[i].fsSelection & 0x2f) -  fsSelection);
         if(anDiff[0] == 0)
         {
-            nEmHeight = (int)pFM[i].lEmHeight;
-            nXHeight  =(int)pFM[i].lXHeight;
             if( (nIs & 0x01) == 0)
             {
                 nIs = 1;

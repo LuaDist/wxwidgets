@@ -4,10 +4,9 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2002/11/27
-// RCS-ID:      $Id: app.mm 49438 2007-10-25 18:01:36Z DE $
 // Copyright:   (c) David Elliott
 //              Software 2000 Ltd.
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #include "wx/wxprec.h"
@@ -15,21 +14,17 @@
 #include "wx/app.h"
 
 #ifndef WX_PRECOMP
-    #include "wx/dc.h"
     #include "wx/intl.h"
     #include "wx/log.h"
     #include "wx/module.h"
 #endif
 
 #include "wx/cocoa/ObjcRef.h"
-#include "wx/cocoa/ObjcPose.h"
 #include "wx/cocoa/autorelease.h"
 #include "wx/cocoa/mbarman.h"
 #include "wx/cocoa/NSApplication.h"
 
-#if wxUSE_WX_RESOURCES
-#  include "wx/resource.h"
-#endif
+#include "wx/cocoa/dc.h"
 
 #import <AppKit/NSApplication.h>
 #import <Foundation/NSRunLoop.h>
@@ -43,16 +38,6 @@ bool      wxApp::sm_isEmbedded = false; // Normally we're not a plugin
 
 // wxNSApplicationObserver singleton.
 static wxObjcAutoRefFromAlloc<wxNSApplicationObserver*> sg_cocoaAppObserver = [[WX_GET_OBJC_CLASS(wxNSApplicationObserver) alloc] init];
-
-// The following two are supposed to be wxApp members but because of 2.8 ABI compatibility
-// we must make them static.  No problem since wxApp is a singleton anyway.
-static wxCFRef<CFRunLoopObserverRef> m_cfRunLoopIdleObserver;
-static wxCFRef<CFStringRef> m_cfObservedRunLoopMode;
-
-// ========================================================================
-// wxPoseAsInitializer
-// ========================================================================
-wxPoseAsInitializer *wxPoseAsInitializer::sm_first = NULL;
 
 // ========================================================================
 // wxNSApplicationDelegate
@@ -116,11 +101,6 @@ WX_IMPLEMENT_GET_OBJC_CLASS(wxNSApplicationObserver,NSObject)
 // wxApp Static member initialization
 // ----------------------------------------------------------------------------
 IMPLEMENT_DYNAMIC_CLASS(wxApp, wxEvtHandler)
-BEGIN_EVENT_TABLE(wxApp, wxEvtHandler)
-    EVT_IDLE(wxAppBase::OnIdle)
-//    EVT_END_SESSION(wxApp::OnEndSession)
-//    EVT_QUERY_END_SESSION(wxApp::OnQueryEndSession)
-END_EVENT_TABLE()
 
 // ----------------------------------------------------------------------------
 // wxApp initialization/cleanup
@@ -135,7 +115,7 @@ bool wxApp::Initialize(int& argc, wxChar **argv)
     // application (otherwise applications would need to handle it)
     if ( argc > 1 )
     {
-        static const wxChar *ARG_PSN = _T("-psn_");
+        static const wxChar *ARG_PSN = wxT("-psn_");
         if ( wxStrncmp(argv[1], ARG_PSN, wxStrlen(ARG_PSN)) == 0 )
         {
             // remove this argument
@@ -143,10 +123,6 @@ bool wxApp::Initialize(int& argc, wxChar **argv)
             memmove(argv + 1, argv + 2, argc * sizeof(wxChar *));
         }
     }
-
-    // Posing must be completed before any instances of the Objective-C
-    // classes being posed as are created.
-    wxPoseAsInitializer::InitializePosers();
 
     /*
         Cocoa supports -Key value options which set the user defaults key "Key"
@@ -186,7 +162,7 @@ void wxApp::CleanUp()
 {
     wxAutoNSAutoreleasePool pool;
 
-    wxDC::CocoaShutdownTextSystem();
+    wxCocoaDCImpl::CocoaShutdownTextSystem();
     wxMenuBarManager::DestroyInstance();
 
     [[NSNotificationCenter defaultCenter] removeObserver:sg_cocoaAppObserver];
@@ -198,16 +174,6 @@ void wxApp::CleanUp()
     }
 
     wxAppBase::CleanUp();
-
-    // Program built against < 2.8.5 hack: Destroy the idle observer here in
-    // case the formerly inline virtual destructor was inlined by an old app.
-    if(m_cfRunLoopIdleObserver != NULL)
-    {
-        // Invalidate the observer which also removes it from the run loop.
-        CFRunLoopObserverInvalidate(m_cfRunLoopIdleObserver);
-        // Release the ref as we don't need it anymore.
-        m_cfRunLoopIdleObserver.reset();
-    }
 }
 
 // ----------------------------------------------------------------------------
@@ -217,12 +183,10 @@ wxApp::wxApp()
 {
     m_topWindow = NULL;
 
-#ifdef __WXDEBUG__
-    m_isInAssert = false;
-#endif // __WXDEBUG__
-
     argc = 0;
+#if !wxUSE_UNICODE
     argv = NULL;
+#endif
     m_cocoaApp = NULL;
     m_cocoaAppDelegate = NULL;
 }
@@ -289,7 +253,7 @@ bool wxApp::OnInitGui()
     if(!sm_isEmbedded)
         wxMenuBarManager::CreateInstance();
 
-    wxDC::CocoaInitializeTextSystem();
+    wxCocoaDCImpl::CocoaInitializeTextSystem();
     return true;
 }
 
@@ -325,75 +289,6 @@ void wxApp::Exit()
     wxAppConsole::Exit();
 }
 
-// Yield to other processes
-bool wxApp::Yield(bool onlyIfNeeded)
-{
-    // MT-FIXME
-    static bool s_inYield = false;
-
-#if wxUSE_LOG
-    // disable log flushing from here because a call to wxYield() shouldn't
-    // normally result in message boxes popping up &c
-    wxLog::Suspend();
-#endif // wxUSE_LOG
-
-    if (s_inYield)
-    {
-        if ( !onlyIfNeeded )
-        {
-            wxFAIL_MSG( wxT("wxYield called recursively" ) );
-        }
-
-        return false;
-    }
-
-    s_inYield = true;
-
-    // Run the event loop until it is out of events
-    while(1)
-    {
-        wxAutoNSAutoreleasePool pool;
-        /*  NOTE: It may be better to use something like
-            NSEventTrackingRunLoopMode since we don't necessarily want all
-            timers/sources/observers to run, only those which would
-            run while tracking events.  However, it should be noted that
-            NSEventTrackingRunLoopMode is in the common set of modes
-            so it may not effectively make much of a difference.
-         */
-        NSEvent *event = [GetNSApplication()
-                nextEventMatchingMask:NSAnyEventMask
-                untilDate:[NSDate distantPast]
-                inMode:NSDefaultRunLoopMode
-                dequeue: YES];
-        if(!event)
-            break;
-        [GetNSApplication() sendEvent: event];
-    }
-
-    /*
-        Because we just told NSApplication to avoid blocking it will in turn
-        run the CFRunLoop with a timeout of 0 seconds.  In that case, our
-        run loop observer on kCFRunLoopBeforeWaiting never fires because
-        no waiting occurs.  Therefore, no idle events are sent.
-
-        Believe it or not, this is actually desirable because we do not want
-        to process idle from here.  However, we do want to process pending
-        events because some user code expects to do work in a thread while
-        the main thread waits and then notify the main thread by posting
-        an event.
-     */
-    ProcessPendingEvents();
-
-#if wxUSE_LOG
-    // let the logs be flashed again
-    wxLog::Resume();
-#endif // wxUSE_LOG
-
-    s_inYield = false;
-
-    return true;
-}
-
 void wxApp::WakeUpIdle()
 {
     /*  When called from the main thread the NSAutoreleasePool managed by
@@ -423,7 +318,7 @@ void wxApp::WakeUpIdle()
         done without exiting the runloop.
 
         Be careful if you decide to change the implementation of this method
-        as wxEventLoop::Exit depends on the current behavior.
+        as wxEventLoop::Exit depends on the current behaviour.
      */
     [m_cocoaApp postEvent:[NSEvent otherEventWithType:NSApplicationDefined
             location:NSZeroPoint modifierFlags:NSAnyEventMask
@@ -458,7 +353,7 @@ static int sg_cApplicationWillUpdate = 0;
     before the run loop waits and send the idle events from there.
 
     It also has the desirable effect of only sending the wx idle events when
-    the event loop is actualy going to block.  If the event loop is being
+    the event loop is actually going to block.  If the event loop is being
     pumped manualy (e.g. like a PeekMessage) then the kCFRunLoopBeforeWaiting
     observer never fires.  Our Yield() method depends on this because sending
     idle events from within Yield would be bad.
@@ -565,15 +460,6 @@ void wxApp::CF_ObserveMainRunLoopBeforeWaiting(CFRunLoopObserverRef observer, in
         wxLogTrace(wxTRACE_COCOA, wxT("Idle END"));
     }
 }
-
-#ifdef __WXDEBUG__
-void wxApp::OnAssert(const wxChar *file, int line, const wxChar* cond, const wxChar *msg)
-{
-    m_isInAssert = true;
-    wxAppBase::OnAssert(file, line, cond, msg);
-    m_isInAssert = false;
-}
-#endif // __WXDEBUG__
 
 /*  A note about Cocoa's event loops vs. run loops:
 

@@ -2,7 +2,6 @@
 // Name:        src/gtk1/utilsgtk.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: utilsgtk.cpp 49838 2007-11-11 23:52:54Z VZ $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -19,10 +18,9 @@
 #endif
 
 #include "wx/apptrait.h"
-
+#include "wx/gtk1/private/timer.h"
+#include "wx/evtloop.h"
 #include "wx/process.h"
-
-#include "wx/unix/execute.h"
 
 #include <stdarg.h>
 #include <string.h>
@@ -57,14 +55,11 @@ extern GtkWidget *wxGetRootWindow();
 //----------------------------------------------------------------------------
 // misc.
 //----------------------------------------------------------------------------
-#ifndef __EMX__
-// on OS/2, we use the wxBell from wxBase library
 
 void wxBell()
 {
     gdk_beep();
 }
-#endif
 
 /* Don't synthesize KeyUp events holding down a key and producing
    KeyDown events with autorepeat. */
@@ -105,7 +100,7 @@ void wxDisplaySizeMM( int *width, int *height )
 
 void wxGetMousePosition( int* x, int* y )
 {
-    gdk_window_get_pointer( (GdkWindow*) NULL, x, y, (GdkModifierType*) NULL );
+    gdk_window_get_pointer( NULL, x, y, NULL );
 }
 
 bool wxColourDisplay()
@@ -128,49 +123,14 @@ wxWindow* wxFindWindowAtPoint(const wxPoint& pt)
 // subprocess routines
 // ----------------------------------------------------------------------------
 
-extern "C" {
-static
-void GTK_EndProcessDetector(gpointer data, gint source,
-                            GdkInputCondition WXUNUSED(condition) )
+#if wxUSE_TIMER
+
+wxTimerImpl* wxGUIAppTraits::CreateTimerImpl(wxTimer *timer)
 {
-   wxEndProcessData *proc_data = (wxEndProcessData *)data;
-
-   // has the process really terminated? unfortunately GDK (or GLib) seem to
-   // generate G_IO_HUP notification even when it simply tries to read from a
-   // closed fd and hasn't terminated at all
-   int pid = (proc_data->pid > 0) ? proc_data->pid : -(proc_data->pid);
-   int status = 0;
-   int rc = waitpid(pid, &status, WNOHANG);
-
-   if ( rc == 0 )
-   {
-       // no, it didn't exit yet, continue waiting
-       return;
-   }
-
-   // set exit code to -1 if something bad happened
-   proc_data->exitcode = rc != -1 && WIFEXITED(status) ? WEXITSTATUS(status)
-                                                      : -1;
-
-   // child exited, end waiting
-   close(source);
-
-   // don't call us again!
-   gdk_input_remove(proc_data->tag);
-
-   wxHandleProcessTermination(proc_data);
-}
+    return new wxGTKTimerImpl(timer);
 }
 
-int wxAddProcessCallback(wxEndProcessData *proc_data, int fd)
-{
-    int tag = gdk_input_add(fd,
-                            GDK_INPUT_READ,
-                            GTK_EndProcessDetector,
-                            (gpointer)proc_data);
-
-    return tag;
-}
+#endif // wxUSE_TIMER
 
 // ----------------------------------------------------------------------------
 // wxPlatformInfo-related
@@ -186,7 +146,8 @@ wxPortId wxGUIAppTraits::GetToolkitVersion(int *verMaj, int *verMin) const
     return wxPORT_GTK;
 }
 
-wxString wxGUIAppTraits::GetDesktopEnvironment() const
+wxEventLoopBase* wxGUIAppTraits::CreateEventLoop()
 {
-    return wxEmptyString;
+    return new wxEventLoop;
 }
+

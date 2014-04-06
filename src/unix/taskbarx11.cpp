@@ -4,7 +4,6 @@
 // Author:      Vaclav Slavik
 // Modified by:
 // Created:     04/04/2003
-// RCS-ID:      $Id: taskbarx11.cpp 53582 2008-05-12 23:54:34Z RD $
 // Copyright:   (c) Vaclav Slavik, 2003
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////
@@ -21,7 +20,7 @@
 // For compilers that support precompilation, includes "wx.h".
 #include "wx/wxprec.h"
 
-#ifdef wxHAS_TASK_BAR_ICON
+#if wxUSE_TASKBARICON && !defined(__WXGTK20__)
 
 #include "wx/taskbar.h"
 
@@ -48,37 +47,25 @@
 // base class that implements toolkit-specific method:
 // ----------------------------------------------------------------------------
 
-#ifdef __WXGTK20__
-    #include <gtk/gtk.h>
-    #if GTK_CHECK_VERSION(2,1,0)
-        #include "wx/gtk/taskbarpriv.h"
-        #define TASKBAR_ICON_AREA_BASE_INCLUDED
-    #endif
-#endif
-
-#ifndef TASKBAR_ICON_AREA_BASE_INCLUDED
     class WXDLLIMPEXP_ADV wxTaskBarIconAreaBase : public wxFrame
     {
     public:
         wxTaskBarIconAreaBase()
-            : wxFrame(NULL, wxID_ANY, _T("systray icon"),
+            : wxFrame(NULL, wxID_ANY, wxT("systray icon"),
                       wxDefaultPosition, wxDefaultSize,
                       wxDEFAULT_FRAME_STYLE | wxFRAME_NO_TASKBAR |
                       wxSIMPLE_BORDER | wxFRAME_SHAPED) {}
 
-        bool IsProtocolSupported() const { return false; }
+        static bool IsProtocolSupported() { return false; }
     };
-#endif
-
 
 // ----------------------------------------------------------------------------
 // toolkit dependent methods to set properties on helper window:
 // ----------------------------------------------------------------------------
 
 #if defined(__WXGTK__)
-    #include <gdk/gdk.h>
-    #include <gdk/gdkx.h>
     #include <gtk/gtk.h>
+    #include <gdk/gdkx.h>
     #define GetDisplay()        GDK_DISPLAY()
     #define GetXWindow(wxwin)   GDK_WINDOW_XWINDOW((wxwin)->m_widget->window)
 #elif defined(__WXX11__) || defined(__WXMOTIF__)
@@ -124,12 +111,8 @@ BEGIN_EVENT_TABLE(wxTaskBarIconArea, wxTaskBarIconAreaBase)
 END_EVENT_TABLE()
 
 wxTaskBarIconArea::wxTaskBarIconArea(wxTaskBarIcon *icon, const wxBitmap &bmp)
-    : wxTaskBarIconAreaBase(), m_icon(icon), m_pos(0,0)
+    : wxTaskBarIconAreaBase(), m_icon(icon), m_bmp(bmp)
 {
-#if defined(__WXGTK20__) && defined(TASKBAR_ICON_AREA_BASE_INCLUDED)
-    m_invokingWindow = icon;
-#endif
-
     // Set initial size to bitmap size (tray manager may and often will
     // change it):
     SetClientSize(wxSize(bmp.GetWidth(), bmp.GetHeight()));
@@ -138,8 +121,8 @@ wxTaskBarIconArea::wxTaskBarIconArea(wxTaskBarIcon *icon, const wxBitmap &bmp)
 
     if (!IsProtocolSupported())
     {
-        wxLogTrace(_T("systray"),
-                   _T("using legacy KDE1,2 and GNOME 1.2 methods"));
+        wxLogTrace(wxT("systray"),
+                   wxT("using legacy KDE1,2 and GNOME 1.2 methods"));
         SetLegacyWMProperties();
     }
 }
@@ -206,7 +189,7 @@ void wxTaskBarIconArea::SetLegacyWMProperties()
 
 void wxTaskBarIconArea::OnSizeChange(wxSizeEvent& WXUNUSED(event))
 {
-    wxLogTrace(_T("systray"), _T("icon size changed to %i x %i"),
+    wxLogTrace(wxT("systray"), wxT("icon size changed to %i x %i"),
                GetSize().x, GetSize().y);
     // rescale or reposition the icon as needed:
     wxBitmap bmp(m_bmp);
@@ -251,6 +234,15 @@ void wxTaskBarIconArea::OnMenuEvent(wxCommandEvent& event)
 }
 
 // ----------------------------------------------------------------------------
+// wxTaskBarIconBase class:
+// ----------------------------------------------------------------------------
+
+bool wxTaskBarIconBase::IsAvailable()
+{
+    return wxTaskBarIconArea::IsProtocolSupported();
+}
+
+// ----------------------------------------------------------------------------
 // wxTaskBarIcon class:
 // ----------------------------------------------------------------------------
 
@@ -264,8 +256,8 @@ wxTaskBarIcon::~wxTaskBarIcon()
 {
     if (m_iconWnd)
     {
-        m_iconWnd->Disconnect(wxEVT_DESTROY, (wxObjectEventFunction)NULL,
-                              (wxObject*)NULL, this);
+        m_iconWnd->Disconnect(wxEVT_DESTROY,
+            wxWindowDestroyEventHandler(wxTaskBarIcon::OnDestroy), NULL, this);
         RemoveIcon();
     }
 }
@@ -343,4 +335,4 @@ bool wxTaskBarIcon::PopupMenu(wxMenu *menu)
     return true;
 }
 
-#endif // wxHAS_TASK_BAR_ICON
+#endif // wxUSE_TASKBARICON

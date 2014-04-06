@@ -4,7 +4,6 @@
 // Author:      Stefan Neis
 // Modified by:
 // Created:     22.09.2003
-// RCS-ID:      $Id: apptrait.h 53707 2008-05-22 21:19:43Z SN $
 // Copyright:   (c) 2003 Stefan Neis <Stefan.Neis@t-online.de>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -19,6 +18,12 @@
 class WXDLLIMPEXP_BASE wxConsoleAppTraits : public wxConsoleAppTraitsBase
 {
 public:
+#if wxUSE_CONSOLE_EVENTLOOP
+    virtual wxEventLoopBase *CreateEventLoop();
+#endif // wxUSE_CONSOLE_EVENTLOOP
+#if wxUSE_TIMER
+    virtual wxTimerImpl *CreateTimerImpl(wxTimer *timer);
+#endif
 };
 
 #if wxUSE_GUI
@@ -26,7 +31,11 @@ public:
 class WXDLLIMPEXP_CORE wxGUIAppTraits : public wxGUIAppTraitsBase
 {
 public:
-    virtual wxPortId GetToolkitVersion(int *majVer, int *minVer) const;
+    virtual wxEventLoopBase *CreateEventLoop();
+#if wxUSE_TIMER
+    virtual wxTimerImpl *CreateTimerImpl(wxTimer *timer);
+#endif
+    virtual wxPortId GetToolkitVersion(int *majVer = NULL, int *minVer = NULL) const;
 
     // wxThread helpers
     // ----------------
@@ -38,6 +47,9 @@ public:
     virtual void TerminateGui(unsigned long ulHab);
 #ifdef __WXGTK__
     virtual wxString GetDesktopEnvironment() const;
+#endif
+#if wxUSE_SOCKETS
+    virtual wxFDIOManager *GetFDIOManager();
 #endif
 };
 

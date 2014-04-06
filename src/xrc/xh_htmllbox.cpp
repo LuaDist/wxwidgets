@@ -1,9 +1,8 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        xh_simplehtmllbox.cpp
+// Name:        src/xrc/xh_simplehtmllbox.cpp
 // Purpose:     XML resource handler for wxSimpleHtmlListBox
 // Author:      Francesco Montorsi
 // Created:     2006/10/21
-// RCS-ID:      $Id: xh_htmllbox.cpp 42257 2006-10-22 22:09:16Z VZ $
 // Copyright:   (c) 2006 Francesco Montorsi
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -21,6 +20,8 @@
 
 #include "wx/htmllbox.h"
 #include "wx/filesys.h"
+
+#include "wx/xml/xml.h"
 
 IMPLEMENT_DYNAMIC_CLASS(wxSimpleHtmlListBoxXmlHandler, wxXmlResourceHandler)
 
@@ -50,7 +51,7 @@ wxObject *wxSimpleHtmlListBoxXmlHandler::DoCreateResource()
                         GetID(),
                         GetPosition(), GetSize(),
                         strList,
-                        GetStyle(_T("style"), wxHLB_DEFAULT_STYLE),
+                        GetStyle(wxT("style"), wxHLB_DEFAULT_STYLE),
                         wxDefaultValidator,
                         GetName());
 

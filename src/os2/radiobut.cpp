@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/12/99
-// RCS-ID:      $Id: radiobut.cpp 39567 2006-06-05 16:46:15Z ABX $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -26,8 +25,6 @@
 #endif
 
 #include "wx/os2/private.h"
-
-IMPLEMENT_DYNAMIC_CLASS(wxRadioButton, wxControl)
 
 extern void  wxAssociateWinWithHandle( HWND         hWnd
                                       ,wxWindowOS2* pWin
@@ -83,7 +80,7 @@ bool wxRadioButton::Create( wxWindow* pParent,
     if (HasFlag(wxCLIP_SIBLINGS))
         lSstyle |= WS_CLIPSIBLINGS;
 
-    if (!OS2CreateControl( _T("BUTTON")
+    if (!OS2CreateControl( wxT("BUTTON")
                           ,lSstyle
                           ,rPos
                           ,rSize
@@ -165,7 +162,7 @@ bool wxRadioButton::OS2Command( WXUINT wParam, WXWORD WXUNUSED(wId) )
             if (!bIsChecked )
                 SetValue(true);
         }
-        wxCommandEvent rEvent( wxEVT_COMMAND_RADIOBUTTON_SELECTED, m_windowId );
+        wxCommandEvent rEvent( wxEVT_RADIOBUTTON, m_windowId );
         rEvent.SetEventObject(this);
         ProcessCommand(rEvent);
     }
@@ -202,7 +199,7 @@ void wxRadioButton::SetValue( bool bValue )
         const wxWindowList&         rSiblings = GetParent()->GetChildren();
         wxWindowList::compatibility_iterator nodeThis = rSiblings.Find(this);
 
-        wxCHECK_RET(nodeThis, _T("radio button not a child of its parent?"));
+        wxCHECK_RET(nodeThis, wxT("radio button not a child of its parent?"));
 
         //
         // If it's not the first item of the group ...

@@ -3,7 +3,6 @@
 // Purpose:     declaration of standard wxDataObjectSimple-derived classes
 // Author:      Mattia Barbon
 // Created:     27.04.03
-// RCS-ID:      $Id: dataobj2.h 40325 2006-07-25 14:31:55Z ABX $
 // Copyright:   (c) 2003 Mattia Barbon
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////

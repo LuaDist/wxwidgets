@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     10.09.00
-// RCS-ID:      $Id: radiobut.cpp 39567 2006-06-05 16:46:15Z ABX $
 // Copyright:   (c) 2000 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -40,8 +39,6 @@
 // ============================================================================
 // implementation
 // ============================================================================
-
-IMPLEMENT_DYNAMIC_CLASS(wxRadioButton, wxControl)
 
 // ----------------------------------------------------------------------------
 // wxRadioButton
@@ -137,7 +134,7 @@ void wxRadioButton::ClearValue()
 
 void wxRadioButton::SendEvent()
 {
-    wxCommandEvent event(wxEVT_COMMAND_RADIOBUTTON_SELECTED, GetId());
+    wxCommandEvent event(wxEVT_RADIOBUTTON, GetId());
     InitCommandEvent(event);
     event.SetInt(IsChecked());
     Command(event);
@@ -150,7 +147,7 @@ void wxRadioButton::SendEvent()
 wxSize wxRadioButton::GetBitmapSize() const
 {
     wxBitmap bmp = GetBitmap(State_Normal, Status_Checked);
-    return bmp.Ok() ? wxSize(bmp.GetWidth(), bmp.GetHeight())
+    return bmp.IsOk() ? wxSize(bmp.GetWidth(), bmp.GetHeight())
                     : GetRenderer()->GetRadioBitmapSize();
 }
 

@@ -3,7 +3,6 @@
 // Purpose:     wxOverlayImpl declaration
 // Author:      Vaclav Slavik
 // Created:     2006-10-20
-// RCS-ID:      $Id: overlay.h 54748 2008-07-21 17:01:35Z VZ $
 // Copyright:   (c) wxWidgets team
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -11,13 +10,13 @@
 #ifndef _WX_DFB_PRIVATE_OVERLAY_H_
 #define _WX_DFB_PRIVATE_OVERLAY_H_
 
-#include "wx/gdicmn.h"
 #include "wx/dfb/dfbptr.h"
+#include "wx/gdicmn.h"
 
 wxDFB_DECLARE_INTERFACE(IDirectFBSurface);
 
-class WXDLLEXPORT wxWindow;
-
+class WXDLLIMPEXP_FWD_CORE wxWindow;
+class WXDLLIMPEXP_FWD_CORE wxDC;
 
 class wxOverlayImpl
 {
@@ -27,10 +26,10 @@ public:
 
     void Reset();
     bool IsOk();
-    void Init(wxWindowDC* dc, int x , int y , int width , int height);
-    void BeginDrawing(wxWindowDC* dc);
-    void EndDrawing(wxWindowDC* dc);
-    void Clear(wxWindowDC* dc);
+    void Init(wxDC* dc, int x , int y , int width , int height);
+    void BeginDrawing(wxDC* dc);
+    void EndDrawing(wxDC* dc);
+    void Clear(wxDC* dc);
 
     // wxDFB specific methods:
     bool IsEmpty() const { return m_isEmpty; }

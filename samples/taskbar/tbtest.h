@@ -4,16 +4,15 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: tbtest.h 36336 2005-12-03 17:55:33Z vell $
 // Copyright:   (c)
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
-class MyTaskBarIcon: public wxTaskBarIcon
+class MyTaskBarIcon : public wxTaskBarIcon
 {
 public:
-#if defined(__WXCOCOA__)
-    MyTaskBarIcon(wxTaskBarIconType iconType = DEFAULT_TYPE)
+#if defined(__WXOSX__) && wxOSX_USE_COCOA
+    MyTaskBarIcon(wxTaskBarIconType iconType = wxTBI_DEFAULT_TYPE)
     :   wxTaskBarIcon(iconType)
 #else
     MyTaskBarIcon()
@@ -24,40 +23,38 @@ public:
     void OnMenuRestore(wxCommandEvent&);
     void OnMenuExit(wxCommandEvent&);
     void OnMenuSetNewIcon(wxCommandEvent&);
-    void OnMenuSetOldIcon(wxCommandEvent&);
-       void OnMenuCheckmark(wxCommandEvent&);
-       void OnMenuUICheckmark(wxUpdateUIEvent&);
+    void OnMenuCheckmark(wxCommandEvent&);
+    void OnMenuUICheckmark(wxUpdateUIEvent&);
     void OnMenuSub(wxCommandEvent&);
     virtual wxMenu *CreatePopupMenu();
 
-DECLARE_EVENT_TABLE()
+    DECLARE_EVENT_TABLE()
 };
 
 
 // Define a new application
-class MyApp: public wxApp
+class MyApp : public wxApp
 {
 public:
-    bool OnInit(void);
+    virtual bool OnInit();
 };
 
 class MyDialog: public wxDialog
 {
 public:
-    MyDialog(wxWindow* parent, const wxWindowID id, const wxString& title,
-        const wxPoint& pos, const wxSize& size, const long windowStyle = wxDEFAULT_DIALOG_STYLE);
-    ~MyDialog();
+    MyDialog(const wxString& title);
+    virtual ~MyDialog();
 
+protected:
+    void OnAbout(wxCommandEvent& event);
     void OnOK(wxCommandEvent& event);
     void OnExit(wxCommandEvent& event);
     void OnCloseWindow(wxCloseEvent& event);
-    void Init(void);
 
-protected:
     MyTaskBarIcon   *m_taskBarIcon;
-#if defined(__WXCOCOA__)
+#if defined(__WXOSX__) && wxOSX_USE_COCOA
     MyTaskBarIcon   *m_dockIcon;
 #endif
 
-DECLARE_EVENT_TABLE()
+    DECLARE_EVENT_TABLE()
 };

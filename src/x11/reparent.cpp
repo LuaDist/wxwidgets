@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     2002-03-09
-// RCS-ID:      $Id: reparent.cpp 39285 2006-05-23 11:04:37Z ABX $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -39,6 +38,8 @@
 #include "wx/x11/private.h"
 #include "X11/Xatom.h"
 
+#include "wx/generic/private/timer.h"
+
 /*
  * wxAdoptedWindow
  */
@@ -68,7 +69,7 @@ wxWindow* wxReparenter::sm_newParent = NULL;
 wxString wxReparenter::sm_name;
 bool wxReparenter::sm_exactMatch = false;
 
-static int ErrorHandler(Display* dpy, XErrorEvent* event)
+static int ErrorHandler(Display* WXUNUSED(dpy), XErrorEvent* WXUNUSED(event))
 {
     Xerror = True;
     return False;
@@ -87,12 +88,12 @@ bool wxReparenter::Reparent(wxWindow* newParent, wxAdoptedWindow* toReparent)
 
     old = XSetErrorHandler(ErrorHandler);
     XReparentWindow( wxGlobalDisplay(),
-                     (Window) toReparent->GetMainWindow(),
-                     (Window) newParent->GetMainWindow(),
+                     (Window) toReparent->X11GetMainWindow(),
+                     (Window) newParent->X11GetMainWindow(),
                      0, 0);
 
     if (!XQueryTree( wxGlobalDisplay(),
-                     (Window) toReparent->GetMainWindow(),
+                     (Window) toReparent->X11GetMainWindow(),
                      &returnroot, &returnparent,
                      &children, &numchildren) || Xerror)
     {
@@ -121,7 +122,7 @@ bool wxReparenter::Reparent(wxWindow* newParent, wxAdoptedWindow* toReparent)
               "Reparenting child at offset %d and position %d, %d.\n",
                parentOffset, parentOffset+xwa.x, parentOffset+xwa.y);
             XReparentWindow( wxGlobalDisplay(),
-                             children[each], (Window) newParent->GetMainWindow(),
+                             children[each], (Window) newParent->X11GetMainWindow(),
                              xwa.x, xwa.y);
         }
     }
@@ -150,11 +151,6 @@ bool wxReparenter::WaitAndReparent(wxWindow* newParent, wxAdoptedWindow* toRepar
     if (!WM_STATE)
         WM_STATE = XInternAtom(display, "WM_STATE", False);
 
-#ifdef __WXDEBUG__
-    if (!windowName.empty())
-        wxLogDebug(_T("Waiting for window %s"), windowName.c_str());
-#endif
-
     sm_done = false;
 
     wxEventLoop eventLoop;
@@ -173,7 +169,7 @@ bool wxReparenter::WaitAndReparent(wxWindow* newParent, wxAdoptedWindow* toRepar
         else
         {
 #if wxUSE_TIMER
-            wxTimer::NotifyTimers();
+            wxGenericTimerImpl::NotifyTimers();
             wxTheApp->ProcessIdle();
 #endif
         }
@@ -190,13 +186,13 @@ bool wxReparenter::ProcessXEvent(WXEvent* event)
     {
         if (xevent->type == MapNotify)
         {
-            wxLogDebug(_T("Window was mapped"));
+            wxLogDebug(wxT("Window was mapped"));
         }
 
         if (xevent->type == MapNotify && !xevent->xmap.override_redirect &&
             (client = (Window) FindAClientWindow((WXWindow) xevent->xmap.window, sm_name)))
         {
-            wxLogDebug(_T("Found a client window, about to reparent"));
+            wxLogDebug(wxT("Found a client window, about to reparent"));
             wxASSERT(sm_toReparent->GetParent() == NULL);
 
             sm_toReparent->SetHandle((WXWindow) client);
@@ -207,7 +203,7 @@ bool wxReparenter::ProcessXEvent(WXEvent* event)
                    xevent->xmap.override_redirect &&
                    xevent->xmap.window)
         {
-            wxLogDebug(_T("Found an override redirect window, about to reparent"));
+            wxLogDebug(wxT("Found an override redirect window, about to reparent"));
             sm_toReparent->SetHandle((WXWindow) xevent->xmap.window);
             sm_newParent->AddChild(sm_toReparent);
             wxASSERT(sm_toReparent->GetParent() == NULL);

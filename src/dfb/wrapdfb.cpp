@@ -3,7 +3,6 @@
 // Purpose:     wx wrappers for DirectFB interfaces
 // Author:      Vaclav Slavik
 // Created:     2006-09-04
-// RCS-ID:      $Id: wrapdfb.cpp 54748 2008-07-21 17:01:35Z VZ $
 // Copyright:   (c) 2006 REA Elektronik GmbH
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -15,8 +14,11 @@
     #pragma hdrstop
 #endif
 
-#include "wx/intl.h"
-#include "wx/log.h"
+#ifndef WX_PRECOMP
+    #include "wx/intl.h"
+    #include "wx/log.h"
+#endif
+
 #include "wx/dfb/wrapdfb.h"
 
 //-----------------------------------------------------------------------------
@@ -33,7 +35,7 @@ bool wxDfbCheckReturn(DFBResult code)
         // these are programming errors, assert:
         #define DFB_ASSERT(code)                                        \
             case code:                                                  \
-                wxFAIL_MSG( _T("DirectFB error: ") _T(#code) );         \
+                wxFAIL_MSG( "DirectFB error: " wxT(#code) );         \
                 return false                                            \
 
         DFB_ASSERT(DFB_DEAD);
@@ -58,7 +60,7 @@ bool wxDfbCheckReturn(DFBResult code)
 
         default:
             // FIXME: should handle the errors individually
-            wxLogError(_("DirectFB error %d occured."), (int)code);
+            wxLogError(_("DirectFB error %d occurred."), (int)code);
             return false;
     }
 }
@@ -102,13 +104,26 @@ wxIDirectFBSurfacePtr wxIDirectFB::GetPrimarySurface()
 {
     DFBSurfaceDescription desc;
     desc.flags = DSDESC_CAPS;
-    desc.caps = DSCAPS_PRIMARY;
+    // NB: see dcscreen.cpp for why we request double-buffered surface
+    //
+    //     This assumes the cooperative level is DFSCL_NORMAL (that's the
+    //     default and wx doesn't modify it anywhere); if we ever support
+    //     other cooperative levels, DSCAPS_DOUBLE should *not* be used with
+    //     them.
+    desc.caps = DFBSurfaceCapabilities(DSCAPS_PRIMARY | DSCAPS_DOUBLE);
     return CreateSurface(&desc);
 }
 
 //-----------------------------------------------------------------------------
 // wxIDirectFBSurface
 //-----------------------------------------------------------------------------
+
+DFBSurfacePixelFormat wxIDirectFBSurface::GetPixelFormat()
+{
+    DFBSurfacePixelFormat format = DSPF_UNKNOWN;
+    GetPixelFormat(&format);
+    return format;
+}
 
 int wxIDirectFBSurface::GetDepth()
 {
@@ -130,7 +145,7 @@ wxIDirectFBSurface::CreateCompatible(const wxSize& sz, int flags)
             return NULL;
     }
 
-    wxCHECK_MSG( size.x > 0 && size.y > 0, NULL, _T("invalid size") );
+    wxCHECK_MSG( size.x > 0 && size.y > 0, NULL, "invalid size" );
 
     DFBSurfaceDescription desc;
     desc.flags = (DFBSurfaceDescriptionFlags)(

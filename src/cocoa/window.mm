@@ -4,9 +4,8 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2002/12/26
-// RCS-ID:      $Id: window.mm 51869 2008-02-18 04:58:07Z DE $
 // Copyright:   (c) 2002 David Elliott
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #include "wx/wxprec.h"
@@ -15,16 +14,18 @@
     #include "wx/log.h"
     #include "wx/window.h"
     #include "wx/dc.h"
+    #include "wx/dcclient.h"
     #include "wx/utils.h"
 #endif //WX_PRECOMP
 
 #include "wx/tooltip.h"
 
+#include "wx/cocoa/dc.h"
 #include "wx/cocoa/autorelease.h"
 #include "wx/cocoa/string.h"
 #include "wx/cocoa/trackingrectmanager.h"
 #include "wx/cocoa/private/scrollview.h"
-#include "wx/mac/corefoundation/cfref.h"
+#include "wx/osx/core/cfref.h"
 #include "wx/cocoa/ObjcRef.h"
 
 #import <Foundation/NSArray.h>
@@ -150,7 +151,7 @@ namespace { // file namespace
 
 class wxCocoaPrivateScreenCoordinateTransformer
 {
-    DECLARE_NO_COPY_CLASS(wxCocoaPrivateScreenCoordinateTransformer)
+    wxDECLARE_NO_COPY_CLASS(wxCocoaPrivateScreenCoordinateTransformer);
 public:
     wxCocoaPrivateScreenCoordinateTransformer();
     ~wxCocoaPrivateScreenCoordinateTransformer();
@@ -271,7 +272,7 @@ NSPoint wxWindowCocoa::OriginInCocoaScreenCoordinatesForRectInWxDisplayCoordinat
 // ========================================================================
 class wxWindowCocoaHider: protected wxCocoaNSView
 {
-    DECLARE_NO_COPY_CLASS(wxWindowCocoaHider)
+    wxDECLARE_NO_COPY_CLASS(wxWindowCocoaHider);
 public:
     wxWindowCocoaHider(wxWindow *owner);
     virtual ~wxWindowCocoaHider();
@@ -280,9 +281,7 @@ protected:
     wxWindowCocoa *m_owner;
     WX_NSView m_dummyNSView;
     virtual void Cocoa_FrameChanged(void);
-#if wxUSE_ABI_INCOMPATIBLE_FEATURES
     virtual void Cocoa_synthesizeMouseMoved(void) {}
-#endif
 #ifdef WXCOCOA_FILL_DUMMY_VIEW
     virtual bool Cocoa_drawRect(const NSRect& rect);
 #endif //def WXCOCOA_FILL_DUMMY_VIEW
@@ -309,6 +308,12 @@ WX_IMPLEMENT_GET_OBJC_CLASS(wxDummyNSView,NSView)
 
 // ========================================================================
 // wxWindowCocoaHider
+//  NOTE: This class and method of hiding predates setHidden: support in
+//  the toolkit.  The hack used here is to replace the view with a stand-in
+//  that will be subject to the usual Cocoa resizing rules.
+//  When possible (i.e. when running on 10.3 or higher) we make it hidden
+//  mostly as an optimization so Cocoa doesn't have to consider it when
+//  drawing or finding key views.
 // ========================================================================
 wxWindowCocoaHider::wxWindowCocoaHider(wxWindow *owner)
 :   m_owner(owner)
@@ -319,6 +324,9 @@ wxWindowCocoaHider::wxWindowCocoaHider(wxWindow *owner)
         initWithFrame:[owner->GetNSViewForHiding() frame]];
     [m_dummyNSView setAutoresizingMask: [owner->GetNSViewForHiding() autoresizingMask]];
     AssociateNSView(m_dummyNSView);
+
+    if([m_dummyNSView respondsToSelector:@selector(setHidden:)])
+        [m_dummyNSView setHidden:YES];
 }
 
 wxWindowCocoaHider::~wxWindowCocoaHider()
@@ -348,9 +356,9 @@ bool wxWindowCocoaHider::Cocoa_drawRect(const NSRect& rect)
 
 
 /*! @class WXManualScrollView
-    @abstract   An NSScrollView subclass which implements wx scroll behavior
+    @abstract   An NSScrollView subclass which implements wx scroll behaviour
     @discussion
-    Overrides default behavior of NSScrollView such that this class receives
+    Overrides default behaviour of NSScrollView such that this class receives
     the scroller action messages and allows the wxCocoaScrollView to act
     on them accordingly.  In particular, because the NSScrollView will not
     receive action messages from the scroller, it will not adjust the
@@ -548,7 +556,7 @@ void wxWindowCocoaScrollView::Encapsulate()
     // Set the scroll view autoresizingMask to match the current NSView
     [m_cocoaNSScrollView setAutoresizingMask: [m_owner->GetNSView() autoresizingMask]];
     [m_owner->GetNSView() setAutoresizingMask: NSViewNotSizable];
-    // NOTE: replaceSubView will cause m_cocaNSView to be released
+    // NOTE: replaceSubView will cause m_cocoaNSView to be released
     // except when it hasn't been added into an NSView hierarchy in which
     // case it doesn't need to be and this should work out to a no-op
     m_owner->CocoaReplaceView(m_owner->GetNSView(), m_cocoaNSScrollView);
@@ -726,7 +734,7 @@ int wxWindowCocoaScrollView::GetScrollPos(wxOrientation orient)
         position is at range-thumbsize.
 
         The range of an NSScroller is 0.0 to 1.0.  Much easier! NOTE: Apple doesn't really specify
-        but GNUStep docs do say that 0.0 is top/left and 1.0 is bottom/right.  This is actualy
+        but GNUStep docs do say that 0.0 is top/left and 1.0 is bottom/right.  This is actually
         in contrast to NSSlider which generally has 1.0 at the TOP when it's done vertically.
      */
     CGFloat cocoaScrollPos = [cocoaScroller floatValue];
@@ -877,7 +885,7 @@ void wxWindowCocoaScrollView::_wx_doScroller(NSScroller *sender)
     }
     wxScrollWinEvent event(commandType, scrollpos, orientation);
     event.SetEventObject(m_owner);
-    m_owner->GetEventHandler()->ProcessEvent(event);
+    m_owner->HandleWindowEvent(event);
 }
 
 void wxWindowCocoaScrollView::UpdateSizes()
@@ -902,7 +910,7 @@ void wxWindowCocoaScrollView::Cocoa_FrameChanged(void)
     wxLogTrace(wxTRACE_COCOA,wxT("wxWindowCocoaScrollView=%p::Cocoa_FrameChanged for wxWindow %p"), this, m_owner);
     wxSizeEvent event(m_owner->GetSize(), m_owner->GetId());
     event.SetEventObject(m_owner);
-    m_owner->GetEventHandler()->ProcessEvent(event);
+    m_owner->HandleWindowEvent(event);
 
     /*  If the view is not a native one then it's being managed by wx.  In this case the control
         may decide to change its virtual size and we must update the document view's size to
@@ -919,8 +927,6 @@ void wxWindowCocoaScrollView::Cocoa_FrameChanged(void)
 // normally the base classes aren't included, but wxWindow is special
 #ifdef __WXUNIVERSAL__
 IMPLEMENT_ABSTRACT_CLASS(wxWindowCocoa, wxWindowBase)
-#else
-IMPLEMENT_DYNAMIC_CLASS(wxWindow, wxWindowBase)
 #endif
 
 BEGIN_EVENT_TABLE(wxWindowCocoa, wxWindowBase)
@@ -934,12 +940,8 @@ void wxWindowCocoa::Init()
     m_cocoaNSView = NULL;
     m_cocoaHider = NULL;
     m_wxCocoaScrollView = NULL;
-    m_isBeingDeleted = false;
     m_isInPaint = false;
-    m_shouldBeEnabled = true;
-#if wxUSE_ABI_INCOMPATIBLE_FEATURES
     m_visibleTrackingRectManager = NULL;
-#endif
 }
 
 // Constructor
@@ -1002,11 +1004,9 @@ void wxWindowCocoa::CocoaRemoveFromParent(void)
 
 void wxWindowCocoa::SetNSView(WX_NSView cocoaNSView)
 {
-#if wxUSE_ABI_INCOMPATIBLE_FEATURES
     // Clear the visible area tracking rect if we have one.
     delete m_visibleTrackingRectManager;
     m_visibleTrackingRectManager = NULL;
-#endif
 
     bool need_debug = cocoaNSView || m_cocoaNSView;
     if(need_debug) wxLogTrace(wxTRACE_COCOA_RetainRelease,wxT("wxWindowCocoa=%p::SetNSView [m_cocoaNSView=%p retainCount]=%d"),this,m_cocoaNSView,[m_cocoaNSView retainCount]);
@@ -1061,7 +1061,7 @@ NSRect wxWindowCocoa::CocoaTransformWxToBounds(NSRect rectWx)
 WX_NSAffineTransform wxWindowCocoa::CocoaGetWxToBoundsTransform()
 {
     // TODO: Handle scrolling offset
-    NSAffineTransform *transform = wxDC::CocoaGetWxToBoundsTransform([GetNSView() isFlipped], [GetNSView() bounds].size.height);
+    NSAffineTransform *transform = wxCocoaDCImpl::CocoaGetWxToBoundsTransform([GetNSView() isFlipped], [GetNSView() bounds].size.height);
     return transform;
 }
 
@@ -1095,7 +1095,7 @@ bool wxWindowCocoa::Cocoa_drawRect(const NSRect &rect)
 
     wxPaintEvent event(m_windowId);
     event.SetEventObject(this);
-    bool ret = GetEventHandler()->ProcessEvent(event);
+    bool ret = HandleWindowEvent(event);
     m_isInPaint = false;
     return ret;
 }
@@ -1165,7 +1165,7 @@ bool wxWindowCocoa::Cocoa_mouseMoved(WX_NSEvent theEvent)
     wxMouseEvent event(wxEVT_MOTION);
     InitMouseEvent(event,theEvent);
     wxLogTrace(wxTRACE_COCOA,wxT("wxWindow=%p::Cocoa_mouseMoved @%d,%d"),this,event.m_x,event.m_y);
-    return GetEventHandler()->ProcessEvent(event);
+    return HandleWindowEvent(event);
 }
 
 void wxWindowCocoa::Cocoa_synthesizeMouseMoved()
@@ -1186,12 +1186,11 @@ void wxWindowCocoa::Cocoa_synthesizeMouseMoved()
     event.SetId(GetId());
 
     wxLogTrace(wxTRACE_COCOA,wxT("wxwin=%p Synthesized Mouse Moved @%d,%d"),this,event.m_x,event.m_y);
-    GetEventHandler()->ProcessEvent(event);
+    HandleWindowEvent(event);
 }
 
 bool wxWindowCocoa::Cocoa_mouseEntered(WX_NSEvent theEvent)
 {
-#if wxUSE_ABI_INCOMPATIBLE_FEATURES
     if(m_visibleTrackingRectManager != NULL && m_visibleTrackingRectManager->IsOwnerOfEvent(theEvent))
     {
         m_visibleTrackingRectManager->BeginSynthesizingEvents();
@@ -1205,16 +1204,14 @@ bool wxWindowCocoa::Cocoa_mouseEntered(WX_NSEvent theEvent)
         wxMouseEvent event(wxEVT_ENTER_WINDOW);
         InitMouseEvent(event,theEvent);
         wxLogTrace(wxTRACE_COCOA_TrackingRect,wxT("wxwin=%p Mouse Entered TR#%d @%d,%d"),this,[theEvent trackingNumber], event.m_x,event.m_y);
-        return GetEventHandler()->ProcessEvent(event);
+        return HandleWindowEvent(event);
     }
     else
-#endif
         return false;
 }
 
 bool wxWindowCocoa::Cocoa_mouseExited(WX_NSEvent theEvent)
 {
-#if wxUSE_ABI_INCOMPATIBLE_FEATURES
     if(m_visibleTrackingRectManager != NULL && m_visibleTrackingRectManager->IsOwnerOfEvent(theEvent))
     {
         m_visibleTrackingRectManager->StopSynthesizingEvents();
@@ -1222,10 +1219,9 @@ bool wxWindowCocoa::Cocoa_mouseExited(WX_NSEvent theEvent)
         wxMouseEvent event(wxEVT_LEAVE_WINDOW);
         InitMouseEvent(event,theEvent);
         wxLogTrace(wxTRACE_COCOA_TrackingRect,wxT("wxwin=%p Mouse Exited TR#%d @%d,%d"),this,[theEvent trackingNumber],event.m_x,event.m_y);
-        return GetEventHandler()->ProcessEvent(event);
+        return HandleWindowEvent(event);
     }
     else
-#endif
         return false;
 }
 
@@ -1234,7 +1230,7 @@ bool wxWindowCocoa::Cocoa_mouseDown(WX_NSEvent theEvent)
     wxMouseEvent event([theEvent clickCount]<2?wxEVT_LEFT_DOWN:wxEVT_LEFT_DCLICK);
     InitMouseEvent(event,theEvent);
     wxLogTrace(wxTRACE_COCOA,wxT("Mouse Down @%d,%d num clicks=%d"),event.m_x,event.m_y,[theEvent clickCount]);
-    return GetEventHandler()->ProcessEvent(event);
+    return HandleWindowEvent(event);
 }
 
 bool wxWindowCocoa::Cocoa_mouseDragged(WX_NSEvent theEvent)
@@ -1243,7 +1239,7 @@ bool wxWindowCocoa::Cocoa_mouseDragged(WX_NSEvent theEvent)
     InitMouseEvent(event,theEvent);
     event.m_leftDown = true;
     wxLogTrace(wxTRACE_COCOA,wxT("Mouse Drag @%d,%d"),event.m_x,event.m_y);
-    return GetEventHandler()->ProcessEvent(event);
+    return HandleWindowEvent(event);
 }
 
 bool wxWindowCocoa::Cocoa_mouseUp(WX_NSEvent theEvent)
@@ -1251,7 +1247,7 @@ bool wxWindowCocoa::Cocoa_mouseUp(WX_NSEvent theEvent)
     wxMouseEvent event(wxEVT_LEFT_UP);
     InitMouseEvent(event,theEvent);
     wxLogTrace(wxTRACE_COCOA,wxT("Mouse Up @%d,%d"),event.m_x,event.m_y);
-    return GetEventHandler()->ProcessEvent(event);
+    return HandleWindowEvent(event);
 }
 
 bool wxWindowCocoa::Cocoa_rightMouseDown(WX_NSEvent theEvent)
@@ -1259,7 +1255,7 @@ bool wxWindowCocoa::Cocoa_rightMouseDown(WX_NSEvent theEvent)
     wxMouseEvent event([theEvent clickCount]<2?wxEVT_RIGHT_DOWN:wxEVT_RIGHT_DCLICK);
     InitMouseEvent(event,theEvent);
     wxLogDebug(wxT("Mouse Down @%d,%d num clicks=%d"),event.m_x,event.m_y,[theEvent clickCount]);
-    return GetEventHandler()->ProcessEvent(event);
+    return HandleWindowEvent(event);
 }
 
 bool wxWindowCocoa::Cocoa_rightMouseDragged(WX_NSEvent theEvent)
@@ -1268,7 +1264,7 @@ bool wxWindowCocoa::Cocoa_rightMouseDragged(WX_NSEvent theEvent)
     InitMouseEvent(event,theEvent);
     event.m_rightDown = true;
     wxLogDebug(wxT("Mouse Drag @%d,%d"),event.m_x,event.m_y);
-    return GetEventHandler()->ProcessEvent(event);
+    return HandleWindowEvent(event);
 }
 
 bool wxWindowCocoa::Cocoa_rightMouseUp(WX_NSEvent theEvent)
@@ -1276,7 +1272,7 @@ bool wxWindowCocoa::Cocoa_rightMouseUp(WX_NSEvent theEvent)
     wxMouseEvent event(wxEVT_RIGHT_UP);
     InitMouseEvent(event,theEvent);
     wxLogDebug(wxT("Mouse Up @%d,%d"),event.m_x,event.m_y);
-    return GetEventHandler()->ProcessEvent(event);
+    return HandleWindowEvent(event);
 }
 
 bool wxWindowCocoa::Cocoa_otherMouseDown(WX_NSEvent theEvent)
@@ -1305,18 +1301,43 @@ void wxWindowCocoa::Cocoa_FrameChanged(void)
     if(isViewForSuperview)
     {
         wxLogTrace(wxTRACE_COCOA,wxT("wxWindow=%p::Cocoa_FrameChanged"),this);
-#if wxUSE_ABI_INCOMPATIBLE_FEATURES
         if(m_visibleTrackingRectManager != NULL)
             m_visibleTrackingRectManager->RebuildTrackingRect();
-#endif
         wxSizeEvent event(GetSize(), m_windowId);
         event.SetEventObject(this);
-        GetEventHandler()->ProcessEvent(event);
+        HandleWindowEvent(event);
     }
     else
     {
         wxLogTrace(wxTRACE_COCOA,wxT("wxWindow=%p::Cocoa_FrameChanged ignored"),this);
     }
+}
+
+bool wxWindowCocoa::Cocoa_resetCursorRects()
+{
+    wxLogTrace(wxTRACE_COCOA,wxT("wxWindow=%p::Cocoa_resetCursorRects"),this);
+
+    // When we are called there may be a queued tracking rect event (mouse entered or exited) and
+    // we won't know it.  A specific example is wxGenericHyperlinkCtrl changing the cursor from its
+    // mouse exited event.  If the control happens to share the edge with its parent window which is
+    // also tracking mouse events then Cocoa receives two mouse exited events from the window server.
+    // The first one will cause wxGenericHyperlinkCtrl to call wxWindow::SetCursor which will
+    // invaildate the cursor rect causing Cocoa to schedule cursor rect reset with the run loop
+    // which willl in turn call us before exiting for the next user event.
+
+    // If we are the parent window then rebuilding our tracking rectangle will cause us to miss
+    // our mouse exited event because the already queued event will have the old tracking rect
+    // tag.  The simple solution is to only rebuild our tracking rect if we need to.
+
+    if(m_visibleTrackingRectManager != NULL)
+        m_visibleTrackingRectManager->RebuildTrackingRectIfNeeded();
+
+    if(!m_cursor.GetNSCursor())
+        return false;
+
+    [GetNSView() addCursorRect: [GetNSView() visibleRect]  cursor: m_cursor.GetNSCursor()];
+
+    return true;
 }
 
 bool wxWindowCocoa::SetCursor(const wxCursor &cursor)
@@ -1336,36 +1357,6 @@ bool wxWindowCocoa::SetCursor(const wxCursor &cursor)
     return true;
 }
 
-bool wxWindowCocoa::Cocoa_resetCursorRects()
-{
-    wxLogTrace(wxTRACE_COCOA,wxT("wxWindow=%p::Cocoa_resetCursorRects"),this);
-#if wxUSE_ABI_INCOMPATIBLE_FEATURES
-
-    // When we are called there may be a queued tracking rect event (mouse entered or exited) and
-    // we won't know it.  A specific example is wxGenericHyperlinkCtrl changing the cursor from its
-    // mouse exited event.  If the control happens to share the edge with its parent window which is
-    // also tracking mouse events then Cocoa receives two mouse exited events from the window server.
-    // The first one will cause wxGenericHyperlinkCtrl to call wxWindow::SetCursor which will
-    // invaildate the cursor rect causing Cocoa to schedule cursor rect reset with the run loop
-    // which willl in turn call us before exiting for the next user event.
-
-    // If we are the parent window then rebuilding our tracking rectangle will cause us to miss
-    // our mouse exited event because the already queued event will have the old tracking rect
-    // tag.  The simple solution is to only rebuild our tracking rect if we need to.
-
-    if(m_visibleTrackingRectManager != NULL)
-        m_visibleTrackingRectManager->RebuildTrackingRectIfNeeded();
-#endif
-
-    if(!m_cursor.GetNSCursor())
-        return false;
-
-    [GetNSView() addCursorRect: [GetNSView() visibleRect]  cursor: m_cursor.GetNSCursor()];
-
-    return true;
-}
-
-#if wxUSE_ABI_INCOMPATIBLE_FEATURES
 bool wxWindowCocoa::Cocoa_viewDidMoveToWindow()
 {
     wxLogTrace(wxTRACE_COCOA,wxT("wxWindow=%p::viewDidMoveToWindow"),this);
@@ -1383,7 +1374,6 @@ bool wxWindowCocoa::Cocoa_viewWillMoveToWindow(WX_NSWindow newWindow)
         m_visibleTrackingRectManager->ClearTrackingRect();
     return false;
 }
-#endif
 
 bool wxWindow::Close(bool force)
 {
@@ -1397,32 +1387,9 @@ void wxWindow::CocoaReplaceView(WX_NSView oldView, WX_NSView newView)
     [[oldView superview] replaceSubview:oldView with:newView];
 }
 
-bool wxWindow::EnableSelfAndChildren(bool enable)
+void wxWindow::DoEnable(bool enable)
 {
-    // If the state isn't changing, don't do anything
-    if(!wxWindowBase::Enable(enable && m_shouldBeEnabled))
-        return false;
-    // Set the state of the Cocoa window
-    CocoaSetEnabled(m_isEnabled);
-    // Disable all children or (if enabling) return them to their proper state
-    for(wxWindowList::compatibility_iterator node = GetChildren().GetFirst();
-        node; node = node->GetNext())
-    {
-        node->GetData()->EnableSelfAndChildren(enable);
-    }
-    return true;
-}
-
-bool wxWindow::Enable(bool enable)
-{
-    // Keep track of what the window SHOULD be doing
-    m_shouldBeEnabled = enable;
-    // If the parent is disabled for any reason, then this window will be too.
-    if(!IsTopLevel() && GetParent())
-    {
-        enable = enable && GetParent()->IsEnabled();
-    }
-    return EnableSelfAndChildren(enable);
+	CocoaSetEnabled(enable);
 }
 
 bool wxWindow::Show(bool show)
@@ -1441,22 +1408,53 @@ bool wxWindow::Show(bool show)
         // If state isn't changing, return false
         if(!m_cocoaHider)
             return false;
+
+        // Replace the stand-in view with the real one and destroy the dummy view
         CocoaReplaceView(m_cocoaHider->GetNSView(), cocoaView);
         wxASSERT(![m_cocoaHider->GetNSView() superview]);
         delete m_cocoaHider;
         m_cocoaHider = NULL;
         wxASSERT([cocoaView superview]);
+
+        // Schedule an update of the key view loop (NOTE: 10.4+ only.. argh)
+        NSWindow *window = [cocoaView window];
+        if(window != nil)
+        {
+            // Delay this until returning to the event loop for a couple of reasons:
+            // 1. If a lot of stuff is shown/hidden we avoid recalculating needlessly
+            // 2. NSWindow does not seem to see the newly shown views if we do it right now.
+            if([window respondsToSelector:@selector(recalculateKeyViewLoop)])
+                [window performSelector:@selector(recalculateKeyViewLoop) withObject:nil afterDelay:0.0];
+        }
     }
     else
     {
         // If state isn't changing, return false
         if(m_cocoaHider)
             return false;
+
+        // Handle the first responder
+        NSWindow *window = [cocoaView window];
+        if(window != nil)
+        {
+            NSResponder *firstResponder = [window firstResponder];
+            if([firstResponder isKindOfClass:[NSView class]] && [(NSView*)firstResponder isDescendantOf:cocoaView])
+            {
+                BOOL didResign = [window makeFirstResponder:nil];
+                // If the current first responder (one of our subviews) refuses to give
+                // up its status, then fail now and don't hide this view
+                if(didResign == NO)
+                    return false;
+            }
+        }
+
+        // Create a new view to stand in for the real one (via wxWindowCocoaHider) and replace
+        // the real one with the stand in.
         m_cocoaHider = new wxWindowCocoaHider(this);
-        // NOTE: replaceSubview:with will cause m_cocaNSView to be
+        // NOTE: replaceSubview:with will cause m_cocoaNSView to be
         // (auto)released which balances out addSubview
         CocoaReplaceView(cocoaView, m_cocoaHider->GetNSView());
-        // m_coocaNSView is now only retained by us
+        // m_cocoaNSView is now only retained by us
         wxASSERT([m_cocoaHider->GetNSView() superview]);
         wxASSERT(![cocoaView superview]);
     }
@@ -1695,7 +1693,7 @@ void wxWindow::SetLabel(const wxString& WXUNUSED(label))
 
 wxString wxWindow::GetLabel() const
 {
-    // General Get/Set of labels is NOT implemented in wxControlBase until trunk (2.9).
+    // General Get/Set of labels is implemented in wxControlBase
     wxLogDebug(wxT("wxWindow::GetLabel: Should be overridden if needed."));
     return wxEmptyString;
 }
@@ -1703,26 +1701,24 @@ wxString wxWindow::GetLabel() const
 int wxWindow::GetCharHeight() const
 {
     // TODO
-    return 0;
+    return 10;
 }
 
 int wxWindow::GetCharWidth() const
 {
     // TODO
-    return 0;
+    return 5;
 }
 
-void wxWindow::GetTextExtent(const wxString& string, int *outX, int *outY,
+void wxWindow::DoGetTextExtent(const wxString& string, int *outX, int *outY,
         int *outDescent, int *outExternalLeading, const wxFont *inFont) const
 {
     // FIXME: This obviously ignores the window's font (if any) along with any size
     // transformations.  However, it's better than nothing.
     // We don't create a wxClientDC because we don't want to accidently be able to use
     // it for drawing.
-    wxDC tmpdc;
-    // NOTE: We must use const_cast here on 2.8 because we must take a const wxFont but the wxDC method
-    // must not.  In trunk, the wxDC method has been corrected to take const wxFont.
-    return tmpdc.GetTextExtent(string, outX, outY, outDescent, outExternalLeading, const_cast<wxFont*>(inFont));
+    wxClientDC tmpdc(const_cast<wxWindow*>(this));
+    return tmpdc.GetTextExtent(string, outX, outY, outDescent, outExternalLeading, inFont);
 }
 
 // Coordinates relative to the window
@@ -1818,7 +1814,7 @@ static char const * const comparisonresultStrings[] =
 
 class CocoaWindowCompareContext
 {
-    DECLARE_NO_COPY_CLASS(CocoaWindowCompareContext)
+    wxDECLARE_NO_COPY_CLASS(CocoaWindowCompareContext);
 public:
     CocoaWindowCompareContext(); // Not implemented
     CocoaWindowCompareContext(NSView *target, NSArray *subviews)
@@ -2009,7 +2005,7 @@ wxWindow* wxFindWindowAtPointer(wxPoint& pt)
  */
 class wxCocoaMouseMovedEventSynthesizer
 {
-    DECLARE_NO_COPY_CLASS(wxCocoaMouseMovedEventSynthesizer)
+    wxDECLARE_NO_COPY_CLASS(wxCocoaMouseMovedEventSynthesizer);
 public:
     wxCocoaMouseMovedEventSynthesizer()
     {   m_lastScreenMouseLocation = NSZeroPoint;
@@ -2079,7 +2075,27 @@ void wxCocoaMouseMovedEventSynthesizer::AddRunLoopObserver()
     ,   NULL
     ,   NULL
     };
-    m_runLoopObserver.reset(CFRunLoopObserverCreate(kCFAllocatorDefault, kCFRunLoopBeforeWaiting, TRUE, 0, SynthesizeMouseMovedEvent, &observerContext));
+
+    // The kCFRunLoopExit observation point is used such that we hook the run loop after it has already decided that
+    // it is going to exit which is generally for the purpose of letting the event loop process the next Cocoa event.
+
+    // Executing our procedure within the run loop (e.g. kCFRunLoopBeforeWaiting which was used before) results
+    // in our observer procedure being called before the run loop has decided that it is going to return control to
+    // the Cocoa event loop.  One major problem is uncovered by the wxGenericHyperlinkCtrl (consider this to be "user
+    // code") which changes the window's cursor and thus causes the cursor rectangle's to be invalidated.
+
+    // Cocoa implements this invalidation using a delayed notification scheme whereby the resetCursorRects method
+    // won't be called until the CFRunLoop gets around to it.  If the CFRunLoop has not yet exited then it will get
+    // around to it before letting the event loop do its work.  This has some very odd effects on the way the
+    // newly created tracking rects function.  In particular, we will often miss the mouseExited: message if the
+    // user flicks the mouse quickly enough such that the mouse is already outside of the tracking rect by the
+    // time the new one is built.
+
+    // Observing from the kCFRunLoopExit point gives Cocoa's event loop an opportunity to chew some events before it cedes
+    // control back to the CFRunLoop, thus causing the delayed notifications to fire at an appropriate time and
+    // the mouseExited: message to be sent properly.
+
+    m_runLoopObserver.reset(CFRunLoopObserverCreate(kCFAllocatorDefault, kCFRunLoopExit, TRUE, 0, SynthesizeMouseMovedEvent, &observerContext));
     CFRunLoopAddObserver([[NSRunLoop currentRunLoop] getCFRunLoop], m_runLoopObserver, kCFRunLoopCommonModes);
     wxLogTrace(wxTRACE_COCOA_TrackingRect, wxT("Added tracking rect run loop observer"));
 }
@@ -2093,7 +2109,6 @@ void wxCocoaMouseMovedEventSynthesizer::RemoveRunLoopObserver()
 
 void wxCocoaMouseMovedEventSynthesizer::SynthesizeMouseMovedEvent()
 {
-#if wxUSE_ABI_INCOMPATIBLE_FEATURES
     NSPoint screenMouseLocation = [NSEvent mouseLocation];
     // Checking the last mouse location is done for a few reasons:
     // 1. We are observing every iteration of the event loop so we'd be sending out a lot of extraneous events
@@ -2111,7 +2126,6 @@ void wxCocoaMouseMovedEventSynthesizer::SynthesizeMouseMovedEvent()
             (*i)->Cocoa_synthesizeMouseMoved();
         }
     }
-#endif
 }
 
 // Singleton used for all views:

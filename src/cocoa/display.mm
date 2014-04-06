@@ -4,7 +4,6 @@
 // Author:      Ryan Norton
 // Modified by:
 // Created:     2004-10-03
-// RCS-ID:      $Id: display.mm 41548 2006-10-02 05:38:05Z PC $
 // Copyright:   (c) Ryan Norton
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -53,7 +52,7 @@ public:
 private:
     CGDirectDisplayID m_id;
 
-    DECLARE_NO_COPY_CLASS(wxDisplayImplMacOSX)
+    wxDECLARE_NO_COPY_CLASS(wxDisplayImplMacOSX);
 };
 
 class wxDisplayFactoryMacOSX : public wxDisplayFactory
@@ -66,7 +65,7 @@ public:
     virtual int GetFromPoint(const wxPoint& pt);
 
 protected:
-    DECLARE_NO_COPY_CLASS(wxDisplayFactoryMacOSX)
+    wxDECLARE_NO_COPY_CLASS(wxDisplayFactoryMacOSX);
 };
 
 // ============================================================================
@@ -76,12 +75,8 @@ protected:
 unsigned wxDisplayFactoryMacOSX::GetCount()
 {
     CGDisplayCount count;
-#ifdef __WXDEBUG__
-    CGDisplayErr err =
-#endif
-    CGGetActiveDisplayList(0, NULL, &count);
-
-    wxASSERT(err == CGDisplayNoErr);
+    CGDisplayErr err = CGGetActiveDisplayList(0, NULL, &count);
+    wxCHECK_MSG( err != CGDisplayNoErr, 0, "CGGetActiveDisplayList() failed" );
 
     return count;
 }
@@ -126,12 +121,9 @@ wxDisplayImpl *wxDisplayFactoryMacOSX::CreateDisplay(unsigned n)
     CGDisplayCount theCount = GetCount();
     CGDirectDisplayID* theIDs = new CGDirectDisplayID[theCount];
 
-#ifdef __WXDEBUG__
-    CGDisplayErr err =
-#endif
-    CGGetActiveDisplayList(theCount, theIDs, &theCount);
+    CGDisplayErr err = CGGetActiveDisplayList(theCount, theIDs, &theCount);
+    wxCHECK_MSG( err != CGDisplayNoErr, NULL, "CGGetActiveDisplayList() failed" );
 
-    wxASSERT( err == CGDisplayNoErr );
     wxASSERT( n < theCount );
 
     wxDisplayImplMacOSX *display = new wxDisplayImplMacOSX(n, theIDs[n]);

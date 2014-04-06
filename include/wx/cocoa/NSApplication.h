@@ -4,7 +4,6 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2004/01/26
-// RCS-ID:      $Id: NSApplication.h 47445 2007-07-13 21:49:41Z DE $
 // Copyright:   (c) 2003,2004 David Elliott
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -19,7 +18,7 @@
 // ========================================================================
 /*!
     @class wxNSApplicationDelegate
-    @discussion Implements an NSApplication delegate which can respond to messages sent by Cocoa to change Cocoa's behavior.
+    @discussion Implements an NSApplication delegate which can respond to messages sent by Cocoa to change Cocoa's behaviour.
 
     wxCocoa will set a singleton instance of this class as the NSApplication delegate upon startup unless wxWidgets is running
     in a "plugin" manner in which case it would not be appropriate to do this.

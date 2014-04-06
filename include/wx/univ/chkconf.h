@@ -3,13 +3,23 @@
 // Purpose:     wxUniversal-specific configuration options checks
 // Author:      Vadim Zeitlin
 // Created:     2006-09-28 (extracted from wx/chkconf.h)
-// RCS-ID:      $Id: chkconf.h 41494 2006-09-28 22:55:28Z VZ $
 // Copyright:   (c) 2006 Vadim Zeitlin <vadim@wxwindows.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 #ifndef _WX_UNIV_CHKCONF_H_
 #define _WX_UNIV_CHKCONF_H_
+
+#if wxUSE_OWNER_DRAWN
+    /*
+        It is not clear if owner-drawn code makes much sense for wxUniv in the
+        first place but in any case it doesn't link currently (at least under
+        wxMSW but probably elsewhere too) as there is no wxUniv-specific
+        wxOwnerDrawnBase implementation so disable it for now.
+    */
+    #undef wxUSE_OWNER_DRAWN
+    #define wxUSE_OWNER_DRAWN 0
+#endif /* wxUSE_OWNER_DRAWN */
 
 #if (wxUSE_COMBOBOX || wxUSE_MENUS) && !wxUSE_POPUPWIN
 #    ifdef wxABORT_ON_CONFIG_ERROR

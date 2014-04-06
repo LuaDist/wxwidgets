@@ -3,7 +3,6 @@
 // Purpose:     XRC resource for wxCalendarCtrl
 // Author:      Brian Gavin
 // Created:     2000/09/09
-// RCS-ID:      $Id: xh_cald.cpp 38939 2006-04-27 12:47:14Z ABX $
 // Copyright:   (c) 2000 Brian Gavin
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

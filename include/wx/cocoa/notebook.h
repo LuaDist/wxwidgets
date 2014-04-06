@@ -4,7 +4,6 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2004/04/08
-// RCS-ID:      $Id: notebook.h 41764 2006-10-08 23:41:52Z VZ $
 // Copyright:   (c) 2004 David Elliott
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -17,7 +16,7 @@
 // ========================================================================
 // wxNotebook
 // ========================================================================
-class WXDLLEXPORT wxNotebook: public wxNotebookBase, protected wxCocoaNSTabView
+class WXDLLIMPEXP_CORE wxNotebook: public wxNotebookBase, protected wxCocoaNSTabView
 {
     DECLARE_DYNAMIC_CLASS(wxNotebook)
     DECLARE_EVENT_TABLE()
@@ -48,7 +47,7 @@ public:
 // ------------------------------------------------------------------------
 protected:
     // Notebooks cannot be enabled/disabled
-    virtual void CocoaSetEnabled(bool enable) { }
+    virtual void CocoaSetEnabled(bool WXUNUSED(enable)) { }
     virtual void CocoaDelegate_tabView_didSelectTabViewItem(WX_NSTabViewItem tabviewItem);
     virtual bool CocoaDelegate_tabView_shouldSelectTabViewItem(WX_NSTabViewItem tabviewItem);
 // ------------------------------------------------------------------------
@@ -56,7 +55,7 @@ protected:
 // ------------------------------------------------------------------------
 public:
     // set the currently selected page, return the index of the previously
-    // selected one (or -1 on error)
+    // selected one (or wxNOT_FOUND on error)
     int SetSelection(size_t nPage);
     // get the currently selected page
     int GetSelection() const;
@@ -97,7 +96,7 @@ public:
                      wxNotebookPage *win,
                      const wxString& strText,
                      bool bSelect = false,
-                     int imageId = -1 );
+                     int imageId = NO_IMAGE );
 
 protected:
 };

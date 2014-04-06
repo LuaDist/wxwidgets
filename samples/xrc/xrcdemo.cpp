@@ -2,7 +2,6 @@
 // Name:        xrcdemo.cpp
 // Purpose:     XML resources sample: Main application file
 // Author:      Robert O'Connor (rob@medicalmnemonics.com), Vaclav Slavik
-// RCS-ID:      $Id: xrcdemo.cpp 43619 2006-11-24 00:00:37Z VZ $
 // Copyright:   (c) Robert O'Connor and Vaclav Slavik
 // Licence:     wxWindows licence
 //-----------------------------------------------------------------------------
@@ -38,6 +37,10 @@
 
 #include "wx/xrc/xmlres.h"          // XRC XML resources
 
+#if wxUSE_RIBBON
+    #include "wx/xrc/xh_ribbon.h"
+#endif // wxUSE_RIBBON
+
 #include "wx/cshelp.h"              // wxSimpleHelpProvider for helptext
 
 #include "myframe.h"
@@ -60,11 +63,15 @@ IMPLEMENT_APP(MyApp)
 // 'Main program' equivalent: the program execution "starts" here
 bool MyApp::OnInit()
 {
+    if ( !wxApp::OnInit() )
+        return false;
+
     // If there is any of a certain format of image in the xrcs, then first
-    // load a handler for that image type. This example uses XPMs, but if
-    // you want PNGs, then add a PNG handler, etc. See wxImage::AddHandler()
+    // load a handler for that image type. This example uses XPMs & a gif, but
+    // if you want PNGs, then add a PNG handler, etc. See wxImage::AddHandler()
     // documentation for the types of image handlers available.
     wxImage::AddHandler(new wxXPMHandler);
+    wxImage::AddHandler(new wxGIFHandler);
 
     // Initialize all the XRC handlers. Always required (unless you feel like
     // going through and initializing a handler of each control type you will
@@ -74,53 +81,15 @@ bool MyApp::OnInit()
     // wxXRC docs for details.
     wxXmlResource::Get()->InitAllHandlers();
 
+#if wxUSE_RIBBON
+    wxXmlResource::Get()->AddHandler(new wxRibbonXmlHandler);
+#endif
+
     // Load all of the XRC files that will be used. You can put everything
     // into one giant XRC file if you wanted, but then they become more
     // diffcult to manage, and harder to reuse in later projects.
-    // The menubar
-    if (!wxXmlResource::Get()->Load(wxT("rc/menu.xrc")))
+    if ( !wxXmlResource::Get()->LoadAllFiles("rc") )
         return false;
-
-    // The toolbar
-    if (!wxXmlResource::Get()->Load(wxT("rc/toolbar.xrc")))
-        return false;
-
-    // Non-derived dialog example
-    if (!wxXmlResource::Get()->Load(wxT("rc/basicdlg.xrc")))
-        return false;
-
-    // Derived dialog example
-    if (!wxXmlResource::Get()->Load(wxT("rc/derivdlg.xrc")))
-        return false;
-
-    // Controls property example
-    if (!wxXmlResource::Get()->Load(wxT("rc/controls.xrc")))
-        return false;
-
-    // Frame example
-    if (!wxXmlResource::Get()->Load(wxT("rc/frame.xrc")))
-        return false;
-
-    // Uncentered example
-    if (!wxXmlResource::Get()->Load(wxT("rc/uncenter.xrc")))
-        return false;
-
-    // Custom class example
-    if (!wxXmlResource::Get()->Load(wxT("rc/custclas.xrc")))
-        return false;
-
-    // wxArtProvider example
-    if (!wxXmlResource::Get()->Load(wxT("rc/artprov.xrc")))
-        return false;
-
-    // Platform property example
-    if (!wxXmlResource::Get()->Load(wxT("rc/platform.xrc")))
-        return false;
-
-    // Variable expansion example
-    if (!wxXmlResource::Get()->Load(wxT("rc/variable.xrc")))
-        return false;
-
 
 #if wxUSE_HELP
     // Use the simple help provider to show the context-sensitive help

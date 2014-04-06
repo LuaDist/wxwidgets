@@ -3,24 +3,22 @@
 // Purpose:
 // Author:      Robert Roebling
 // Created:     01/02/97
-// Id:
 // Copyright:   (c) 1998 Robert Roebling and Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
-#ifndef __IMAGELISTH_G__
-#define __IMAGELISTH_G__
+#ifndef _WX_IMAGLISTG_H_
+#define _WX_IMAGLISTG_H_
 
-#include "wx/defs.h"
 #include "wx/list.h"
-#include "wx/icon.h"
 
-class WXDLLEXPORT wxDC;
-class WXDLLEXPORT wxBitmap;
-class WXDLLEXPORT wxColour;
+class WXDLLIMPEXP_FWD_CORE wxDC;
+class WXDLLIMPEXP_FWD_CORE wxBitmap;
+class WXDLLIMPEXP_FWD_CORE wxIcon;
+class WXDLLIMPEXP_FWD_CORE wxColour;
 
 
-class WXDLLEXPORT wxGenericImageList: public wxObject
+class WXDLLIMPEXP_CORE wxGenericImageList: public wxObject
 {
 public:
     wxGenericImageList() { m_width = m_height = 0; }
@@ -49,12 +47,12 @@ public:
     // Internal use only
     const wxBitmap *GetBitmapPtr(int index) const;
 private:
-    wxList  m_images;
+    wxObjectList  m_images;
 
     int     m_width;
     int     m_height;
 
-    DECLARE_DYNAMIC_CLASS(wxGenericImageList)
+    DECLARE_DYNAMIC_CLASS_NO_COPY(wxGenericImageList)
 };
 
 #ifndef wxHAS_NATIVE_IMAGELIST
@@ -64,7 +62,7 @@ private:
  * the run-time information.
  */
 
-class WXDLLEXPORT wxImageList: public wxGenericImageList
+class WXDLLIMPEXP_CORE wxImageList: public wxGenericImageList
 {
     DECLARE_DYNAMIC_CLASS(wxImageList)
 
@@ -78,5 +76,4 @@ public:
 };
 #endif // !wxHAS_NATIVE_IMAGELIST
 
-#endif  // __IMAGELISTH_G__
-
+#endif  // _WX_IMAGLISTG_H_

@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/13/99
-// RCS-ID:      $Id: combobox.cpp 42872 2006-10-31 20:46:35Z SN $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -35,8 +34,6 @@ MRESULT EXPENTRY wxComboEditWndProc( HWND   hWnd
 //
 static WXFARPROC gfnWndprocEdit     = (WXFARPROC)NULL;
 
-IMPLEMENT_DYNAMIC_CLASS(wxComboBox, wxControl)
-
 bool wxComboBox::OS2Command( WXUINT uParam, WXWORD WXUNUSED(wId) )
 {
     long lSel = GetSelection();
@@ -47,7 +44,7 @@ bool wxComboBox::OS2Command( WXUINT uParam, WXWORD WXUNUSED(wId) )
         case CBN_LBSELECT:
             if (lSel > -1)
             {
-                wxCommandEvent vEvent( wxEVT_COMMAND_COMBOBOX_SELECTED, GetId() );
+                wxCommandEvent vEvent( wxEVT_COMBOBOX, GetId() );
 
                 vEvent.SetInt(lSel);
                 vEvent.SetEventObject(this);
@@ -59,7 +56,7 @@ bool wxComboBox::OS2Command( WXUINT uParam, WXWORD WXUNUSED(wId) )
 
         case CBN_EFCHANGE:
             {
-                wxCommandEvent vEvent( wxEVT_COMMAND_TEXT_UPDATED, GetId() );
+                wxCommandEvent vEvent( wxEVT_TEXT, GetId() );
 
                 if (lSel == -1L)
                     sValue = GetValue();
@@ -140,7 +137,7 @@ bool wxComboBox::Create(
         lSstyle |= CBS_DROPDOWN;
 
 
-    if (!OS2CreateControl( _T("COMBOBOX")
+    if (!OS2CreateControl( wxT("COMBOBOX")
                           ,lSstyle
                          ))
         return false;
@@ -183,174 +180,29 @@ bool wxComboBox::Create(
 
 wxString wxComboBox::GetValue() const
 {
-    return wxGetWindowText(GetHwnd());
+    return HasFlag(wxCB_READONLY) ? GetStringSelection()
+                                  : wxTextEntry::GetValue();
 }
 
-void wxComboBox::SetValue(
-  const wxString&                   rsValue
-)
+void wxComboBox::SetValue(const wxString& value)
 {
     if ( HasFlag(wxCB_READONLY) )
-        SetStringSelection(rsValue);
+        SetStringSelection(value);
     else
-        ::WinSetWindowText(GetHwnd(), (PSZ)rsValue.c_str());
-} // end of wxComboBox::SetValue
+        wxTextEntry::SetValue(value);
+}
 
-//
-// Clipboard operations
-//
-void wxComboBox::Copy()
+void wxComboBox::Clear()
 {
-    HWND                            hWnd = GetHwnd();
+    wxChoice::Clear();
+    if ( !HasFlag(wxCB_READONLY) )
+        wxTextEntry::Clear();
+}
 
-    ::WinSendMsg(hWnd, EM_COPY, (MPARAM)0, (MPARAM)0);
-} // end of wxComboBox::Copy
-
-void wxComboBox::Cut()
+bool wxComboBox::IsEditable() const
 {
-    HWND                            hWnd = GetHwnd();
-
-    ::WinSendMsg(hWnd, EM_CUT, (MPARAM)0, (MPARAM)0);
-} // end of wxComboBox::Cut
-
-void wxComboBox::Paste()
-{
-    HWND                            hWnd = GetHwnd();
-
-    ::WinSendMsg(hWnd, EM_PASTE, (MPARAM)0, (MPARAM)0);
-} // end of wxComboBox::Paste
-
-void wxComboBox::SetEditable(
-  bool                              bEditable
-)
-{
-    HWND                            hWnd = GetHwnd();
-
-    ::WinSendMsg(hWnd, EM_SETREADONLY, (MPARAM)!bEditable, (MPARAM)0L);
-} // end of wxComboBox::SetEditable
-
-void wxComboBox::SetInsertionPoint(
-  long                              lPos
-)
-{
-    HWND                            hWnd = GetHwnd();
-
-    ::WinSendMsg(hWnd, EM_SETFIRSTCHAR, MPFROMLONG(lPos), (MPARAM)0);
-} // end of wxComboBox::SetInsertionPoint
-
-void wxComboBox::SetInsertionPointEnd()
-{
-    wxTextPos                       lPos = GetLastPosition();
-
-    SetInsertionPoint(lPos);
-} // end of wxComboBox::SetInsertionPointEnd
-
-long wxComboBox::GetInsertionPoint() const
-{
-    long                            lPos = LONGFROMMR(::WinSendMsg( GetHwnd()
-                                                                   ,LM_QUERYSELECTION
-                                                                   ,(MPARAM)0
-                                                                   ,(MPARAM)0
-                                                                  ));
-   if (lPos == LIT_NONE)
-        return wxNOT_FOUND;
-   return lPos;
-} // end of wxComboBox::GetInsertionPoint
-
-wxTextPos wxComboBox::GetLastPosition() const
-{
-    long                            lLineLength = 0L;
-    WNDPARAMS                       vParams;
-
-    //
-    // Get number of characters in the last (only) line. We'll add this to the character
-    // index for the last line, 1st position.
-    //
-
-
-    vParams.fsStatus = WPM_CCHTEXT;
-    if (::WinSendMsg( GetHwnd()
-                     ,WM_QUERYWINDOWPARAMS
-                     ,&vParams
-                     ,0
-                    ))
-    {
-        lLineLength = (long)vParams.cchText;
-    }
-    else
-        lLineLength = 0L;
-    return lLineLength;
-} // end of wxComboBox::GetLastPosition
-
-void wxComboBox::Replace( long lFrom,
-                          long lTo,
-                          const wxString& rsValue )
-{
-#if wxUSE_CLIPBOARD
-    HWND                            hWnd = GetHwnd();
-
-    //
-    // Set selection and remove it
-    //
-    ::WinSendMsg(hWnd, EM_SETSEL, MPFROM2SHORT((USHORT)lFrom, (USHORT)lTo), 0);
-    ::WinSendMsg(hWnd, EM_CUT, (MPARAM)0, (MPARAM)0);
-
-    //
-    // Now replace with 'value', by pasting.
-    //
-    wxSetClipboardData( wxDF_TEXT
-                       ,(wxObject *)rsValue.c_str()
-                       ,0
-                       ,0
-                      );
-
-    //
-    // Paste into edit control
-    //
-    ::WinSendMsg(hWnd, EM_PASTE, (MPARAM)0, (MPARAM)0L);
-#else
-    wxUnusedVar(lFrom);
-    wxUnusedVar(lTo);
-    wxUnusedVar(rsValue);
-#endif
-} // end of wxComboBox::Replace
-
-void wxComboBox::Remove( long lFrom, long lTo)
-{
-#if wxUSE_CLIPBOARD
-    HWND                            hWnd = GetHwnd();
-
-    ::WinSendMsg(hWnd, EM_SETSEL, MPFROM2SHORT((USHORT)lFrom, (USHORT)lTo), 0);
-    ::WinSendMsg(hWnd, EM_CUT, (MPARAM)0, (MPARAM)0);
-#else
-    wxUnusedVar(lFrom);
-    wxUnusedVar(lTo);
-#endif
-} // end of wxComboBox::Remove
-
-void wxComboBox::SetSelection( long lFrom, long lTo )
-{
-    HWND hWnd = GetHwnd();
-    long lFromChar = 0;
-    long lToChar   = 0;
-
-    //
-    // If from and to are both -1, it means
-    // (in wxWidgets) that all text should be selected.
-    // This translates into Windows convention
-    //
-    if ((lFrom == -1L) && (lTo == -1L))
-    {
-        lFromChar = 0;
-        lToChar = -1;
-    }
-
-    ::WinSendMsg( hWnd
-                 ,EM_SETSEL
-                 ,MPFROM2SHORT((USHORT)lFromChar, (USHORT)lToChar)
-                 ,(MPARAM)0
-                );
-} // end of wxComboBox::SetSelection
+    return !HasFlag(wxCB_READONLY) && wxTextEntry::IsEditable();
+}
 
 bool wxComboBox::ProcessEditMsg(
   WXUINT                            uMsg

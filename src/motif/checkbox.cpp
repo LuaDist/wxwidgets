@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     04/01/98
-// RCS-ID:      $Id: checkbox.cpp 50982 2008-01-01 20:38:33Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -40,13 +39,10 @@
     #define wxHAS_3STATE 0
 #endif
 
-
 #include "wx/motif/private.h"
 
 void wxCheckBoxCallback (Widget w, XtPointer clientData,
                          XtPointer ptr);
-
-IMPLEMENT_DYNAMIC_CLASS(wxCheckBox, wxControl)
 
 // Single check box item
 bool wxCheckBox::Create(wxWindow *parent, wxWindowID id, const wxString& label,
@@ -58,6 +54,7 @@ bool wxCheckBox::Create(wxWindow *parent, wxWindowID id, const wxString& label,
     if( !wxControl::CreateControl( parent, id, pos, size, style, validator,
                                    name ) )
         return false;
+    PreCreation();
 
     wxXmString text( GetLabelText(label) );
 
@@ -81,10 +78,10 @@ bool wxCheckBox::Create(wxWindow *parent, wxWindowID id, const wxString& label,
 
     XmToggleButtonSetState ((Widget) m_mainWidget, False, True);
 
+    PostCreation();
     AttachWidget( parent, m_mainWidget, (WXWidget)NULL,
                   pos.x, pos.y, size.x, size.y );
 
-    ChangeBackgroundColour();
     return true;
 }
 
@@ -140,8 +137,11 @@ void wxCheckBoxCallback (Widget WXUNUSED(w), XtPointer clientData,
 
 void wxCheckBox::ChangeBackgroundColour()
 {
+    if (!m_backgroundColour.IsOk())
+        return;
+
     wxComputeColours (XtDisplay((Widget) m_mainWidget), & m_backgroundColour,
-        (wxColour*) NULL);
+        NULL);
 
     XtVaSetValues ((Widget) m_mainWidget,
         XmNbackground, g_itemColors[wxBACK_INDEX].pixel,
@@ -215,7 +215,7 @@ wxCheckBoxState wxCheckBox::DoGet3StateValue() const
 
 #if wxUSE_TOGGLEBTN
 
-DEFINE_EVENT_TYPE(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED)
+wxDEFINE_EVENT( wxEVT_TOGGLEBUTTON, wxCommandEvent );
 IMPLEMENT_DYNAMIC_CLASS(wxToggleButton, wxControl)
 
 bool wxToggleButton::Create( wxWindow* parent, wxWindowID id,
@@ -250,4 +250,4 @@ bool wxToggleButton::Create( wxWindow* parent, wxWindowID id,
     return true;
 }
 
-#endif // wxUSE_TOGGLEBUTTON
+#endif // wxUSE_TOGGLEBTN

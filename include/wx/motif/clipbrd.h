@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: clipbrd.h 41020 2006-09-05 20:47:48Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -14,7 +13,7 @@
 
 #if wxUSE_CLIPBOARD
 
-class WXDLLIMPEXP_CORE wxDataObject;
+class WXDLLIMPEXP_FWD_CORE wxDataObject;
 struct wxDataIdToDataObject;
 
 #include "wx/list.h"
@@ -22,16 +21,16 @@ struct wxDataIdToDataObject;
 WX_DECLARE_LIST(wxDataObject, wxDataObjectList);
 WX_DECLARE_LIST(wxDataIdToDataObject, wxDataIdToDataObjectList);
 
-bool WXDLLEXPORT wxOpenClipboard();
-bool WXDLLEXPORT wxClipboardOpen();
-bool WXDLLEXPORT wxCloseClipboard();
-bool WXDLLEXPORT wxEmptyClipboard();
-bool WXDLLEXPORT wxIsClipboardFormatAvailable(wxDataFormat dataFormat);
-bool WXDLLEXPORT wxSetClipboardData(wxDataFormat dataFormat, wxObject *obj, int width = 0, int height = 0);
-wxObject* WXDLLEXPORT wxGetClipboardData(wxDataFormat dataFormat, long *len = NULL);
-wxDataFormat WXDLLEXPORT wxEnumClipboardFormats(wxDataFormat dataFormat);
-wxDataFormat WXDLLEXPORT wxRegisterClipboardFormat(char *formatName);
-bool WXDLLEXPORT wxGetClipboardFormatName(wxDataFormat dataFormat, char *formatName, int maxCount);
+WXDLLIMPEXP_CORE bool wxOpenClipboard();
+WXDLLIMPEXP_CORE bool wxClipboardOpen();
+WXDLLIMPEXP_CORE bool wxCloseClipboard();
+WXDLLIMPEXP_CORE bool wxEmptyClipboard();
+WXDLLIMPEXP_CORE bool wxIsClipboardFormatAvailable(wxDataFormat dataFormat);
+WXDLLIMPEXP_CORE bool wxSetClipboardData(wxDataFormat dataFormat, wxObject *obj, int width = 0, int height = 0);
+WXDLLIMPEXP_CORE wxObject* wxGetClipboardData(wxDataFormat dataFormat, long *len = NULL);
+WXDLLIMPEXP_CORE wxDataFormat wxEnumClipboardFormats(wxDataFormat dataFormat);
+WXDLLIMPEXP_CORE wxDataFormat wxRegisterClipboardFormat(char *formatName);
+WXDLLIMPEXP_CORE bool wxGetClipboardFormatName(wxDataFormat dataFormat, char *formatName, int maxCount);
 
 //-----------------------------------------------------------------------------
 // wxClipboard
@@ -67,13 +66,9 @@ public:
     // clears wxTheClipboard and the system's clipboard if possible
     virtual void Clear();
 
-    virtual void UsePrimarySelection(bool primary = true)
-    { m_usePrimary = primary; }
-
     // implementation from now on
     bool              m_open;
     wxDataObjectList  m_data;
-    bool              m_usePrimary;
     wxDataIdToDataObjectList m_idToObject;
 
 private:
@@ -82,5 +77,4 @@ private:
 
 #endif // wxUSE_CLIPBOARD
 
-#endif
-// _WX_CLIPBRD_H_
+#endif // _WX_CLIPBRD_H_

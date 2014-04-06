@@ -4,9 +4,8 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2002/12/30
-// RCS-ID:      $Id: button.mm 48529 2007-09-03 17:17:35Z DE $
 // Copyright:   (c) 2002 David Elliott
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #include "wx/wxprec.h"
@@ -15,7 +14,6 @@
 
 #ifndef WX_PRECOMP
     #include "wx/log.h"
-    #include "wx/toplevel.h"
 #endif
 
 #include "wx/stockitem.h"
@@ -80,7 +78,7 @@ wxButton::~wxButton()
 void wxButton::Cocoa_wxNSButtonAction(void)
 {
     wxLogTrace(wxTRACE_COCOA,wxT("YAY!"));
-    wxCommandEvent event(wxEVT_COMMAND_BUTTON_CLICKED, GetId());
+    wxCommandEvent event(wxEVT_BUTTON, GetId());
     InitCommandEvent(event); //    event.SetEventObject(this);
     Command(event);
 }
@@ -104,16 +102,6 @@ wxSize wxButton::DoGetBestSize() const
             size.x = 68;
     }
     return size;
-}
-
-void wxButton::SetDefault()
-{
-    wxTopLevelWindow * const
-        tlw = wxDynamicCast(wxGetTopLevelParent(this), wxTopLevelWindow);
-
-    wxCHECK_RET( tlw != NULL, _T("button without top level window?") );
-
-    tlw->SetDefaultItem(this);
 }
 
 static NSRect MakeNSButtonDefaultRect()

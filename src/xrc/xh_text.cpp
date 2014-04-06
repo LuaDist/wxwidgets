@@ -3,7 +3,6 @@
 // Purpose:     XRC resource for wxTextCtrl
 // Author:      Aleksandras Gluchovas
 // Created:     2000/03/21
-// RCS-ID:      $Id: xh_text.cpp 40443 2006-08-04 11:10:53Z VZ $
 // Copyright:   (c) 2000 Aleksandras Gluchovas
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -28,7 +27,6 @@ IMPLEMENT_DYNAMIC_CLASS(wxTextCtrlXmlHandler, wxXmlResourceHandler)
 wxTextCtrlXmlHandler::wxTextCtrlXmlHandler() : wxXmlResourceHandler()
 {
     XRC_ADD_STYLE(wxTE_NO_VSCROLL);
-    XRC_ADD_STYLE(wxTE_AUTO_SCROLL);
     XRC_ADD_STYLE(wxTE_PROCESS_ENTER);
     XRC_ADD_STYLE(wxTE_PROCESS_TAB);
     XRC_ADD_STYLE(wxTE_MULTILINE);
@@ -48,6 +46,12 @@ wxTextCtrlXmlHandler::wxTextCtrlXmlHandler() : wxXmlResourceHandler()
 #endif // WXWIN_COMPATIBILITY_2_6
     XRC_ADD_STYLE(wxTE_CHARWRAP);
     XRC_ADD_STYLE(wxTE_WORDWRAP);
+
+    // this style doesn't exist since wx 2.9.0 but we still support it (by
+    // ignoring it silently) in XRC files to avoid unimportant warnings when
+    // using XRC produced by old tools
+    AddStyle(wxT("wxTE_AUTO_SCROLL"), 0);
+
     AddWindowStyles();
 }
 

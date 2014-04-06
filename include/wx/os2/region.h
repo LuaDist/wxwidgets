@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/15/99
-// RCS-ID:      $Id: region.h 43288 2006-11-10 20:35:39Z ABX $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -15,7 +14,7 @@
 #include "wx/list.h"
 #include "wx/os2/private.h"
 
-class WXDLLEXPORT wxRegion : public wxRegionWithCombine
+class WXDLLIMPEXP_CORE wxRegion : public wxRegionWithCombine
 {
 public:
     wxRegion( wxCoord x
@@ -28,7 +27,7 @@ public:
             );
     wxRegion(const wxRect& rRect);
     wxRegion(WXHRGN hRegion, WXHDC hPS); // Hangs on to this region
-    wxRegion(size_t n, const wxPoint *points, int fillStyle = wxODDEVEN_RULE );
+    wxRegion(size_t n, const wxPoint *points, wxPolygonFillMode fillStyle = wxODDEVEN_RULE );
     wxRegion( const wxBitmap& bmp)
     {
         Union(bmp);
@@ -64,8 +63,8 @@ public:
     void   SetPS(HPS hPS);
 
 protected:
-    virtual wxObjectRefData* CreateData(void) const;
-    virtual wxObjectRefData* CloneData(const wxObjectRefData* pData) const;
+    virtual wxGDIRefData* CreateGDIRefData(void) const;
+    virtual wxGDIRefData* CloneGDIRefData(const wxGDIRefData* pData) const;
 
     virtual bool DoIsEqual(const wxRegion& region) const;
     virtual bool DoGetBox(wxCoord& x, wxCoord& y, wxCoord& w, wxCoord& h) const;
@@ -75,14 +74,13 @@ protected:
     virtual bool DoOffset(wxCoord x, wxCoord y);
     virtual bool DoCombine(const wxRegion& region, wxRegionOp op);
 
-    friend class WXDLLEXPORT wxRegionIterator;
+    friend class WXDLLIMPEXP_FWD_CORE wxRegionIterator;
     DECLARE_DYNAMIC_CLASS(wxRegion);
 
 }; // end of CLASS wxRegion
 
-class WXDLLEXPORT wxRegionIterator : public wxObject
+class WXDLLIMPEXP_CORE wxRegionIterator : public wxObject
 {
-DECLARE_DYNAMIC_CLASS(wxRegionIterator);
 public:
     wxRegionIterator();
     wxRegionIterator(const wxRegion& rRegion);
@@ -110,6 +108,8 @@ private:
     long                            m_lNumRects;
     wxRegion                        m_vRegion;
     wxRect*                         m_pRects;
+
+    DECLARE_DYNAMIC_CLASS(wxRegionIterator)
 }; // end of wxRegionIterator
 
 #endif // _WX_OS2_REGION_H_

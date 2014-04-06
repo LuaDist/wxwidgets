@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: radiobut.h 41020 2006-09-05 20:47:48Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -12,7 +11,7 @@
 #ifndef _WX_RADIOBUT_H_
 #define _WX_RADIOBUT_H_
 
-class WXDLLEXPORT wxRadioButton: public wxControl
+class WXDLLIMPEXP_CORE wxRadioButton: public wxControl
 {
     DECLARE_DYNAMIC_CLASS(wxRadioButton)
 public:
@@ -48,6 +47,8 @@ public:
     // clears the selection in the radiobuttons in the cycle
     // and returns the old selection (if any)
     wxRadioButton* ClearSelections();
+protected:
+    virtual wxBorder GetDefaultBorder() const { return wxBORDER_NONE; }
 private:
     wxRadioButton* AddInCycle(wxRadioButton* cycle);
     void RemoveFromCycle();

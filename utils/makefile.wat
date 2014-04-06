@@ -36,24 +36,25 @@ WATCOM_CWD = $+ $(%cdrive):$(%cwd) $-
 
 MAKEARGS = CC="$(CC)" CXX="$(CXX)" CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" &
 	CPPFLAGS="$(CPPFLAGS)" LDFLAGS="$(LDFLAGS)" CPP="$(CPP)" SHARED="$(SHARED)" &
-	WXUNIV="$(WXUNIV)" UNICODE="$(UNICODE)" BUILD="$(BUILD)" &
-	DEBUG_INFO="$(DEBUG_INFO)" DEBUG_FLAG="$(DEBUG_FLAG)" &
-	MONOLITHIC="$(MONOLITHIC)" USE_GUI="$(USE_GUI)" USE_HTML="$(USE_HTML)" &
+	TOOLKIT_VERSION="$(TOOLKIT_VERSION)" WXUNIV="$(WXUNIV)" &
+	UNICODE="$(UNICODE)" BUILD="$(BUILD)" DEBUG_INFO="$(DEBUG_INFO)" &
+	DEBUG_FLAG="$(DEBUG_FLAG)" MONOLITHIC="$(MONOLITHIC)" USE_GUI="$(USE_GUI)" &
+	USE_HTML="$(USE_HTML)" USE_WEBVIEW="$(USE_WEBVIEW)" &
 	USE_MEDIA="$(USE_MEDIA)" USE_XRC="$(USE_XRC)" USE_AUI="$(USE_AUI)" &
-	USE_RICHTEXT="$(USE_RICHTEXT)" USE_OPENGL="$(USE_OPENGL)" &
-	USE_ODBC="$(USE_ODBC)" USE_QA="$(USE_QA)" &
+	USE_RIBBON="$(USE_RIBBON)" USE_PROPGRID="$(USE_PROPGRID)" &
+	USE_RICHTEXT="$(USE_RICHTEXT)" USE_STC="$(USE_STC)" &
+	USE_OPENGL="$(USE_OPENGL)" USE_QA="$(USE_QA)" &
 	USE_EXCEPTIONS="$(USE_EXCEPTIONS)" USE_RTTI="$(USE_RTTI)" &
 	USE_THREADS="$(USE_THREADS)" USE_CAIRO="$(USE_CAIRO)" &
-	USE_GDIPLUS="$(USE_GDIPLUS)" OFFICIAL_BUILD="$(OFFICIAL_BUILD)" &
-	VENDOR="$(VENDOR)" WX_FLAVOUR="$(WX_FLAVOUR)" &
-	WX_LIB_FLAVOUR="$(WX_LIB_FLAVOUR)" CFG="$(CFG)" &
+	OFFICIAL_BUILD="$(OFFICIAL_BUILD)" VENDOR="$(VENDOR)" &
+	WX_FLAVOUR="$(WX_FLAVOUR)" WX_LIB_FLAVOUR="$(WX_LIB_FLAVOUR)" CFG="$(CFG)" &
 	CPPUNIT_CFLAGS="$(CPPUNIT_CFLAGS)" CPPUNIT_LIBS="$(CPPUNIT_LIBS)" &
 	RUNTIME_LIBS="$(RUNTIME_LIBS)"
 
 
 ### Targets: ###
 
-all : .SYMBOLIC emulator helpview tex2rtf helpgen
+all : .SYMBOLIC emulator execmon helpview hhp2cached ifacecheck screenshotgen wxrc
 
 clean : .SYMBOLIC 
 	-if exist .\*.obj del .\*.obj
@@ -64,13 +65,22 @@ clean : .SYMBOLIC
 	cd emulator\src
 	wmake $(__MAKEOPTS__) -f makefile.wat $(MAKEARGS) clean
 	cd $(WATCOM_CWD)
+	cd execmon
+	wmake $(__MAKEOPTS__) -f makefile.wat $(MAKEARGS) clean
+	cd $(WATCOM_CWD)
 	cd helpview\src
 	wmake $(__MAKEOPTS__) -f makefile.wat $(MAKEARGS) clean
 	cd $(WATCOM_CWD)
-	cd tex2rtf\src
+	cd hhp2cached
 	wmake $(__MAKEOPTS__) -f makefile.wat $(MAKEARGS) clean
 	cd $(WATCOM_CWD)
-	cd HelpGen\src
+	cd ifacecheck\src
+	wmake $(__MAKEOPTS__) -f makefile.wat $(MAKEARGS) clean
+	cd $(WATCOM_CWD)
+	cd screenshotgen\src
+	wmake $(__MAKEOPTS__) -f makefile.wat $(MAKEARGS) clean
+	cd $(WATCOM_CWD)
+	cd wxrc
 	wmake $(__MAKEOPTS__) -f makefile.wat $(MAKEARGS) clean
 	cd $(WATCOM_CWD)
 
@@ -79,18 +89,33 @@ emulator : .SYMBOLIC
 	wmake $(__MAKEOPTS__) -f makefile.wat $(MAKEARGS) all
 	cd $(WATCOM_CWD)
 
+execmon : .SYMBOLIC 
+	cd execmon
+	wmake $(__MAKEOPTS__) -f makefile.wat $(MAKEARGS) all
+	cd $(WATCOM_CWD)
+
 helpview : .SYMBOLIC 
 	cd helpview\src
 	wmake $(__MAKEOPTS__) -f makefile.wat $(MAKEARGS) all
 	cd $(WATCOM_CWD)
 
-tex2rtf : .SYMBOLIC 
-	cd tex2rtf\src
+hhp2cached : .SYMBOLIC 
+	cd hhp2cached
 	wmake $(__MAKEOPTS__) -f makefile.wat $(MAKEARGS) all
 	cd $(WATCOM_CWD)
 
-helpgen : .SYMBOLIC 
-	cd HelpGen\src
+ifacecheck : .SYMBOLIC 
+	cd ifacecheck\src
+	wmake $(__MAKEOPTS__) -f makefile.wat $(MAKEARGS) all
+	cd $(WATCOM_CWD)
+
+screenshotgen : .SYMBOLIC 
+	cd screenshotgen\src
+	wmake $(__MAKEOPTS__) -f makefile.wat $(MAKEARGS) all
+	cd $(WATCOM_CWD)
+
+wxrc : .SYMBOLIC 
+	cd wxrc
 	wmake $(__MAKEOPTS__) -f makefile.wat $(MAKEARGS) all
 	cd $(WATCOM_CWD)
 

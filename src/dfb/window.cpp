@@ -2,9 +2,8 @@
 // Name:        src/dfb/window.cpp
 // Purpose:     wxWindow
 // Author:      Vaclav Slavik
-//              (based on GTK, MSW, MGL implementations)
+//              (based on GTK, MSW implementations)
 // Created:     2006-80-10
-// RCS-ID:      $Id: window.cpp 54750 2008-07-21 17:05:14Z VZ $
 // Copyright:   (c) 2006 REA Elektronik GmbH
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -28,7 +27,7 @@
 
 #ifndef WX_PRECOMP
     #include "wx/dcclient.h"
-    #include "wx/toplevel.h"
+    #include "wx/nonownedwnd.h"
 #endif
 
 #include "wx/caret.h"
@@ -37,8 +36,8 @@
 #include "wx/dfb/private.h"
 #include "wx/private/overlay.h"
 
-#define TRACE_EVENTS _T("events")
-#define TRACE_PAINT  _T("paint")
+#define TRACE_EVENTS "events"
+#define TRACE_PAINT  "paint"
 
 // ===========================================================================
 // implementation
@@ -72,6 +71,15 @@ IMPLEMENT_ABSTRACT_CLASS(wxWindowDFB, wxWindowBase)
 BEGIN_EVENT_TABLE(wxWindowDFB, wxWindowBase)
 END_EVENT_TABLE()
 
+//-----------------------------------------------------------------------------
+// global functions
+//-----------------------------------------------------------------------------
+
+wxWindow *wxGetActiveWindow()
+{
+    return wxWindow::FindFocus();
+}
+
 // ----------------------------------------------------------------------------
 // constructors and such
 // ----------------------------------------------------------------------------
@@ -79,7 +87,6 @@ END_EVENT_TABLE()
 void wxWindowDFB::Init()
 {
     m_isShown = true;
-    m_frozenness = 0;
     m_tlw = NULL;
     m_overlays = NULL;
 }
@@ -89,29 +96,8 @@ wxWindowDFB::~wxWindowDFB()
 {
     SendDestroyEvent();
 
-    m_isBeingDeleted = true;
-
     if ( gs_mouseCapture == this )
         ReleaseMouse();
-
-#warning "FIXME: what to do with gs_activeFrame here and elsewhere?"
-#if 0
-    if (gs_activeFrame == this)
-    {
-        gs_activeFrame = NULL;
-        // activate next frame in Z-order:
-        if ( m_wnd->prev )
-        {
-            wxWindowDFB *win = (wxWindowDFB*)m_wnd->prev->userData;
-            win->SetFocus();
-        }
-        else if ( m_wnd->next )
-        {
-            wxWindowDFB *win = (wxWindowDFB*)m_wnd->next->userData;
-            win->SetFocus();
-        }
-    }
-#endif
 
     if ( gs_focusedWindow == this )
         DFBKillFocus();
@@ -157,10 +143,10 @@ bool wxWindowDFB::Create(wxWindow *parent,
 
 wxIDirectFBSurfacePtr wxWindowDFB::ObtainDfbSurface() const
 {
-    wxCHECK_MSG( m_parent, NULL, _T("parentless window?") );
+    wxCHECK_MSG( m_parent, NULL, "parentless window?" );
 
     wxIDirectFBSurfacePtr parentSurface(m_parent->GetDfbSurface());
-    wxCHECK_MSG( parentSurface, NULL, _T("invalid parent surface") );
+    wxCHECK_MSG( parentSurface, NULL, "invalid parent surface" );
 
     wxRect r(GetRect());
     AdjustForParentClientOrigin(r.x, r.y, 0);
@@ -174,7 +160,7 @@ wxIDirectFBSurfacePtr wxWindowDFB::GetDfbSurface()
     if ( !m_surface )
     {
         m_surface = ObtainDfbSurface();
-        wxASSERT_MSG( m_surface, _T("invalid DirectFB surface") );
+        wxASSERT_MSG( m_surface, "invalid DirectFB surface" );
     }
 
     return m_surface;
@@ -213,7 +199,8 @@ void wxWindowDFB::SetFocus()
 
     gs_focusedWindow = this;
 
-    if ( IsShownOnScreen() )
+    if ( IsShownOnScreen() &&
+         (!oldFocusedWindow || oldFocusedWindow->GetTLW() != m_tlw) )
     {
         m_tlw->SetDfbFocus();
     }
@@ -221,35 +208,15 @@ void wxWindowDFB::SetFocus()
     //       are hidden; when the TLW becomes visible, it will set the focus
     //       to use from wxTLW::Show()
 
-    #warning "FIXME: implement in terms of DWET_{GOT,LOST}FOCUS"
-    #warning "FIXME: keep this or not? not, think multiapp core"
-#if 0
-    wxWindowDFB *active = wxGetTopLevelParent((wxWindow*)this);
-    if ( !(m_windowStyle & wxPOPUP_WINDOW) && active != gs_activeFrame )
-    {
-        if ( gs_activeFrame )
-        {
-            wxActivateEvent event(wxEVT_ACTIVATE, false, gs_activeFrame->GetId());
-            event.SetEventObject(gs_activeFrame);
-            gs_activeFrame->GetEventHandler()->ProcessEvent(event);
-        }
-
-        gs_activeFrame = active;
-        wxActivateEvent event(wxEVT_ACTIVATE, true, gs_activeFrame->GetId());
-        event.SetEventObject(gs_activeFrame);
-        gs_activeFrame->GetEventHandler()->ProcessEvent(event);
-    }
-#endif
-
     // notify the parent keeping track of focus for the kbd navigation
     // purposes that we got it
     wxChildFocusEvent eventFocus((wxWindow*)this);
-    GetEventHandler()->ProcessEvent(eventFocus);
+    HandleWindowEvent(eventFocus);
 
     wxFocusEvent event(wxEVT_SET_FOCUS, GetId());
     event.SetEventObject(this);
     event.SetWindow((wxWindow*)oldFocusedWindow);
-    GetEventHandler()->ProcessEvent(event);
+    HandleWindowEvent(event);
 
 #if wxUSE_CARET
     // caret needs to be informed about focus change
@@ -262,7 +229,7 @@ void wxWindowDFB::SetFocus()
 void wxWindowDFB::DFBKillFocus()
 {
     wxCHECK_RET( gs_focusedWindow == this,
-                 _T("killing focus on window that doesn't have it") );
+                 "killing focus on window that doesn't have it" );
 
     gs_focusedWindow = NULL;
 
@@ -279,7 +246,7 @@ void wxWindowDFB::DFBKillFocus()
     wxFocusEvent event(wxEVT_KILL_FOCUS, GetId());
     event.SetEventObject(this);
     event.SetWindow(gs_toBeFocusedWindow);
-    GetEventHandler()->ProcessEvent(event);
+    HandleWindowEvent(event);
 }
 
 // ----------------------------------------------------------------------------
@@ -301,43 +268,19 @@ bool wxWindowDFB::Show(bool show)
     // parent area at the place of this window (if hiding):
     DoRefreshWindow();
 
-#warning "FIXME: all of this must be implemented for DFB"
-#if 0
-    DFB_wmShowWindow(m_wnd, show);
-
-    if (!show && gs_activeFrame == this)
-    {
-        // activate next frame in Z-order:
-        if ( m_wnd->prev )
-        {
-            wxWindowDFB *win = (wxWindowDFB*)m_wnd->prev->userData;
-            win->SetFocus();
-        }
-        else if ( m_wnd->next )
-        {
-            wxWindowDFB *win = (wxWindowDFB*)m_wnd->next->userData;
-            win->SetFocus();
-        }
-        else
-        {
-            gs_activeFrame = NULL;
-        }
-    }
-#endif
-
     return true;
 }
 
 // Raise the window to the top of the Z order
 void wxWindowDFB::Raise()
 {
-    wxFAIL_MSG( _T("Raise() not implemented") );
+    wxFAIL_MSG( "Raise() not implemented" );
 }
 
 // Lower the window to the bottom of the Z order
 void wxWindowDFB::Lower()
 {
-    wxFAIL_MSG( _T("Lower() not implemented") );
+    wxFAIL_MSG( "Lower() not implemented" );
 }
 
 void wxWindowDFB::DoCaptureMouse()
@@ -379,7 +322,7 @@ bool wxWindowDFB::SetCursor(const wxCursor& cursor)
 
 #warning "implement this"
 #if 0
-    if ( m_cursor.Ok() )
+    if ( m_cursor.IsOk() )
         DFB_wmSetWindowCursor(m_wnd, *m_cursor.GetDFBCursor());
     else
         DFB_wmSetWindowCursor(m_wnd, *wxSTANDARD_CURSOR->GetDFBCursor());
@@ -400,7 +343,7 @@ void wxWindowDFB::WarpPointer(int x, int y)
     if ( y >= h ) y = h-1;
 
     wxIDirectFBDisplayLayerPtr layer(wxIDirectFB::Get()->GetDisplayLayer());
-    wxCHECK_RET( layer, _T("no display layer") );
+    wxCHECK_RET( layer, "no display layer" );
 
     layer->WarpCursor(x, y);
 }
@@ -412,7 +355,7 @@ bool wxWindowDFB::Reparent(wxWindowBase *parent)
         return false;
 
 #warning "implement this"
-    wxFAIL_MSG( _T("reparenting not yet implemented") );
+    wxFAIL_MSG( "reparenting not yet implemented" );
 
     return true;
 }
@@ -436,7 +379,7 @@ void wxWindowDFB::DoGetPosition(int *x, int *y) const
 
 static wxPoint GetScreenPosOfClientOrigin(const wxWindowDFB *win)
 {
-    wxCHECK_MSG( win, wxPoint(0, 0), _T("no window provided") );
+    wxCHECK_MSG( win, wxPoint(0, 0), "no window provided" );
 
     wxPoint pt(win->GetPosition() + win->GetClientAreaOrigin());
 
@@ -493,6 +436,15 @@ void wxWindowDFB::DoMoveWindow(int x, int y, int width, int height)
     {
         // queue both former and new position of the window for repainting:
         wxWindow *parent = GetParent();
+
+        // only refresh the visible parts:
+        if ( !CanBeOutsideClientArea() )
+        {
+            wxRect parentClient(parent->GetClientSize());
+            oldpos.Intersect(parentClient);
+            newpos.Intersect(parentClient);
+        }
+
         parent->RefreshRect(oldpos);
         parent->RefreshRect(newpos);
     }
@@ -579,7 +531,7 @@ void wxWindowDFB::DoSetSize(int x, int y, int width, int height, int sizeFlags)
         wxSize newSize(width, height);
         wxSizeEvent event(newSize, GetId());
         event.SetEventObject(this);
-        GetEventHandler()->ProcessEvent(event);
+        HandleWindowEvent(event);
     }
 }
 
@@ -604,10 +556,11 @@ int wxWindowDFB::GetCharWidth() const
     return dc.GetCharWidth();
 }
 
-void wxWindowDFB::GetTextExtent(const wxString& string,
-                             int *x, int *y,
-                             int *descent, int *externalLeading,
-                             const wxFont *theFont) const
+void wxWindowDFB::DoGetTextExtent(const wxString& string,
+                                  int *x, int *y,
+                                  int *descent,
+                                  int *externalLeading,
+                                  const wxFont *theFont) const
 {
     wxWindowDC dc((wxWindow*)this);
     dc.GetTextExtent(string, x, y, descent, externalLeading, (wxFont*)theFont);
@@ -617,14 +570,6 @@ void wxWindowDFB::GetTextExtent(const wxString& string,
 // ---------------------------------------------------------------------------
 // painting
 // ---------------------------------------------------------------------------
-
-void wxWindowDFB::Clear()
-{
-    wxClientDC dc((wxWindow *)this);
-    wxBrush brush(GetBackgroundColour(), wxSOLID);
-    dc.SetBackground(brush);
-    dc.Clear();
-}
 
 void wxWindowDFB::Refresh(bool WXUNUSED(eraseBack), const wxRect *rect)
 {
@@ -665,7 +610,7 @@ void wxWindowDFB::DoRefreshWindow()
 void wxWindowDFB::DoRefreshRect(const wxRect& rect)
 {
     wxWindow *parent = GetParent();
-    wxCHECK_RET( parent, _T("no parent") );
+    wxCHECK_RET( parent, "no parent" );
 
     // don't overlap outside of the window (NB: 'rect' is in window coords):
     wxRect r(rect);
@@ -674,7 +619,7 @@ void wxWindowDFB::DoRefreshRect(const wxRect& rect)
         return;
 
     wxLogTrace(TRACE_PAINT,
-               _T("%p ('%s'): refresh rect [%i,%i,%i,%i]"),
+               "%p ('%s'): refresh rect [%i,%i,%i,%i]",
                this, GetName().c_str(),
                rect.x, rect.y, rect.GetRight(), rect.GetBottom());
 
@@ -682,6 +627,11 @@ void wxWindowDFB::DoRefreshRect(const wxRect& rect)
     // recursively refresh the parent:
     r.Offset(GetPosition());
     r.Offset(parent->GetClientAreaOrigin());
+
+    // normal windows cannot extend out of its parent's client area, so don't
+    // refresh any hidden parts:
+    if ( !CanBeOutsideClientArea() )
+        r.Intersect(parent->GetClientRect());
 
     parent->DoRefreshRect(r);
 }
@@ -694,28 +644,18 @@ void wxWindowDFB::Update()
     GetParent()->Update();
 }
 
-void wxWindowDFB::Freeze()
+void wxWindowDFB::DoThaw()
 {
-    m_frozenness++;
-}
-
-void wxWindowDFB::Thaw()
-{
-    wxASSERT_MSG( IsFrozen(), _T("Thaw() without matching Freeze()") );
-
-    if ( --m_frozenness == 0 )
-    {
-        if ( IsShown() )
-            DoRefreshWindow();
-    }
+    if ( IsShown() )
+        DoRefreshWindow();
 }
 
 void wxWindowDFB::PaintWindow(const wxRect& rect)
 {
-    wxCHECK_RET( !IsFrozen() && IsShown(), _T("shouldn't be called") );
+    wxCHECK_RET( !IsFrozen() && IsShown(), "shouldn't be called" );
 
     wxLogTrace(TRACE_PAINT,
-               _T("%p ('%s'): painting region [%i,%i,%i,%i]"),
+               "%p ('%s'): painting region [%i,%i,%i,%i]",
                this, GetName().c_str(),
                rect.x, rect.y, rect.GetRight(), rect.GetBottom());
 
@@ -723,13 +663,14 @@ void wxWindowDFB::PaintWindow(const wxRect& rect)
 
     // FIXME_DFB: don't waste time rendering the area if it's fully covered
     //            by some children, go directly to rendering the children
+    //            (unless some child has HasTransparentBackground()=true!)
 
     // NB: unconditionally send wxEraseEvent, because our implementation of
     //     wxWindow::Refresh() ignores the eraseBack argument
     wxWindowDC dc((wxWindow*)this);
     wxEraseEvent eventEr(m_windowId, &dc);
     eventEr.SetEventObject(this);
-    GetEventHandler()->ProcessEvent(eventEr);
+    HandleWindowEvent(eventEr);
 
     wxRect clientRect(GetClientRect());
 
@@ -738,11 +679,11 @@ void wxWindowDFB::PaintWindow(const wxRect& rect)
     {
         wxNcPaintEvent eventNc(GetId());
         eventNc.SetEventObject(this);
-        GetEventHandler()->ProcessEvent(eventNc);
+        HandleWindowEvent(eventNc);
     }
     else
     {
-        wxLogTrace(TRACE_PAINT, _T("%p ('%s'): not sending wxNcPaintEvent"),
+        wxLogTrace(TRACE_PAINT, "%p ('%s'): not sending wxNcPaintEvent",
                    this, GetName().c_str());
     }
 
@@ -751,11 +692,11 @@ void wxWindowDFB::PaintWindow(const wxRect& rect)
     {
         wxPaintEvent eventPt(GetId());
         eventPt.SetEventObject(this);
-        GetEventHandler()->ProcessEvent(eventPt);
+        HandleWindowEvent(eventPt);
     }
     else
     {
-        wxLogTrace(TRACE_PAINT, _T("%p ('%s'): not sending wxPaintEvent"),
+        wxLogTrace(TRACE_PAINT, "%p ('%s'): not sending wxPaintEvent",
                    this, GetName().c_str());
     }
 
@@ -763,6 +704,10 @@ void wxWindowDFB::PaintWindow(const wxRect& rect)
     PaintOverlays(rect);
 
     m_updateRegion.Clear();
+
+    // client area portion of 'rect':
+    wxRect rectClientOnly(rect);
+    rectClientOnly.Intersect(clientRect);
 
     // paint the children:
     wxPoint origin = GetClientAreaOrigin();
@@ -778,7 +723,12 @@ void wxWindowDFB::PaintWindow(const wxRect& rect)
         // compute child's area to repaint
         wxRect childrect(child->GetRect());
         childrect.Offset(origin);
-        childrect.Intersect(rect);
+
+        if ( child->CanBeOutsideClientArea() )
+            childrect.Intersect(rect);
+        else
+            childrect.Intersect(rectClientOnly);
+
         if ( childrect.IsEmpty() )
             continue;
 
@@ -797,10 +747,7 @@ void wxWindowDFB::PaintOverlays(const wxRect& rect)
     for ( wxDfbOverlaysList::const_iterator i = m_overlays->begin();
           i != m_overlays->end(); ++i )
     {
-        // the cast is necessary in STL build because of bug in const_iterator
-        // operator*() return value
-        const wxOverlayImpl * const
-            overlay = wx_static_cast(const wxOverlayImpl *, *i);
+        const wxOverlayImpl * const overlay = *i;
 
         wxRect orectOrig(overlay->GetRect());
         wxRect orect(orectOrig);
@@ -832,7 +779,7 @@ void wxWindowDFB::AddOverlay(wxOverlayImpl *overlay)
 
 void wxWindowDFB::RemoveOverlay(wxOverlayImpl *overlay)
 {
-    wxCHECK_RET( m_overlays, _T("no overlays to remove") );
+    wxCHECK_RET( m_overlays, "no overlays to remove" );
 
     m_overlays->Remove(overlay);
 
@@ -853,7 +800,7 @@ void wxWindowDFB::RemoveOverlay(wxOverlayImpl *overlay)
 #define KEY(dfb, wx)                                                \
     case dfb:                                                       \
           wxLogTrace(TRACE_EVENTS,                                  \
-                     _T("key " #dfb " mapped to " #wx));            \
+                     wxT("key " #dfb " mapped to " #wx));            \
           return wx
 
 // returns translated keycode, i.e. the one for KEYUP/KEYDOWN where 'a'..'z' is
@@ -997,7 +944,7 @@ static long GetTranslatedKeyCode(DFBInputDeviceKeyIdentifier key_id)
 
         case DIKI_KEYDEF_END:
         case DIKI_NUMBER_OF_KEYS:
-            wxFAIL_MSG( _T("invalid key_id value") );
+            wxFAIL_MSG( "invalid key_id value" );
             return 0;
     }
 
@@ -1019,13 +966,11 @@ static long GetUntraslatedKeyCode(DFBInputDeviceKeyIdentifier key_id,
                 return key_symbol;
             else
             {
-#if wxUSE_WCHAR_T
                 wchar_t chr = key_symbol;
                 wxCharBuffer buf(wxConvUI->cWC2MB(&chr, 1, NULL));
                 if ( buf )
                     return *buf; // may be 0 if failed
                 else
-#endif // wxUSE_WCHAR_T
                     return 0;
             }
 #endif
@@ -1045,8 +990,8 @@ void wxWindowDFB::HandleKeyEvent(const wxDFBWindowEvent& event_)
     const DFBWindowEvent& e = event_;
 
     wxLogTrace(TRACE_EVENTS,
-               _T("handling key %s event for window %p ('%s')"),
-               e.type == DWET_KEYUP ? _T("up") : _T("down"),
+               "handling key %s event for window %p ('%s')",
+               e.type == DWET_KEYUP ? "up" : "down",
                this, GetName().c_str());
 
     // fill in wxKeyEvent fields:
@@ -1055,7 +1000,6 @@ void wxWindowDFB::HandleKeyEvent(const wxDFBWindowEvent& event_)
     event.SetTimestamp(wxDFB_EVENT_TIMESTAMP(e));
     event.m_rawCode = e.key_code;
     event.m_keyCode = GetTranslatedKeyCode(e.key_id);
-    event.m_scanCode = 0; // not used by wx at all
 #if wxUSE_UNICODE
     event.m_uniChar = e.key_symbol;
 #endif
@@ -1073,7 +1017,7 @@ void wxWindowDFB::HandleKeyEvent(const wxDFBWindowEvent& event_)
     if ( e.type == DWET_KEYUP )
     {
         event.SetEventType(wxEVT_KEY_UP);
-        GetEventHandler()->ProcessEvent(event);
+        HandleWindowEvent(event);
     }
     else
     {
@@ -1081,7 +1025,7 @@ void wxWindowDFB::HandleKeyEvent(const wxDFBWindowEvent& event_)
 
         event.SetEventType(wxEVT_KEY_DOWN);
 
-        if ( GetEventHandler()->ProcessEvent(event) )
+        if ( HandleWindowEvent(event) )
             return;
 
         // only send wxEVT_CHAR event if not processed yet:
@@ -1089,7 +1033,7 @@ void wxWindowDFB::HandleKeyEvent(const wxDFBWindowEvent& event_)
         if ( event.m_keyCode != 0 )
         {
             event.SetEventType(wxEVT_CHAR);
-            if ( GetEventHandler()->ProcessEvent(event) )
+            if ( HandleWindowEvent(event) )
                 return;
         }
 
@@ -1104,21 +1048,10 @@ void wxWindowDFB::HandleKeyEvent(const wxDFBWindowEvent& event_)
             // Ctrl-TAB changes the (parent) window, i.e. switch notebook page:
             navEvent.SetWindowChange(event.m_controlDown);
             navEvent.SetCurrentFocus(wxStaticCast(this, wxWindow));
-            GetParent()->GetEventHandler()->ProcessEvent(navEvent);
+            GetParent()->HandleWindowEvent(navEvent);
         }
     }
 }
-
-// ---------------------------------------------------------------------------
-// idle events processing
-// ---------------------------------------------------------------------------
-
-void wxWindowDFB::OnInternalIdle()
-{
-    if (wxUpdateUIEvent::CanUpdate(this) && IsShown())
-        UpdateWindowUI(wxUPDATE_UI_FROMIDLE);
-}
-
 
 // Find the wxWindow at the current mouse position, returning the mouse
 // position.
@@ -1127,8 +1060,8 @@ wxWindow* wxFindWindowAtPointer(wxPoint& pt)
     return wxFindWindowAtPoint(pt = wxGetMousePosition());
 }
 
-wxWindow* wxFindWindowAtPoint(const wxPoint& pt)
+wxWindow* wxFindWindowAtPoint(const wxPoint& WXUNUSED(pt))
 {
-    wxFAIL_MSG( _T("wxFindWindowAtPoint not implemented") );
+    wxFAIL_MSG( "wxFindWindowAtPoint not implemented" );
     return NULL;
 }

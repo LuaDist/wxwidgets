@@ -1,10 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        data.cpp
+// Name:        src/os2/data.cpp
 // Purpose:     Various OS/2-specific global data
 // Author:      David Webster
 // Modified by:
 // Created:     09/20/99
-// RCS-ID:      $Id: data.cpp 27408 2004-05-23 20:53:33Z JS $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

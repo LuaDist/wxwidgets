@@ -4,7 +4,6 @@
 // Author:      Julian Smart, originally in bitmap.cpp
 // Modified by:
 // Created:     25/03/2003
-// RCS-ID:      $Id: bmpmotif.cpp 50982 2008-01-01 20:38:33Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -36,7 +35,7 @@ Pixmap XCreateInsensitivePixmap( Display *display, Pixmap pixmap );
 
 static inline wxCharBuffer GetCacheImageName(WXImage image)
 {
-    return wxString::Format(_T("wxBitmap_%p"), image).ToAscii();
+    return wxString::Format(wxT("wxBitmap_%p"), image).ToAscii();
 }
 
 wxBitmapCache::~wxBitmapCache()
@@ -74,7 +73,7 @@ void wxBitmapCache::SetBitmap( const wxBitmap& bitmap )
         {
             XmUninstallImage( (XImage*)m_image );
             XtFree( (char*)(XImage*)m_image );
-            m_image = (WXImage*)NULL;
+            m_image = NULL;
         }
     }
 }
@@ -263,7 +262,7 @@ XCreateInsensitivePixmap( Display *display, Pixmap pixmap )
     stipple = XCreateBitmapFromData( display, pixmap, stipple_data, 16, 16 );
     if ( 0 != stipple )
     {
-        gc = XCreateGC( display, pixmap, (XtGCMask)0, (XGCValues*)NULL );
+        gc = XCreateGC( display, pixmap, (XtGCMask)0, NULL );
         if ( NULL != gc )
         {
             /* Create an identical copy of the argument pixmap.

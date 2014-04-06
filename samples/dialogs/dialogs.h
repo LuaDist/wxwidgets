@@ -1,12 +1,12 @@
 /////////////////////////////////////////////////////////////////////////////
 // Name:        dialogs.h
 // Purpose:     Common dialogs demo
-// Author:      Julian Smart
-// Modified by: ABX (2004) - adjustementd for conditional building
+// Author:      Julian Smart, Vadim Zeitlin, ABX
 // Created:     04/01/98
-// RCS-ID:      $Id: dialogs.h 41713 2006-10-08 14:12:59Z VZ $
 // Copyright:   (c) Julian Smart
-// Licence:     wxWindows license
+//              (c) 2004 ABX
+//              (c) Vadim Zeitlin
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 /*
@@ -52,7 +52,7 @@ of MSW, MAC and OS2
     #define USE_WXMAC 0
 #endif
 
-#if defined(__WXMAC_OSX__) && ( MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_2) && USE_NATIVE_FONT_DIALOG_FOR_MACOSX
+#if USE_NATIVE_FONT_DIALOG_FOR_MACOSX
     #define USE_WXMACFONTDLG 1
 #else
     #define USE_WXMACFONTDLG 0
@@ -77,7 +77,8 @@ of MSW, MAC and OS2
 #define USE_DIRDLG_GENERIC \
     ((USE_WXMSW || USE_WXMAC) && USE_GENERIC_DIALOGS && wxUSE_DIRDLG)
 #define USE_FILEDLG_GENERIC \
-    ((((USE_WXMSW || USE_WXMAC || USE_WXPM) && USE_GENERIC_DIALOGS) || USE_WXWINCE) && wxUSE_FILEDLG)
+    ((((USE_WXMSW || USE_WXMAC || USE_WXPM || USE_WXGTK) \
+                    && USE_GENERIC_DIALOGS) || USE_WXWINCE) && wxUSE_FILEDLG)
 #define USE_FONTDLG_GENERIC \
     ((USE_WXMSW || USE_WXMACFONTDLG || USE_WXPM) && USE_GENERIC_DIALOGS && wxUSE_FONTDLG)
 
@@ -97,15 +98,42 @@ of MSW, MAC and OS2
     #define USE_SETTINGS_DIALOG 0
 #endif
 
+#if wxUSE_LOG
+
+// Custom application traits class which we use to override the default log
+// target creation
+class MyAppTraits : public wxGUIAppTraits
+{
+public:
+    virtual wxLog *CreateLogTarget();
+};
+
+#endif // wxUSE_LOG
 
 // Define a new application type
 class MyApp: public wxApp
 {
 public:
-    bool OnInit();
+    MyApp() { m_startupProgressStyle = -1; }
 
-    wxFont       m_canvasFont;
-    wxColour     m_canvasTextColour;
+    virtual bool OnInit();
+
+#if wxUSE_CMDLINE_PARSER
+    virtual void OnInitCmdLine(wxCmdLineParser& parser);
+    virtual bool OnCmdLineParsed(wxCmdLineParser& parser);
+#endif // wxUSE_CMDLINE_PARSER
+
+protected:
+#if wxUSE_LOG
+    virtual wxAppTraits *CreateTraits() { return new MyAppTraits; }
+#endif // wxUSE_LOG
+
+private:
+    // Flag set to a valid value if command line option "progress" is used,
+    // this allows testing of wxProgressDialog before the main event loop is
+    // started. If this option is not specified it is set to -1 by default
+    // meaning that progress dialog shouldn't be shown at all.
+    long m_startupProgressStyle;
 };
 
 #if USE_MODAL_PRESENTATION
@@ -140,6 +168,146 @@ private:
 };
 
 #endif // USE_MODAL_PRESENTATION
+
+// A class demonstrating CreateStdDialogButtonSizer()
+class StdButtonSizerDialog : public wxDialog
+{
+public:
+    StdButtonSizerDialog(wxWindow *parent);
+
+    void OnEvent(wxCommandEvent& event);
+
+private:
+    void EnableDisableControls();
+
+    wxCheckBox *m_chkboxAffirmativeButton;
+    wxRadioButton *m_radiobtnOk,
+                  *m_radiobtnYes;
+
+    wxCheckBox *m_chkboxDismissButton;
+    wxRadioButton *m_radiobtnClose,
+                  *m_radiobtnCancel;
+
+    wxCheckBox *m_chkboxApply,
+               *m_chkboxNo,
+               *m_chkboxHelp,
+               *m_chkboxNoDefault;
+
+    wxSizer *m_buttonsSizer;
+
+    DECLARE_EVENT_TABLE()
+};
+
+// Test harness for wxMessageDialog.
+class TestMessageBoxDialog : public wxDialog
+{
+public:
+    TestMessageBoxDialog(wxWindow *parent);
+
+    bool Create();
+
+protected:
+    wxString GetBoxTitle() { return m_textTitle->GetValue(); }
+    wxString GetMessage() { return m_textMsg->GetValue(); }
+    long GetStyle();
+
+    void PrepareMessageDialog(wxMessageDialogBase &dlg);
+
+    virtual void AddAdditionalTextOptions(wxSizer *WXUNUSED(sizer)) { }
+    virtual void AddAdditionalFlags(wxSizer *WXUNUSED(sizer)) { }
+
+    void OnApply(wxCommandEvent& event);
+    void OnClose(wxCommandEvent& event);
+    void OnUpdateLabelUI(wxUpdateUIEvent& event);
+    void OnUpdateNoDefaultUI(wxUpdateUIEvent& event);
+
+private:
+    enum
+    {
+        Btn_Yes,
+        Btn_No,
+        Btn_Ok,
+        Btn_Cancel,
+        Btn_Help,
+        Btn_Max
+    };
+
+    struct BtnInfo
+    {
+        int flag;
+        const char *name;
+    };
+
+    static const BtnInfo ms_btnInfo[Btn_Max];
+
+    enum
+    {
+        MsgDlgIcon_No,
+        MsgDlgIcon_None,
+        MsgDlgIcon_Info,
+        MsgDlgIcon_Question,
+        MsgDlgIcon_Warning,
+        MsgDlgIcon_Error,
+        MsgDlgIcon_AuthNeeded,
+        MsgDlgIcon_Max
+    };
+
+    wxTextCtrl *m_textTitle,
+               *m_textMsg,
+               *m_textExtMsg;
+
+    wxCheckBox *m_buttons[Btn_Max];
+    wxTextCtrl *m_labels[Btn_Max];
+
+    wxRadioBox *m_icons;
+
+    wxCheckBox *m_chkNoDefault,
+               *m_chkCentre;
+
+    DECLARE_EVENT_TABLE()
+    wxDECLARE_NO_COPY_CLASS(TestMessageBoxDialog);
+};
+
+#if wxUSE_RICHMSGDLG
+class TestRichMessageDialog : public TestMessageBoxDialog
+{
+public:
+    TestRichMessageDialog(wxWindow *parent);
+
+protected:
+    // overrides method in base class
+    virtual void AddAdditionalTextOptions(wxSizer *sizer);
+    virtual void AddAdditionalFlags(wxSizer *sizer);
+
+    void OnApply(wxCommandEvent& event);
+
+private:
+    wxTextCtrl *m_textCheckBox;
+    wxCheckBox *m_initialValueCheckBox;
+    wxTextCtrl *m_textDetailed;
+
+    DECLARE_EVENT_TABLE()
+};
+#endif // wxUSE_RICHMSGDLG
+
+class TestDefaultActionDialog: public wxDialog
+{
+public:
+    TestDefaultActionDialog( wxWindow *parent );
+
+    void OnListBoxDClick(wxCommandEvent& event);
+    void OnDisableOK(wxCommandEvent& event);
+    void OnDisableCancel(wxCommandEvent& event);
+    void OnCatchListBoxDClick(wxCommandEvent& event);
+    void OnTextEnter(wxCommandEvent& event);
+
+private:
+    bool   m_catchListBoxDClick;
+
+private:
+    DECLARE_EVENT_TABLE()
+};
+
 
 #if USE_SETTINGS_DIALOG
 // Property sheet dialog
@@ -177,12 +345,23 @@ DECLARE_EVENT_TABLE()
 class MyFrame: public wxFrame
 {
 public:
-    MyFrame(wxWindow *parent, const wxString& title);
+    MyFrame(const wxString& title);
+    virtual ~MyFrame();
 
+#if wxUSE_MSGDLG
     void MessageBox(wxCommandEvent& event);
+    void MessageBoxDialog(wxCommandEvent& event);
+    void MessageBoxInfo(wxCommandEvent& event);
+    void MessageBoxWindowModal(wxCommandEvent& event);
+    void MessageBoxWindowModalClosed(wxWindowModalDialogEvent& event);
+#endif // wxUSE_MSGDLG
+#if wxUSE_RICHMSGDLG
+    void RichMessageDialog(wxCommandEvent& event);
+#endif // wxUSE_RICHMSGDLG
 
 #if wxUSE_COLOURDLG
     void ChooseColour(wxCommandEvent& event);
+    void GetColour(wxCommandEvent& event);
 #endif // wxUSE_COLOURDLG
 
 #if wxUSE_FONTDLG
@@ -193,12 +372,20 @@ public:
     void LogDialog(wxCommandEvent& event);
 #endif // wxUSE_LOG_DIALOG
 
+#if wxUSE_INFOBAR
+    void InfoBarSimple(wxCommandEvent& event);
+    void InfoBarAdvanced(wxCommandEvent& event);
+#endif // wxUSE_INFOBAR
+
 #if wxUSE_CHOICEDLG
     void SingleChoice(wxCommandEvent& event);
     void MultiChoice(wxCommandEvent& event);
 #endif // wxUSE_CHOICEDLG
 
+    void Rearrange(wxCommandEvent& event);
+
 #if wxUSE_TEXTDLG
+    void LineEntry(wxCommandEvent& event);
     void TextEntry(wxCommandEvent& event);
     void PasswordEntry(wxCommandEvent& event);
 #endif // wxUSE_TEXTDLG
@@ -235,10 +422,12 @@ public:
 
 #if USE_MODAL_PRESENTATION
     void ModalDlg(wxCommandEvent& event);
+#endif // USE_MODAL_PRESENTATION
     void ModelessDlg(wxCommandEvent& event);
     void DlgCenteredScreen(wxCommandEvent& event);
     void DlgCenteredParent(wxCommandEvent& event);
-#endif // USE_MODAL_PRESENTATION
+    void MiniFrame(wxCommandEvent& event);
+    void DlgOnTop(wxCommandEvent& event);
 
 #if wxUSE_PROGRESSDLG
     void ShowProgress(wxCommandEvent& event);
@@ -270,7 +459,23 @@ public:
 #endif // USE_FONTDLG_GENERIC
 
     void OnPropertySheet(wxCommandEvent& event);
+
     void OnRequestUserAttention(wxCommandEvent& event);
+#if wxUSE_NOTIFICATION_MESSAGE
+    void OnNotifMsgAuto(wxCommandEvent& event);
+    void OnNotifMsgShow(wxCommandEvent& event);
+    void OnNotifMsgHide(wxCommandEvent& event);
+#endif // wxUSE_NOTIFICATION_MESSAGE
+
+#if wxUSE_RICHTOOLTIP
+    void OnRichTipDialog(wxCommandEvent& event);
+#endif // wxUSE_RICHTOOLTIP
+
+    void OnStandardButtonsSizerDialog(wxCommandEvent& event);
+
+    void OnTestDefaultActionDialog(wxCommandEvent& event);
+    void OnModalHook(wxCommandEvent& event);
+
     void OnExit(wxCommandEvent& event);
 
 private:
@@ -289,7 +494,21 @@ private:
                         *m_dlgReplace;
 #endif // wxUSE_FINDREPLDLG
 
+#if wxUSE_NOTIFICATION_MESSAGE
+    wxNotificationMessage *m_notifMsg;
+#endif // wxUSE_NOTIFICATION_MESSAGE
+
     wxColourData m_clrData;
+
+    // just a window which we use to show the effect of font/colours selection
+    wxWindow *m_canvas;
+
+#if wxUSE_INFOBAR
+    void OnInfoBarRedo(wxCommandEvent& event);
+
+    wxInfoBar *m_infoBarSimple,
+              *m_infoBarAdvanced;
+#endif // wxUSE_INFOBAR
 
     DECLARE_EVENT_TABLE()
 };
@@ -297,9 +516,14 @@ private:
 class MyCanvas: public wxScrolledWindow
 {
 public:
-    MyCanvas(wxWindow *parent) :
-       wxScrolledWindow(parent,wxID_ANY,wxDefaultPosition,wxDefaultSize,wxNO_FULL_REPAINT_ON_RESIZE) { }
+    MyCanvas(wxWindow *parent) : wxScrolledWindow(parent, wxID_ANY)
+    {
+        SetForegroundColour(*wxBLACK);
+        SetBackgroundColour(*wxWHITE);
+        SetFont(*wxNORMAL_FONT);
+    }
 
+private:
     void OnPaint(wxPaintEvent& event);
 
     DECLARE_EVENT_TABLE()
@@ -310,12 +534,19 @@ public:
 enum
 {
     DIALOGS_CHOOSE_COLOUR = wxID_HIGHEST,
+    DIALOGS_GET_COLOUR,
     DIALOGS_CHOOSE_COLOUR_GENERIC,
     DIALOGS_CHOOSE_FONT,
     DIALOGS_CHOOSE_FONT_GENERIC,
     DIALOGS_MESSAGE_BOX,
+    DIALOGS_MESSAGE_BOX_WINDOW_MODAL,
+    DIALOGS_MESSAGE_DIALOG,
+    DIALOGS_MESSAGE_BOX_WXINFO,
+    DIALOGS_RICH_MESSAGE_DIALOG,
     DIALOGS_SINGLE_CHOICE,
     DIALOGS_MULTI_CHOICE,
+    DIALOGS_REARRANGE,
+    DIALOGS_LINE_ENTRY,
     DIALOGS_TEXT_ENTRY,
     DIALOGS_PASSWORD_ENTRY,
     DIALOGS_FILE_OPEN,
@@ -331,10 +562,14 @@ enum
     DIALOGS_TIP,
     DIALOGS_NUM_ENTRY,
     DIALOGS_LOG_DIALOG,
+    DIALOGS_INFOBAR_SIMPLE,
+    DIALOGS_INFOBAR_ADVANCED,
     DIALOGS_MODAL,
     DIALOGS_MODELESS,
     DIALOGS_CENTRE_SCREEN,
     DIALOGS_CENTRE_PARENT,
+    DIALOGS_MINIFRAME,
+    DIALOGS_ONTOP,
     DIALOGS_MODELESS_BTN,
     DIALOGS_PROGRESS,
     DIALOGS_ABOUTDLG_SIMPLE,
@@ -345,9 +580,16 @@ enum
     DIALOGS_FIND,
     DIALOGS_REPLACE,
     DIALOGS_REQUEST,
+    DIALOGS_NOTIFY_AUTO,
+    DIALOGS_NOTIFY_SHOW,
+    DIALOGS_NOTIFY_HIDE,
+    DIALOGS_RICHTIP_DIALOG,
     DIALOGS_PROPERTY_SHEET,
     DIALOGS_PROPERTY_SHEET_TOOLBOOK,
-    DIALOGS_PROPERTY_SHEET_BUTTONTOOLBOOK
+    DIALOGS_PROPERTY_SHEET_BUTTONTOOLBOOK,
+    DIALOGS_STANDARD_BUTTON_SIZER_DIALOG,
+    DIALOGS_TEST_DEFAULT_ACTION,
+    DIALOGS_MODAL_HOOK
 };
 
 #endif

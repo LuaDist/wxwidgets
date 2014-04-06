@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     06/30/02
-// RCS-ID:      $Id: toolbar.cpp 43350 2006-11-12 16:06:07Z SN $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -26,6 +25,7 @@
 #endif
 
 #include "wx/tooltip.h"
+#include "wx/os2/dcclient.h"
 
 bool wxToolBar::m_bInitialized = false;
 
@@ -60,8 +60,10 @@ public:
 
     inline wxToolBarTool( wxToolBar* pTbar
                          ,wxControl* pControl
+                         ,const wxString& label
                         ) : wxToolBarToolBase( pTbar
                                               ,pControl
+                                              ,label
                                              )
     {
     }
@@ -128,10 +130,12 @@ wxToolBarToolBase* wxToolBar::CreateTool(
 
 wxToolBarToolBase *wxToolBar::CreateTool(
   wxControl*                        pControl
+, const wxString&                   label
 )
 {
     return new wxToolBarTool( this
                              ,pControl
+                             ,label
                             );
 } // end of wxToolBarSimple::CreateTool
 
@@ -418,11 +422,7 @@ bool wxToolBar::Create( wxWindow* pParent,
 
 wxToolBar::~wxToolBar()
 {
-    if (m_pToolTip)
-    {
-        delete m_pToolTip;
-        m_pToolTip = NULL;
-    }
+    wxDELETE(m_pToolTip);
 } // end of wxToolBar::~wxToolBar
 
 bool wxToolBar::Realize()
@@ -544,7 +544,7 @@ bool wxToolBar::Realize()
                     m_vLastY                = m_yMargin;
                 }
                 pTool->m_vX = m_vLastX + pTool->GetWidth();
-                if (HasFlag(wxTB_TEXT) && !pTool->GetLabel().IsNull())
+                if ( HasFlag(wxTB_TEXT) && !pTool->GetLabel().empty() )
                     pTool->m_vY = m_vLastY + (nMaxToolHeight - m_vTextY) + m_toolPacking;
                 else
                     pTool->m_vY = m_vLastY + (nMaxToolHeight - (int)(pTool->GetHeight()/2));
@@ -597,7 +597,8 @@ void wxToolBar::OnPaint (
         return;
     nCount++;
 
-    ::WinFillRect(vDc.GetHPS(), &vDc.m_vRclPaint, GetBackgroundColour().GetPixel());
+    wxPMDCImpl *impl = (wxPMDCImpl*) vDc.GetImpl();
+    ::WinFillRect(impl->GetHPS(), &impl->m_vRclPaint, GetBackgroundColour().GetPixel());
     for ( wxToolBarToolsList::compatibility_iterator node = m_tools.GetFirst();
           node;
           node = node->GetNext() )
@@ -819,7 +820,7 @@ void wxToolBar::DrawTool( wxDC& rDc, wxToolBarToolBase* pToolBase )
 
     PrepareDC(rDc);
 
-    if (!vBitmap.Ok())
+    if (!vBitmap.IsOk())
         return;
     if ((pMask = vBitmap.GetMask()) != NULL)
         if (pMask->GetMaskBitmap() != NULLHANDLE)
@@ -833,7 +834,7 @@ void wxToolBar::DrawTool( wxDC& rDc, wxToolBarToolBase* pToolBase )
             wxColour vColor(wxT("GREY"));
 
             rDc.SetTextForeground(vColor);
-            if (!pTool->GetDisabledBitmap().Ok())
+            if (!pTool->GetDisabledBitmap().IsOk())
                 pTool->SetDisabledBitmap(wxDisableBitmap( vBitmap
                                                          ,(long)GetBackgroundColour().GetPixel()
                                                         ));
@@ -856,7 +857,7 @@ void wxToolBar::DrawTool( wxDC& rDc, wxToolBarToolBase* pToolBase )
         {
             RaiseTool(pTool);
         }
-        if (HasFlag(wxTB_TEXT) && !pTool->GetLabel().IsNull())
+        if ( HasFlag(wxTB_TEXT) && !pTool->GetLabel().empty() )
         {
             wxCoord                 vX;
             wxCoord                 vY;
@@ -892,7 +893,7 @@ void wxToolBar::DrawTool( wxDC& rDc, wxToolBarToolBase* pToolBase )
 
         LowerTool(pTool);
         rDc.SetTextForeground(vColor);
-        if (!pTool->GetDisabledBitmap().Ok())
+        if (!pTool->GetDisabledBitmap().IsOk())
             pTool->SetDisabledBitmap(wxDisableBitmap( vBitmap
                                                      ,(long)GetBackgroundColour().GetPixel()
                                                     ));
@@ -901,7 +902,7 @@ void wxToolBar::DrawTool( wxDC& rDc, wxToolBarToolBase* pToolBase )
                        ,pTool->m_vY
                        ,bUseMask
                       );
-        if (HasFlag(wxTB_TEXT) && !pTool->GetLabel().IsNull())
+        if ( HasFlag(wxTB_TEXT) && !pTool->GetLabel().empty() )
         {
             wxCoord                 vX;
             wxCoord                 vY;
@@ -929,7 +930,7 @@ void wxToolBar::SetRows(
   int                               nRows
 )
 {
-    wxCHECK_RET( nRows != 0, _T("max number of rows must be > 0") );
+    wxCHECK_RET( nRows != 0, wxT("max number of rows must be > 0") );
 
     m_maxCols = (GetToolsCount() + nRows - 1) / nRows;
     Refresh();
@@ -951,7 +952,7 @@ wxToolBarToolBase* wxToolBar::FindToolForPosition(
     {
         wxToolBarTool*              pTool = (wxToolBarTool *)node->GetData();
 
-        if (HasFlag(wxTB_TEXT) && !pTool->GetLabel().IsNull())
+        if ( HasFlag(wxTB_TEXT) && !pTool->GetLabel().empty() )
         {
             if ((vX >= (pTool->m_vX - ((wxCoord)(pTool->GetWidth()/2) - 2))) &&
                 (vY >= (pTool->m_vY - 2)) &&
@@ -973,7 +974,7 @@ wxToolBarToolBase* wxToolBar::FindToolForPosition(
         }
         node = node->GetNext();
     }
-    return (wxToolBarToolBase *)NULL;
+    return NULL;
 } // end of wxToolBar::FindToolForPosition
 
 // ----------------------------------------------------------------------------
@@ -1165,7 +1166,7 @@ void wxToolBar::RaiseTool ( wxToolBarToolBase* pToolBase,
 
 void wxToolBar::OnTimer ( wxTimerEvent& rEvent )
 {
-    if (rEvent.GetId() == m_vToolTimer.GetTimerId())
+    if (rEvent.GetId() == m_vToolTimer.GetId())
     {
         wxPoint vPos( m_vXMouse, m_vYMouse );
 
@@ -1173,7 +1174,7 @@ void wxToolBar::OnTimer ( wxTimerEvent& rEvent )
         m_vToolTimer.Stop();
         m_vToolExpTimer.Start(4000L, TRUE);
     }
-    else if (rEvent.GetId() == m_vToolExpTimer.GetTimerId())
+    else if (rEvent.GetId() == m_vToolExpTimer.GetId())
     {
         m_pToolTip->HideToolTipWindow();
         GetParent()->Refresh();

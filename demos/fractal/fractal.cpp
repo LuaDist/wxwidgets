@@ -4,7 +4,6 @@
 // Author:      Andrew Davison
 // Modified by:
 // Created:     05.04.94
-// RCS-ID:      $Id: fractal.cpp 35650 2005-09-23 12:56:45Z MR $
 // Copyright:   (c) 1994 Andrew Davison
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -93,13 +92,13 @@ DECLARE_EVENT_TABLE()
 bool MyApp::OnInit()
 {
   // Create the main frame window
-  MyFrame *frame = new MyFrame(NULL, _T("Fractal Mountains for wxWidgets"), wxDefaultPosition, wxSize(640, 480));
+  MyFrame *frame = new MyFrame(NULL, wxT("Fractal Mountains for wxWidgets"), wxDefaultPosition, wxSize(640, 480));
 
   // Make a menubar
   wxMenu *file_menu = new wxMenu;
   file_menu->Append(wxID_EXIT, wxGetStockLabel(wxID_EXIT));
   menuBar = new wxMenuBar;
-  menuBar->Append(file_menu, _T("&File"));
+  menuBar->Append(file_menu, wxT("&File"));
   frame->SetMenuBar(menuBar);
 
   int width, height;

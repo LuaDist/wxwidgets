@@ -1,8 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        htmldefs.h
+// Name:        wx/html/htmldefs.h
 // Purpose:     constants for wxhtml library
 // Author:      Vaclav Slavik
-// RCS-ID:      $Id: htmldefs.h 40823 2006-08-25 16:52:58Z VZ $
 // Copyright:   (c) 1999 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -36,8 +35,9 @@
 //                  Used by wxHtmlColourCell to determine clr of what is changing
 //--------------------------------------------------------------------------------
 
-#define wxHTML_CLR_FOREGROUND        0x0001
-#define wxHTML_CLR_BACKGROUND        0x0002
+#define wxHTML_CLR_FOREGROUND                0x0001
+#define wxHTML_CLR_BACKGROUND                0x0002
+#define wxHTML_CLR_TRANSPARENT_BACKGROUND    0x0004
 
 
 
@@ -94,9 +94,6 @@
 
     /* size of temporary buffer used during parsing */
 #define wxHTML_BUFLEN                  1024
-
-    /* maximum number of pages printable via html printing */
-#define wxHTML_PRINT_MAX_PAGES          999
 
 #endif // wxUSE_HTML
 

@@ -3,7 +3,6 @@
 // Purpose:     wxFontEnumerator class
 // Author:      Vaclav Slavik
 // Created:     2006-08-10
-// RCS-ID:      $Id: fontenum.cpp 43727 2006-12-01 10:14:28Z VS $
 // Copyright:   (c) 2006 REA Elektronik GmbH
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -17,6 +16,8 @@
 
 #include "wx/fontenum.h"
 #include "wx/private/fontmgr.h"
+
+#if wxUSE_FONTENUM
 
 // ----------------------------------------------------------------------------
 // wxFontEnumerator
@@ -49,3 +50,5 @@ bool wxFontEnumerator::EnumerateEncodings(const wxString& facename)
 {
     return EnumerateEncodingsUTF8(facename);
 }
+
+#endif // wxUSE_FONTENUM

@@ -4,7 +4,6 @@
 // Author:      Robert Roebling
 // Modified by: Sandro Sigala
 // Created:     04/01/98
-// RCS-ID:      $Id: penguin.cpp 43272 2006-11-10 15:16:02Z VZ $
 // Copyright:   (c) Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -40,6 +39,9 @@
 // `Main program' equivalent, creating windows and returning main app frame
 bool MyApp::OnInit()
 {
+    if ( !wxApp::OnInit() )
+        return false;
+
     // Create the main frame window
     MyFrame *frame = new MyFrame(NULL, wxT("wxWidgets Penguin Sample"),
         wxDefaultPosition, wxDefaultSize);
@@ -75,7 +77,7 @@ MyFrame::MyFrame(wxFrame *frame, const wxString& title, const wxPoint& pos,
     const wxSize& size, long style)
     : wxFrame(frame, wxID_ANY, title, pos, size, style)
 {
-    SetIcon(wxIcon(sample_xpm));
+    SetIcon(wxICON(sample));
 
     // Make the "File" menu
     wxMenu *fileMenu = new wxMenu;
@@ -84,15 +86,17 @@ MyFrame::MyFrame(wxFrame *frame, const wxString& title, const wxPoint& pos,
     fileMenu->Append(wxID_EXIT, wxT("E&xit\tALT-X"));
     // Make the "Help" menu
     wxMenu *helpMenu = new wxMenu;
-    helpMenu->Append(wxID_HELP, wxT("&About..."));
+    helpMenu->Append(wxID_HELP, wxT("&About"));
 
     wxMenuBar *menuBar = new wxMenuBar;
     menuBar->Append(fileMenu, wxT("&File"));
     menuBar->Append(helpMenu, wxT("&Help"));
     SetMenuBar(menuBar);
 
+    Show(true);
+
     m_canvas = new TestGLCanvas(this, wxID_ANY, wxDefaultPosition,
-        wxSize(300, 300), wxSUNKEN_BORDER);
+        GetClientSize(), wxSUNKEN_BORDER);
 }
 
 // File|Open... command
@@ -119,7 +123,7 @@ void MyFrame::OnMenuFileExit( wxCommandEvent& WXUNUSED(event) )
     Close(true);
 }
 
-// Help|About... command
+// Help|About command
 void MyFrame::OnMenuHelpAbout( wxCommandEvent& WXUNUSED(event) )
 {
     wxMessageBox(wxT("OpenGL Penguin Sample (c) Robert Roebling, Sandro Sigala et al"));
@@ -136,10 +140,18 @@ BEGIN_EVENT_TABLE(TestGLCanvas, wxGLCanvas)
     EVT_MOUSE_EVENTS(TestGLCanvas::OnMouse)
 END_EVENT_TABLE()
 
-TestGLCanvas::TestGLCanvas(wxWindow *parent, wxWindowID id,
-    const wxPoint& pos, const wxSize& size, long style, const wxString& name)
-    : wxGLCanvas(parent, id, pos, size, style|wxFULL_REPAINT_ON_RESIZE, name)
+TestGLCanvas::TestGLCanvas(wxWindow *parent,
+                           wxWindowID id,
+                           const wxPoint& pos,
+                           const wxSize& size,
+                           long style,
+                           const wxString& name)
+    : wxGLCanvas(parent, id, NULL, pos, size,
+                 style | wxFULL_REPAINT_ON_RESIZE, name)
 {
+    // Explicitly create a new rendering context instance for this canvas.
+    m_glRC = new wxGLContext(this);
+
     m_gldata.initialized = false;
 
     // initialize view matrix
@@ -151,6 +163,7 @@ TestGLCanvas::TestGLCanvas(wxWindow *parent, wxWindowID id,
 
 TestGLCanvas::~TestGLCanvas()
 {
+    delete m_glRC;
 }
 
 void TestGLCanvas::OnPaint( wxPaintEvent& WXUNUSED(event) )
@@ -158,11 +171,7 @@ void TestGLCanvas::OnPaint( wxPaintEvent& WXUNUSED(event) )
     // must always be here
     wxPaintDC dc(this);
 
-#ifndef __WXMOTIF__
-    if (!GetContext()) return;
-#endif
-
-    SetCurrent();
+    SetCurrent(*m_glRC);
 
     // Initialize OpenGL
     if (!m_gldata.initialized)
@@ -192,11 +201,11 @@ void TestGLCanvas::OnPaint( wxPaintEvent& WXUNUSED(event) )
     SwapBuffers();
 }
 
-void TestGLCanvas::OnSize(wxSizeEvent& event)
+void TestGLCanvas::OnSize(wxSizeEvent& WXUNUSED(event))
 {
-    // this is also necessary to update the context on some platforms
-    wxGLCanvas::OnSize(event);
-    // Reset the OpenGL view aspect
+    // Reset the OpenGL view aspect.
+    // This is OK only because there is only one canvas that uses the context.
+    // See the cube sample for that case that multiple canvases are made current with one context.
     ResetProjectionMode();
 }
 
@@ -210,7 +219,7 @@ void TestGLCanvas::OnEraseBackground(wxEraseEvent& WXUNUSED(event))
 void TestGLCanvas::LoadDXF(const wxString& filename)
 {
     wxFileInputStream stream(filename);
-    if (stream.Ok())
+    if (stream.IsOk())
 #if wxUSE_ZLIB
     {
         if (filename.Right(3).Lower() == wxT(".gz"))
@@ -266,7 +275,7 @@ void TestGLCanvas::InitGL()
     static const GLfloat light1_color[4] = { 0.4f, 0.4f, 1.0f, 1.0f };
 
     /* remove back faces */
-    glDisable(GL_CULL_FACE);
+    glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
 
     /* speedups */
@@ -290,18 +299,24 @@ void TestGLCanvas::InitGL()
 
 void TestGLCanvas::ResetProjectionMode()
 {
+    if ( !IsShownOnScreen() )
+        return;
+
+    // This is normally only necessary if there is more than one wxGLCanvas
+    // or more than one wxGLContext in the application.
+    SetCurrent(*m_glRC);
+
     int w, h;
     GetClientSize(&w, &h);
-#ifndef __WXMOTIF__
-    if ( GetContext() )
-#endif
-    {
-        SetCurrent();
-        glViewport(0, 0, (GLint) w, (GLint) h);
-        glMatrixMode(GL_PROJECTION);
-        glLoadIdentity();
-        gluPerspective(45.0f, (GLfloat)w/h, 1.0, 100.0);
-        glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();
-    }
+
+    // It's up to the application code to update the OpenGL viewport settings.
+    // In order to avoid extensive context switching, consider doing this in
+    // OnPaint() rather than here, though.
+    glViewport(0, 0, (GLint) w, (GLint) h);
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(45.0f, (GLfloat)w/h, 1.0, 100.0);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
 }

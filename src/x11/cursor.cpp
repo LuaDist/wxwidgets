@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: cursor.cpp 42752 2006-10-30 19:26:48Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -19,6 +18,7 @@
     #include "wx/utils.h"
     #include "wx/icon.h"
     #include "wx/gdicmn.h"
+    #include "wx/image.h"
 #endif
 
 #include "wx/x11/private.h"
@@ -31,7 +31,7 @@
 // wxCursor
 //-----------------------------------------------------------------------------
 
-class wxCursorRefData: public wxObjectRefData
+class wxCursorRefData: public wxGDIRefData
 {
 public:
 
@@ -40,6 +40,11 @@ public:
 
     WXCursor     m_cursor;
     WXDisplay   *m_display;
+
+private:
+    // There is no way to copy m_cursor so we can't implement a copy ctor
+    // properly.
+    wxDECLARE_NO_COPY_CLASS(wxCursorRefData);
 };
 
 wxCursorRefData::wxCursorRefData()
@@ -65,7 +70,7 @@ wxCursor::wxCursor()
 
 }
 
-wxCursor::wxCursor( int cursorId )
+void wxCursor::InitFromStock( wxStockCursor cursorId )
 {
     m_refData = new wxCursorRefData();
 
@@ -123,15 +128,15 @@ wxCursor::wxCursor( int cursorId )
 #endif
 }
 
-wxCursor::wxCursor(const char bits[], int width, int  height,
-                   int hotSpotX, int hotSpotY,
-                   const char maskBits[], wxColour *fg, wxColour *bg)
+wxCursor::wxCursor(const wxString& WXUNUSED(name),
+                    wxBitmapType WXUNUSED(type),
+                    int WXUNUSED(hotSpotX), int WXUNUSED(hotSpotY))
 {
-   wxFAIL_MSG( wxT("wxCursor creation from bits not yet implemented") );
+   wxFAIL_MSG( wxT("wxCursor creation from file not yet implemented") );
 }
 
 #if wxUSE_IMAGE
-wxCursor::wxCursor( const wxImage & image )
+wxCursor::wxCursor( const wxImage & WXUNUSED(image) )
 {
    wxFAIL_MSG( wxT("wxCursor creation from wxImage not yet implemented") );
 }
@@ -141,9 +146,17 @@ wxCursor::~wxCursor()
 {
 }
 
-bool wxCursor::IsOk() const
+wxGDIRefData *wxCursor::CreateGDIRefData() const
 {
-    return (m_refData != NULL);
+    return new wxCursorRefData;
+}
+
+wxGDIRefData *
+wxCursor::CloneGDIRefData(const wxGDIRefData * WXUNUSED(data)) const
+{
+    wxFAIL_MSG( wxS("Cloning cursors is not implemented in wxX11.") );
+
+    return new wxCursorRefData;
 }
 
 WXCursor wxCursor::GetCursor() const
@@ -187,7 +200,7 @@ void wxBeginBusyCursor( const wxCursor *WXUNUSED(cursor) )
     if (gs_busyCount++ > 0)
         return;
 
-    wxASSERT_MSG( !gs_savedCursor.Ok(),
+    wxASSERT_MSG( !gs_savedCursor.IsOk(),
                   wxT("forgot to call wxEndBusyCursor, will leak memory") );
 
     gs_savedCursor = g_globalCursor;

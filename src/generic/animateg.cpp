@@ -1,10 +1,9 @@
 ///////////////////////////////////////////////////////////////////////////////
-// Name:        animateg.cpp
+// Name:        src/generic/animateg.cpp
 // Purpose:     wxAnimation and wxAnimationCtrl
 // Author:      Julian Smart and Guillermo Rodriguez Garcia
 // Modified by: Francesco Montorsi
 // Created:     13/8/99
-// RCS-ID:      $Id: animateg.cpp 48085 2007-08-15 11:36:50Z VZ $
 // Copyright:   (c) Julian Smart and Guillermo Rodriguez Garcia
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -15,7 +14,7 @@
   #pragma hdrstop
 #endif  //__BORLANDC__
 
-#if wxUSE_ANIMATIONCTRL && (!defined(__WXGTK20__) || defined(__WXUNIVERSAL__))
+#if wxUSE_ANIMATIONCTRL
 
 #include "wx/animate.h"
 
@@ -42,7 +41,7 @@ wxAnimationDecoderList wxAnimation::sm_handlers;
 // ----------------------------------------------------------------------------
 
 IMPLEMENT_DYNAMIC_CLASS(wxAnimation, wxAnimationBase)
-#define M_ANIMDATA      wx_static_cast(wxAnimationDecoder*, m_refData)
+#define M_ANIMDATA      static_cast<wxAnimationDecoder*>(m_refData)
 
 wxSize wxAnimation::GetSize() const
 {
@@ -138,7 +137,6 @@ bool wxAnimation::Load(wxInputStream &stream, wxAnimationType type)
                 m_refData = handler->Clone();
                 return M_ANIMDATA->Load(stream);
             }
-
         }
 
         wxLogWarning( _("No handler found for animation type.") );
@@ -147,16 +145,17 @@ bool wxAnimation::Load(wxInputStream &stream, wxAnimationType type)
 
     handler = FindHandler(type);
 
-    // do a copy of the handler from the static list which we will own
-    // as our reference data
-    m_refData = handler->Clone();
-
     if (handler == NULL)
     {
         wxLogWarning( _("No animation handler for type %ld defined."), type );
 
         return false;
     }
+
+
+    // do a copy of the handler from the static list which we will own
+    // as our reference data
+    m_refData = handler->Clone();
 
     if (stream.IsSeekable() && !M_ANIMDATA->CanRead(stream))
     {
@@ -186,7 +185,7 @@ void wxAnimation::AddHandler( wxAnimationDecoder *handler )
         // a good reason to add and remove duplicate handlers (and they
         // may) we should probably refcount the duplicates.
 
-        wxLogDebug( _T("Adding duplicate animation handler for '%d' type"),
+        wxLogDebug( wxT("Adding duplicate animation handler for '%d' type"),
                     handler->GetType() );
         delete handler;
     }
@@ -202,7 +201,7 @@ void wxAnimation::InsertHandler( wxAnimationDecoder *handler )
     else
     {
         // see AddHandler for additional comments.
-        wxLogDebug( _T("Inserting duplicate animation handler for '%d' type"),
+        wxLogDebug( wxT("Inserting duplicate animation handler for '%d' type"),
                     handler->GetType() );
         delete handler;
     }
@@ -307,9 +306,16 @@ wxAnimationCtrl::~wxAnimationCtrl()
 
 bool wxAnimationCtrl::LoadFile(const wxString& filename, wxAnimationType type)
 {
+    wxFileInputStream fis(filename);
+    if (!fis.IsOk())
+        return false;
+    return Load(fis, type);
+}
+
+bool wxAnimationCtrl::Load(wxInputStream& stream, wxAnimationType type)
+{
     wxAnimation anim;
-    if (!anim.LoadFile(filename, type) ||
-        !anim.IsOk())
+    if ( !anim.Load(stream, type) || !anim.IsOk() )
         return false;
 
     SetAnimation(anim);
@@ -497,7 +503,7 @@ void wxAnimationCtrl::IncrementalUpdateBackingStore()
 
         case wxANIM_TOPREVIOUS:
             // this disposal should never be used too often.
-            // E.g. GIF specification explicitely say to keep the usage of this
+            // E.g. GIF specification explicitly say to keep the usage of this
             //      disposal limited to the minimum.
             // In fact it may require a lot of time to restore
             if (m_currentFrame == 1)
@@ -588,7 +594,7 @@ void wxAnimationCtrl::DisposeToBackground()
 }
 
 void wxAnimationCtrl::DisposeToBackground(wxDC& dc)
-{ 
+{
     wxColour col = IsUsingWindowBackgroundColour()
                     ? GetBackgroundColour()
                     : m_animation.GetBackgroundColour();
@@ -620,8 +626,8 @@ void wxAnimationCtrl::OnPaint(wxPaintEvent& WXUNUSED(event))
 
     if ( m_backingStore.IsOk() )
     {
-        // NOTE: we draw the bitmap explicitely ignoring the mask (if any);
-        //       i.e. we don't want to combine the backing store with the 
+        // NOTE: we draw the bitmap explicitly ignoring the mask (if any);
+        //       i.e. we don't want to combine the backing store with the
         //       possibly wrong preexisting contents of the window!
         dc.DrawBitmap(m_backingStore, 0, 0, false /* no mask */);
     }
@@ -674,9 +680,9 @@ void wxAnimationCtrl::OnSize(wxSizeEvent &WXUNUSED(event))
     //     when using them inside sizers.
     if (m_animation.IsOk())
     {
-        // be careful to change the backing store *only* if we are 
-        // playing the animation as otherwise we may be displaying 
-        // the inactive bitmap and overwriting the backing store 
+        // be careful to change the backing store *only* if we are
+        // playing the animation as otherwise we may be displaying
+        // the inactive bitmap and overwriting the backing store
         // with the last played frame is wrong in this case
         if (IsPlaying())
         {
@@ -686,5 +692,5 @@ void wxAnimationCtrl::OnSize(wxSizeEvent &WXUNUSED(event))
     }
 }
 
-#endif      // wxUSE_ANIMATIONCTRL
+#endif // wxUSE_ANIMATIONCTRL
 

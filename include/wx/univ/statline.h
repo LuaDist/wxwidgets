@@ -3,7 +3,6 @@
 // Purpose:     wxStaticLine class for wxUniversal
 // Author:      Vadim Zeitlin
 // Created:     28.06.99
-// Version:     $Id: statline.h 43874 2006-12-09 14:52:59Z VZ $
 // Copyright:   (c) 1999 Vadim Zeitlin
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -11,7 +10,7 @@
 #ifndef _WX_UNIV_STATLINE_H_
 #define _WX_UNIV_STATLINE_H_
 
-class WXDLLEXPORT wxStaticLine : public wxStaticLineBase
+class WXDLLIMPEXP_CORE wxStaticLine : public wxStaticLineBase
 {
 public:
     // constructors and pseudo-constructors

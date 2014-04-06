@@ -4,7 +4,6 @@
 // Author:      Original from Wolfram Gloger/Guilhem Lavaux
 // Modified by:
 // Created:     04/22/98
-// RCS-ID:      $Id: threadsgi.cpp 40943 2006-08-31 19:31:43Z ABX $
 // Copyright:   (c) Wolfram Gloger (1996, 1997); Guilhem Lavaux (1998)
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -66,7 +65,9 @@ wxMutex::wxMutex()
 wxMutex::~wxMutex()
 {
   if (m_locked > 0)
+  {
     wxLogDebug( "wxMutex warning: freeing a locked mutex (%d locks)\n", m_locked );
+  }
   delete p_internal;
 }
 
@@ -124,7 +125,7 @@ void wxThreadPrivate::SprocStart(void *ptr)
 
   thr->p_internal->thread_id = getpid();
   thr->p_internal->exit_status = 0;
-  status = thr->Entry();
+  status = thr->CallEntry();
   thr->Exit(status);
 }
 

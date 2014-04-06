@@ -4,7 +4,6 @@
 // Author:      Guillermo Rodriguez Garcia, <guille@iies.es>
 // Modified by:
 // Created:     Jan/2000
-// RCS-ID:      $Id: life.cpp 41160 2006-09-11 14:07:41Z VZ $
 // Copyright:   (c) 2000, Guillermo Rodriguez Garcia
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -38,7 +37,7 @@
 // resources
 // --------------------------------------------------------------------------
 
-#if defined(__WXGTK__) || defined(__WXMOTIF__) || defined(__WXMAC__) || defined(__WXMGL__) || defined(__WXX11__)
+#ifndef wxHAS_IMAGES_IN_RESOURCES
     // application icon
     #include "mondrian.xpm"
 
@@ -150,7 +149,7 @@ IMPLEMENT_APP(LifeApp)
 
 // some shortcuts
 #define ADD_TOOL(id, bmp, tooltip, help) \
-    toolBar->AddTool(id, bmp, wxNullBitmap, false, wxDefaultCoord, wxDefaultCoord, (wxObject *)NULL, tooltip, help)
+    toolBar->AddTool(id, wxEmptyString, bmp, wxNullBitmap, wxITEM_NORMAL, tooltip, help)
 
 
 // --------------------------------------------------------------------------
@@ -163,9 +162,8 @@ bool LifeApp::OnInit()
     // create the main application window
     LifeFrame *frame = new LifeFrame();
 
-    // show it and tell the application that it's our main window
+    // show it
     frame->Show(true);
-    SetTopWindow(frame);
 
     // just for Motif
 #ifdef __WXMOTIF__
@@ -354,10 +352,10 @@ void LifeFrame::UpdateInfoText()
 {
     wxString msg;
 
-    msg.Printf(_(" Generation: %u (T: %u ms),  Population: %u "),
+    msg.Printf(_(" Generation: %lu (T: %lu ms),  Population: %lu "),
                m_tics,
                m_topspeed? 0 : m_interval,
-               m_life->GetNumCells());
+               static_cast<unsigned long>(m_life->GetNumCells()));
     m_text->SetLabel(msg);
 }
 
@@ -693,7 +691,7 @@ void LifeNavigator::OnClose(wxCloseEvent& event)
 // canvas constructor
 LifeCanvas::LifeCanvas(wxWindow *parent, Life *life, bool interactive)
           : wxWindow(parent, wxID_ANY, wxDefaultPosition, wxSize(100, 100),
-            wxFULL_REPAINT_ON_RESIZE
+            wxFULL_REPAINT_ON_RESIZE | wxHSCROLL | wxVSCROLL
 #if !defined(__SMARTPHONE__) && !defined(__POCKETPC__)
             |wxSUNKEN_BORDER
 #else

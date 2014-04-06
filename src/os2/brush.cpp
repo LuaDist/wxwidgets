@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/13/99
-// RCS-ID:      $Id: brush.cpp 42834 2006-10-31 12:02:36Z VZ $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -23,22 +22,66 @@
 
 #include "wx/os2/private.h"
 
-#include "assert.h"
+class WXDLLEXPORT wxBrushRefData: public wxGDIRefData
+{
+    friend class WXDLLIMPEXP_FWD_CORE wxBrush;
+public:
+    wxBrushRefData(const wxColour& colour = wxNullColour, wxBrushStyle style = wxBRUSHSTYLE_SOLID);
+    wxBrushRefData(const wxBitmap& stipple);
+    wxBrushRefData(const wxBrushRefData& rData);
+    virtual ~wxBrushRefData();
+
+    bool operator == (const wxBrushRefData& data) const
+    {
+        return (m_nStyle == data.m_nStyle &&
+                m_vStipple.IsSameAs(data.m_vStipple) &&
+                m_vColour == data.m_vColour);
+    }
+
+protected:
+    wxBrushStyle m_nStyle;
+    wxBitmap     m_vStipple;
+    wxColour     m_vColour;
+    WXHBRUSH     m_hBrush; // in OS/2 GPI this will be the PS the pen is associated with
+    AREABUNDLE   m_vBundle;
+};
+
+#define M_BRUSHDATA ((wxBrushRefData *)m_refData)
+
+// ============================================================================
+// wxBrushRefData implementation
+// ============================================================================
 
 IMPLEMENT_DYNAMIC_CLASS(wxBrush, wxGDIObject)
 
-wxBrushRefData::wxBrushRefData()
+// ----------------------------------------------------------------------------
+// wxBrushRefData ctors/dtor
+// ----------------------------------------------------------------------------
+
+wxBrushRefData::wxBrushRefData(const wxColour& colour, wxBrushStyle style)
+              : m_vColour(colour)
 {
-    m_nStyle = wxSOLID;
+    m_nStyle = style;
     m_hBrush = 0;
     memset(&m_vBundle, '\0', sizeof(AREABUNDLE));
 } // end of wxBrushRefData::wxBrushRefData
 
+wxBrushRefData::wxBrushRefData(const wxBitmap& stipple)
+{
+    m_vStipple = stipple;
+    m_nStyle = stipple.GetMask() ? wxBRUSHSTYLE_STIPPLE_MASK_OPAQUE
+                                 : wxBRUSHSTYLE_STIPPLE;
+
+    m_hBrush = NULL;
+    memset(&m_vBundle, '\0', sizeof(AREABUNDLE));
+}
+
 wxBrushRefData::wxBrushRefData(const wxBrushRefData& rData)
+              : wxGDIRefData(),
+                m_vStipple(rData.m_vStipple),
+                m_vColour(rData.m_vColour)
 {
     m_nStyle   = rData.m_nStyle;
-    m_vStipple = rData.m_vStipple;
-    m_vColour  = rData.m_vColour;
     m_hBrush   = 0;
     memcpy(&m_vBundle, &rData.m_vBundle, sizeof(AREABUNDLE));
 } // end of wxBrushRefData::wxBrushRefData
@@ -47,9 +90,14 @@ wxBrushRefData::~wxBrushRefData()
 {
 } // end of wxBrushRefData::~wxBrushRefData
 
-//
-// Brushes
-//
+// ============================================================================
+// wxBrush implementation
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// wxBrush ctors/dtor
+// ----------------------------------------------------------------------------
+
 wxBrush::wxBrush()
 {
 } // end of wxBrush::wxBrush
@@ -60,27 +108,26 @@ wxBrush::~wxBrush()
 
 wxBrush::wxBrush(
   const wxColour&                   rColour
-, int                               nStyle
+, wxBrushStyle                      nStyle
 )
 {
-    m_refData = new wxBrushRefData;
-
-    M_BRUSHDATA->m_vColour = rColour;
-    M_BRUSHDATA->m_nStyle  = nStyle;
-    M_BRUSHDATA->m_hBrush  = 0;
-    memset(&M_BRUSHDATA->m_vBundle, '\0', sizeof(AREABUNDLE));
+    m_refData = new wxBrushRefData(rColour, nStyle);
 
     RealizeResource();
 } // end of wxBrush::wxBrush
 
+#if FUTURE_WXWIN_COMPATIBILITY_3_0
+wxBrush::wxBrush(const wxColour& col, int style)
+{
+    m_refData = new wxBrushRefData(col, (wxBrushStyle)style);
+
+    RealizeResource();
+}
+#endif
+
 wxBrush::wxBrush(const wxBitmap& rStipple)
 {
-    m_refData = new wxBrushRefData;
-
-    M_BRUSHDATA->m_nStyle   = wxSTIPPLE;
-    M_BRUSHDATA->m_vStipple = rStipple;
-    M_BRUSHDATA->m_hBrush  = 0;
-    memset(&M_BRUSHDATA->m_vBundle, '\0', sizeof(AREABUNDLE));
+    m_refData = new wxBrushRefData(rStipple);
 
     RealizeResource();
 } // end of wxBrush::wxBrush
@@ -123,7 +170,7 @@ bool wxBrush::RealizeResource()
         {
             vError = ::WinGetLastError(vHabmain);
             sError = wxPMErrorToStr(vError);
-            wxLogError(_T("Unable to set current color table to RGB mode. Error: %s\n"), sError.c_str());
+            wxLogError(wxT("Unable to set current color table to RGB mode. Error: %s\n"), sError.c_str());
             return false;
         }
 
@@ -167,7 +214,7 @@ bool wxBrush::RealizeResource()
                 break;
 
             case wxSTIPPLE:
-                if (M_BRUSHDATA->m_vStipple.Ok())
+                if (M_BRUSHDATA->m_vStipple.IsOk())
                 {
                     ::GpiSetBitmapId( M_BRUSHDATA->m_hBrush
                                      ,(USHORT)M_BRUSHDATA->m_vStipple.GetHBITMAP()
@@ -205,17 +252,49 @@ bool wxBrush::RealizeResource()
         {
             vError = ::WinGetLastError(vHabmain);
             sError = wxPMErrorToStr(vError);
-            wxLogError(_T("Can't set Gpi attributes for an AREABUNDLE. Error: %s\n"), sError.c_str());
+            wxLogError(wxT("Can't set Gpi attributes for an AREABUNDLE. Error: %s\n"), sError.c_str());
         }
         return bOk;
     }
     return false;
 } // end of wxBrush::RealizeResource
 
+// ----------------------------------------------------------------------------
+// wxBrush accessors
+// ----------------------------------------------------------------------------
+
+wxColour wxBrush::GetColour() const
+{
+    wxCHECK_MSG( IsOk(), wxNullColour, wxT("invalid brush") );
+
+    return M_BRUSHDATA->m_vColour;
+}
+
+wxBrushStyle wxBrush::GetStyle() const
+{
+    wxCHECK_MSG( IsOk(), wxBRUSHSTYLE_INVALID, wxT("invalid brush") );
+
+    return M_BRUSHDATA->m_nStyle;
+}
+
+wxBitmap *wxBrush::GetStipple() const
+{
+    wxCHECK_MSG( IsOk(), NULL, wxT("invalid brush") );
+
+    return &(M_BRUSHDATA->m_vStipple);
+}
+
+int wxBrush::GetPS() const
+{
+    wxCHECK_MSG( IsOk(), 0, wxT("invalid brush") );
+
+    return M_BRUSHDATA->m_hBrush;
+}
+
 WXHANDLE wxBrush::GetResourceHandle() const
 {
-    if (!M_BRUSHDATA)
-        return 0;
+    wxCHECK_MSG( IsOk(), 0, wxT("invalid brush") );
+
     return (WXHANDLE)M_BRUSHDATA->m_hBrush;
 } // end of wxBrush::GetResourceHandle
 
@@ -234,40 +313,27 @@ bool wxBrush::IsFree() const
   return (M_BRUSHDATA && (M_BRUSHDATA->m_hBrush == 0));
 } // end of wxBrush::IsFree
 
-void wxBrush::Unshare()
-{
-    //
-    // Don't change shared data
-    //
-    if (!m_refData)
-    {
-        m_refData = new wxBrushRefData();
-    }
-    else
-    {
-        wxBrushRefData* ref = new wxBrushRefData(*(wxBrushRefData*)m_refData);
-        UnRef();
-        m_refData = ref;
-    }
-} // end of wxBrush::Unshare
+// ----------------------------------------------------------------------------
+// wxBrush setters
+// ----------------------------------------------------------------------------
 
 void wxBrush::SetColour( const wxColour& rColour )
 {
-    Unshare();
+    AllocExclusive();
     M_BRUSHDATA->m_vColour = rColour;
     RealizeResource();
 }
 
 void wxBrush::SetColour(unsigned char cRed, unsigned char cGreen, unsigned char cBlue)
 {
-    Unshare();
+    AllocExclusive();
     M_BRUSHDATA->m_vColour.Set( cRed, cGreen, cBlue );
     RealizeResource();
 } // end of wxBrush::SetColour
 
-void wxBrush::SetStyle(int nStyle)
+void wxBrush::SetStyle(wxBrushStyle nStyle)
 {
-    Unshare();
+    AllocExclusive();
     M_BRUSHDATA->m_nStyle = nStyle;
     RealizeResource();
 } // end of wxBrush::SetStyle
@@ -276,7 +342,7 @@ void wxBrush::SetStipple(
   const wxBitmap&                   rStipple
 )
 {
-    Unshare();
+    AllocExclusive();
     M_BRUSHDATA->m_vStipple = rStipple;
     RealizeResource();
 } // end of wxBrush::SetStipple
@@ -285,13 +351,16 @@ void wxBrush::SetPS(
   HPS                               hPS
 )
 {
-    Unshare();
+    AllocExclusive();
     if (M_BRUSHDATA->m_hBrush)
         ::GpiDestroyPS(M_BRUSHDATA->m_hBrush);
     M_BRUSHDATA->m_hBrush = hPS;
     RealizeResource();
 } // end of WxWinGdi_CPen::SetPS
 
+// ----------------------------------------------------------------------------
+// wxBrush house keeping stuff
+// ----------------------------------------------------------------------------
 
 bool wxBrush::operator == (
     const wxBrush& brush
@@ -304,3 +373,12 @@ bool wxBrush::operator == (
     return ( *(wxBrushRefData*)m_refData == *(wxBrushRefData*)brush.m_refData );
 } // end of wxBrush::operator ==
 
+wxGDIRefData *wxBrush::CreateGDIRefData() const
+{
+    return new wxBrushRefData;
+}
+
+wxGDIRefData *wxBrush::CloneGDIRefData(const wxGDIRefData *data) const
+{
+    return new wxBrushRefData(*(const wxBrushRefData *)data);
+}

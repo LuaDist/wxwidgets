@@ -1,10 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        menu.h
+// Name:        wx/os2/menu.h
 // Purpose:     wxMenu, wxMenuBar classes
 // Author:      David Webster
 // Modified by:
 // Created:     10/10/99
-// RCS-ID:      $Id: menu.h 48053 2007-08-13 17:07:01Z JS $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -20,7 +19,7 @@
     WX_DEFINE_EXPORTED_ARRAY_PTR(wxAcceleratorEntry *, wxAcceleratorArray);
 #endif // wxUSE_ACCEL
 
-class WXDLLEXPORT wxFrame;
+class WXDLLIMPEXP_FWD_CORE wxFrame;
 
 void wxSetShortCutKey(wxChar* zText);
 
@@ -28,7 +27,7 @@ void wxSetShortCutKey(wxChar* zText);
 // Menu
 // ----------------------------------------------------------------------------
 
-class WXDLLEXPORT wxMenu : public wxMenuBase
+class WXDLLIMPEXP_CORE wxMenu : public wxMenuBase
 {
 public:
     //
@@ -172,7 +171,7 @@ private:
 // Menu Bar (a la Windows)
 // ----------------------------------------------------------------------------
 
-class WXDLLEXPORT wxMenuBar : public wxMenuBarBase
+class WXDLLIMPEXP_CORE wxMenuBar : public wxMenuBarBase
 {
 public:
     //
@@ -226,10 +225,10 @@ public:
     virtual void        EnableTop( size_t nPos
                                   ,bool   bFlag
                                  );
-    virtual void        SetLabelTop( size_t          nPos
+    virtual void        SetMenuLabel( size_t          nPos
                                     ,const wxString& rLabel
                                    );
-    virtual wxString    GetLabelTop(size_t nPos) const;
+    virtual wxString    GetMenuLabel(size_t nPos) const;
 
     //
     // Implementation from now on
@@ -287,13 +286,6 @@ private:
     { wxWindow::Refresh(bErase, pRect); }
 
     DECLARE_DYNAMIC_CLASS(wxMenuBar)
-
-public:
-
-#if wxABI_VERSION >= 20805
-    // Gets the original label at the top-level of the menubar
-    wxString GetMenuLabel(size_t pos) const;
-#endif
 };
 
 #endif // _WX_MENU_H_

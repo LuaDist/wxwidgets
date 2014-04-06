@@ -2,7 +2,6 @@
 // Name:        src/html/m_list.cpp
 // Purpose:     wxHtml module for lists
 // Author:      Vaclav Slavik
-// RCS-ID:      $Id: m_list.cpp 38788 2006-04-18 08:11:26Z ABX $
 // Copyright:   (c) 1999 Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -15,7 +14,7 @@
 
 #if wxUSE_HTML && wxUSE_STREAMS
 
-#ifndef WXPRECOMP
+#ifndef WX_PRECOMP
     #include "wx/brush.h"
     #include "wx/dc.h"
 #endif
@@ -41,10 +40,10 @@ class wxHtmlListmarkCell : public wxHtmlCell
         void Draw(wxDC& dc, int x, int y, int view_y1, int view_y2,
                   wxHtmlRenderingInfo& info);
 
-    DECLARE_NO_COPY_CLASS(wxHtmlListmarkCell)
+    wxDECLARE_NO_COPY_CLASS(wxHtmlListmarkCell);
 };
 
-wxHtmlListmarkCell::wxHtmlListmarkCell(wxDC* dc, const wxColour& clr) : wxHtmlCell(), m_Brush(clr, wxSOLID)
+wxHtmlListmarkCell::wxHtmlListmarkCell(wxDC* dc, const wxColour& clr) : wxHtmlCell(), m_Brush(clr, wxBRUSHSTYLE_SOLID)
 {
     m_Width =  dc->GetCharHeight();
     m_Height = dc->GetCharHeight();
@@ -93,7 +92,7 @@ class wxHtmlListCell : public wxHtmlContainerCell
         void AddRow(wxHtmlContainerCell *mark, wxHtmlContainerCell *cont);
         virtual void Layout(int w);
 
-    DECLARE_NO_COPY_CLASS(wxHtmlListCell)
+    wxDECLARE_NO_COPY_CLASS(wxHtmlListCell);
 };
 
 wxHtmlListCell::wxHtmlListCell(wxHtmlContainerCell *parent) : wxHtmlContainerCell(parent)

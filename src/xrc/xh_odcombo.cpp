@@ -3,7 +3,6 @@
 // Purpose:     XRC resource for wxRadioBox
 // Author:      Alex Bligh - Based on src/xrc/xh_combo.cpp
 // Created:     2006/06/19
-// RCS-ID:      $Id: xh_odcombo.cpp 42258 2006-10-22 22:12:32Z VZ $
 // Copyright:   (c) 2006 Alex Bligh
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -25,6 +24,8 @@
 #endif
 
 #include "wx/odcombo.h"
+
+#include "wx/xml/xml.h"
 
 IMPLEMENT_DYNAMIC_CLASS(wxOwnerDrawnComboBoxXmlHandler, wxXmlResourceHandler)
 
@@ -103,12 +104,12 @@ bool wxOwnerDrawnComboBoxXmlHandler::CanHandle(wxXmlNode *node)
 #else
 
 //  Avoid GCC bug - this fails on certain GCC 3.3 and 3.4 builds for an unknown reason
-//  it is believed to be related to the fact IsOfClass is inline, and node->GetPropVal
+//  it is believed to be related to the fact IsOfClass is inline, and node->GetAttribute
 //  gets passed an invalid "this" pointer. On 2.7, the function is out of line, so the
 //  above should work fine. This code is left in here so this file can easily be used
 //  in a version backported to 2.6. All we are doing here is expanding the macro
 
-    bool fOurClass = node->GetPropVal(wxT("class"), wxEmptyString) == wxT("wxOwnerDrawnComboBox");
+    bool fOurClass = node->GetAttribute(wxT("class"), wxEmptyString) == wxT("wxOwnerDrawnComboBox");
     return (fOurClass ||
           (m_insideBox && node->GetName() == wxT("item")));
 #endif

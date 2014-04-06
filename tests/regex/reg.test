@@ -9,7 +9,6 @@
 #
 # Copyright (c) 1998, 1999 Henry Spencer.  All rights reserved.
 #
-# RCS: @(#) $Id: reg.test 26104 2004-03-05 23:14:23Z VS $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2

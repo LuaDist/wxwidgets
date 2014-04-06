@@ -1,5 +1,4 @@
 <?xml version="1.0" ?>
-<!-- $Id: isosurf.bkl 41872 2006-10-10 10:04:10Z VS $ -->
 
 <makefile>
 
@@ -11,6 +10,7 @@
 
     <exe id="isosurf" template="wx_sample" template_append="wx_append" cond="USE_OPENGL=='1'">
         <sources>isosurf.cpp</sources>
+        <headers>isosurf.h</headers>
         <wx-lib>gl</wx-lib>
         <wx-lib>core</wx-lib>
         <wx-lib>base</wx-lib>

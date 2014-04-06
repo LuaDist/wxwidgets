@@ -2,7 +2,6 @@
 // Name:        src/motif/dnd.cpp
 // Purpose:     wxDropTarget, wxDropSource classes
 // Author:      Julian Smart
-// Id:          $Id: dnd.cpp 39797 2006-06-19 20:18:46Z ABX $
 // Copyright:   (c) 1998 Julian Smart
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -129,7 +128,7 @@ wxDropSource::wxDropSource( wxWindow *win )
 {
 #if 0
   m_window = win;
-  m_data = (wxDataObject *) NULL;
+  m_data = NULL;
   m_retValue = wxDragCancel;
 
   m_defaultCursor = wxCursor( wxCURSOR_NO_ENTRY );

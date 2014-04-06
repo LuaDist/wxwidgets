@@ -3,7 +3,6 @@
 // Purpose:     wxPen class implementation
 // Author:      Vaclav Slavik
 // Created:     2006-08-04
-// RCS-ID:      $Id: pen.cpp 41751 2006-10-08 21:56:55Z VZ $
 // Copyright:   (c) 2006 REA Elektronik GmbH
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -26,10 +25,10 @@
 // wxPen
 //-----------------------------------------------------------------------------
 
-class wxPenRefData: public wxObjectRefData
+class wxPenRefData : public wxGDIRefData
 {
 public:
-    wxPenRefData(const wxColour& clr = wxNullColour, int style = wxSOLID)
+    wxPenRefData(const wxColour& clr = wxNullColour, wxPenStyle style = wxPENSTYLE_SOLID)
     {
         m_colour = clr;
         SetStyle(style);
@@ -38,18 +37,20 @@ public:
     wxPenRefData(const wxPenRefData& data)
         : m_style(data.m_style), m_colour(data.m_colour) {}
 
-    void SetStyle(int style)
+    virtual bool IsOk() const { return m_colour.IsOk(); }
+
+    void SetStyle(wxPenStyle style)
     {
-        if ( style != wxSOLID && style != wxTRANSPARENT )
+        if ( style != wxPENSTYLE_SOLID && style != wxPENSTYLE_TRANSPARENT )
         {
-            wxFAIL_MSG( _T("only wxSOLID and wxTRANSPARENT styles are supported") );
-            style = wxSOLID;
+            wxFAIL_MSG( "only wxSOLID and wxTRANSPARENT styles are supported" );
+            style = wxPENSTYLE_SOLID;
         }
 
         m_style = style;
     }
 
-    int            m_style;
+    wxPenStyle     m_style;
     wxColour       m_colour;
 };
 
@@ -59,23 +60,30 @@ public:
 
 IMPLEMENT_DYNAMIC_CLASS(wxPen, wxGDIObject)
 
-wxPen::wxPen(const wxColour &colour, int width, int style)
+wxPen::wxPen(const wxColour &colour, int width, wxPenStyle style)
 {
-    wxASSERT_MSG( width <= 1, _T("only width=0,1 are supported") );
+    wxASSERT_MSG( width <= 1, "only width=0,1 are supported" );
 
     m_refData = new wxPenRefData(colour, style);
 }
 
+#if FUTURE_WXWIN_COMPATIBILITY_3_0
+wxPen::wxPen(const wxColour& col, int width, int style)
+{
+    m_refData = new wxPenRefData(col, (wxPenStyle)style);
+}
+#endif
+
 wxPen::wxPen(const wxBitmap& WXUNUSED(stipple), int WXUNUSED(width))
 {
-    wxFAIL_MSG( _T("stipple pens not supported") );
+    wxFAIL_MSG( "stipple pens not supported" );
 
     m_refData = new wxPenRefData();
 }
 
 bool wxPen::operator==(const wxPen& pen) const
 {
-#warning "this is incorrect (MGL too)"
+#warning "this is incorrect"
     return m_refData == pen.m_refData;
 }
 
@@ -87,7 +95,7 @@ void wxPen::SetColour(const wxColour &colour)
 
 void wxPen::SetDashes(int WXUNUSED(number_of_dashes), const wxDash *WXUNUSED(dash))
 {
-    wxFAIL_MSG( _T("SetDashes not implemented") );
+    wxFAIL_MSG( "SetDashes not implemented" );
 }
 
 void wxPen::SetColour(unsigned char red, unsigned char green, unsigned char blue)
@@ -96,17 +104,17 @@ void wxPen::SetColour(unsigned char red, unsigned char green, unsigned char blue
     M_PENDATA->m_colour.Set(red, green, blue);
 }
 
-void wxPen::SetCap(int WXUNUSED(capStyle))
+void wxPen::SetCap(wxPenCap WXUNUSED(capStyle))
 {
-    wxFAIL_MSG( _T("SetCap not implemented") );
+    wxFAIL_MSG( "SetCap not implemented" );
 }
 
-void wxPen::SetJoin(int WXUNUSED(joinStyle))
+void wxPen::SetJoin(wxPenJoin WXUNUSED(joinStyle))
 {
-    wxFAIL_MSG( _T("SetJoin not implemented") );
+    wxFAIL_MSG( "SetJoin not implemented" );
 }
 
-void wxPen::SetStyle(int style)
+void wxPen::SetStyle(wxPenStyle style)
 {
     AllocExclusive();
     M_PENDATA->SetStyle(style);
@@ -114,17 +122,17 @@ void wxPen::SetStyle(int style)
 
 void wxPen::SetStipple(const wxBitmap& WXUNUSED(stipple))
 {
-    wxFAIL_MSG( _T("SetStipple not implemented") );
+    wxFAIL_MSG( "SetStipple not implemented" );
 }
 
 void wxPen::SetWidth(int width)
 {
-    wxASSERT_MSG( width <= 1, _T("only width=0,1 are implemented") );
+    wxASSERT_MSG( width <= 1, "only width=0,1 are implemented" );
 }
 
 int wxPen::GetDashes(wxDash **ptr) const
 {
-    wxFAIL_MSG( _T("GetDashes not implemented") );
+    wxFAIL_MSG( "GetDashes not implemented" );
 
     *ptr = NULL;
     return 0;
@@ -132,74 +140,69 @@ int wxPen::GetDashes(wxDash **ptr) const
 
 int wxPen::GetDashCount() const
 {
-    wxFAIL_MSG( _T("GetDashCount not implemented") );
+    wxFAIL_MSG( "GetDashCount not implemented" );
 
     return 0;
 }
 
 wxDash* wxPen::GetDash() const
 {
-    wxFAIL_MSG( _T("GetDash not implemented") );
+    wxFAIL_MSG( "GetDash not implemented" );
 
     return NULL;
 }
 
-int wxPen::GetCap() const
+wxPenCap wxPen::GetCap() const
 {
-    wxCHECK_MSG( Ok(), -1, wxT("invalid pen") );
+    wxCHECK_MSG( IsOk(), wxCAP_INVALID, wxT("invalid pen") );
 
-    wxFAIL_MSG( _T("GetCap not implemented") );
-    return -1;
+    wxFAIL_MSG( "GetCap not implemented" );
+    return wxCAP_INVALID;
 }
 
-int wxPen::GetJoin() const
+wxPenJoin wxPen::GetJoin() const
 {
-    wxCHECK_MSG( Ok(), -1, wxT("invalid pen") );
+    wxCHECK_MSG( IsOk(), wxJOIN_INVALID, wxT("invalid pen") );
 
-    wxFAIL_MSG( _T("GetJoin not implemented") );
-    return -1;
+    wxFAIL_MSG( "GetJoin not implemented" );
+    return wxJOIN_INVALID;
 }
 
-int wxPen::GetStyle() const
+wxPenStyle wxPen::GetStyle() const
 {
-    wxCHECK_MSG( Ok(), -1, wxT("invalid pen") );
+    wxCHECK_MSG( IsOk(), wxPENSTYLE_INVALID, wxT("invalid pen") );
 
     return M_PENDATA->m_style;
 }
 
 int wxPen::GetWidth() const
 {
-    wxCHECK_MSG( Ok(), -1, wxT("invalid pen") );
+    wxCHECK_MSG( IsOk(), -1, wxT("invalid pen") );
 
     return 1;
 }
 
-wxColour &wxPen::GetColour() const
+wxColour wxPen::GetColour() const
 {
-    wxCHECK_MSG( Ok(), wxNullColour, wxT("invalid pen") );
+    wxCHECK_MSG( IsOk(), wxNullColour, wxT("invalid pen") );
 
     return M_PENDATA->m_colour;
 }
 
 wxBitmap *wxPen::GetStipple() const
 {
-    wxCHECK_MSG( Ok(), NULL, wxT("invalid pen") );
+    wxCHECK_MSG( IsOk(), NULL, wxT("invalid pen") );
 
-    wxFAIL_MSG( _T("GetStipple not implemented") );
+    wxFAIL_MSG( "GetStipple not implemented" );
     return NULL;
 }
 
-bool wxPen::IsOk() const
-{
-    return ((m_refData) && M_PENDATA->m_colour.Ok());
-}
-
-wxObjectRefData *wxPen::CreateRefData() const
+wxGDIRefData *wxPen::CreateGDIRefData() const
 {
     return new wxPenRefData;
 }
 
-wxObjectRefData *wxPen::CloneRefData(const wxObjectRefData *data) const
+wxGDIRefData *wxPen::CloneGDIRefData(const wxGDIRefData *data) const
 {
     return new wxPenRefData(*(wxPenRefData *)data);
 }

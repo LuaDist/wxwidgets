@@ -3,7 +3,6 @@
 // Purpose:     wxBrush class implementation
 // Author:      Vaclav Slavik
 // Created:     2006-08-04
-// RCS-ID:      $Id: brush.cpp 41751 2006-10-08 21:56:55Z VZ $
 // Copyright:   (c) 2006 REA Elektronik GmbH
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -26,10 +25,10 @@
 // wxBrush
 //-----------------------------------------------------------------------------
 
-class wxBrushRefData: public wxObjectRefData
+class wxBrushRefData : public wxGDIRefData
 {
 public:
-    wxBrushRefData(const wxColour& clr = wxNullColour, int style = wxSOLID)
+    wxBrushRefData(const wxColour& clr = wxNullColour, wxBrushStyle style = wxBRUSHSTYLE_SOLID)
     {
         m_colour = clr;
         SetStyle(style);
@@ -41,19 +40,21 @@ public:
         m_style = data.m_style;
     }
 
-    void SetStyle(int style)
+    virtual bool IsOk() const { return m_colour.IsOk(); }
+
+    void SetStyle(wxBrushStyle style)
     {
         if ( style != wxSOLID && style != wxTRANSPARENT )
         {
-            wxFAIL_MSG( _T("only wxSOLID and wxTRANSPARENT styles are supported") );
-            style = wxSOLID;
+            wxFAIL_MSG( wxT("only wxSOLID and wxTRANSPARENT styles are supported") );
+            style = wxBRUSHSTYLE_SOLID;
         }
 
         m_style = style;
     }
 
     wxColour       m_colour;
-    int            m_style;
+    wxBrushStyle   m_style;
 };
 
 //-----------------------------------------------------------------------------
@@ -62,54 +63,48 @@ public:
 
 IMPLEMENT_DYNAMIC_CLASS(wxBrush, wxGDIObject)
 
-wxBrush::wxBrush(const wxColour &colour, int style)
+wxBrush::wxBrush(const wxColour &colour, wxBrushStyle style)
 {
     m_refData = new wxBrushRefData(colour, style);
 }
 
+#if FUTURE_WXWIN_COMPATIBILITY_3_0
+wxBrush::wxBrush(const wxColour& col, int style)
+{
+    m_refData = new wxBrushRefData(col, (wxBrushStyle)style);
+}
+#endif
+
 wxBrush::wxBrush(const wxBitmap &stippleBitmap)
 {
-    wxFAIL_MSG( "brushes with stipple bitmaps not implemented" );
+    wxFAIL_MSG( wxT("brushes with stipple bitmaps not implemented") );
 
     m_refData = new wxBrushRefData(*wxBLACK);
 }
 
 bool wxBrush::operator==(const wxBrush& brush) const
 {
-#warning "this is incorrect (MGL too)"
+#warning "this is incorrect"
     return m_refData == brush.m_refData;
 }
 
-bool wxBrush::IsOk() const
+wxBrushStyle wxBrush::GetStyle() const
 {
-    return ((m_refData) && M_BRUSHDATA->m_colour.Ok());
-}
-
-int wxBrush::GetStyle() const
-{
-    if (m_refData == NULL)
-    {
-        wxFAIL_MSG( wxT("invalid brush") );
-        return 0;
-    }
+    wxCHECK_MSG( IsOk(), wxBRUSHSTYLE_INVALID, wxT("invalid brush") );
 
     return M_BRUSHDATA->m_style;
 }
 
-wxColour& wxBrush::GetColour() const
+wxColour wxBrush::GetColour() const
 {
-    if (m_refData == NULL)
-    {
-        wxFAIL_MSG( wxT("invalid brush") );
-        return wxNullColour;
-    }
+    wxCHECK_MSG( IsOk(), wxNullColour, wxT("invalid brush") );
 
     return M_BRUSHDATA->m_colour;
 }
 
 wxBitmap *wxBrush::GetStipple() const
 {
-    wxFAIL_MSG( "brushes with stipple bitmaps not implemented" );
+    wxFAIL_MSG( wxT("brushes with stipple bitmaps not implemented") );
     return &wxNullBitmap;
 }
 
@@ -125,7 +120,7 @@ void wxBrush::SetColour(unsigned char r, unsigned char g, unsigned char b)
     M_BRUSHDATA->m_colour.Set(r, g, b);
 }
 
-void wxBrush::SetStyle(int style)
+void wxBrush::SetStyle(wxBrushStyle style)
 {
     AllocExclusive();
     M_BRUSHDATA->SetStyle(style);
@@ -133,15 +128,15 @@ void wxBrush::SetStyle(int style)
 
 void wxBrush::SetStipple(const wxBitmap& WXUNUSED(stipple))
 {
-    wxFAIL_MSG( "brushes with stipple bitmaps not implemented" );
+    wxFAIL_MSG( wxT("brushes with stipple bitmaps not implemented") );
 }
 
-wxObjectRefData *wxBrush::CreateRefData() const
+wxGDIRefData *wxBrush::CreateGDIRefData() const
 {
     return new wxBrushRefData;
 }
 
-wxObjectRefData *wxBrush::CloneRefData(const wxObjectRefData *data) const
+wxGDIRefData *wxBrush::CloneGDIRefData(const wxGDIRefData *data) const
 {
     return new wxBrushRefData(*(wxBrushRefData *)data);
 }

@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: statbmp.cpp 41640 2006-10-05 19:34:25Z MBN $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -26,8 +25,6 @@
 
 #include "wx/motif/private.h"
 
-IMPLEMENT_DYNAMIC_CLASS(wxStaticBitmap, wxControl)
-
 /*
  * wxStaticBitmap
  */
@@ -42,6 +39,7 @@ bool wxStaticBitmap::Create(wxWindow *parent, wxWindowID id,
     if( !CreateControl( parent, id, pos, size, style, wxDefaultValidator,
                         name ) )
         return false;
+    PreCreation();
 
     m_messageBitmap = bitmap;
     m_messageBitmapOriginal = bitmap;
@@ -57,18 +55,15 @@ bool wxStaticBitmap::Create(wxWindow *parent, wxWindowID id,
                     XmNalignment, XmALIGNMENT_BEGINNING,
                     NULL);
 
-    ChangeBackgroundColour ();
-
-    DoSetBitmap();
-
-    ChangeFont(false);
-
     wxSize actualSize(size);
     // work around the cases where the bitmap is a wxNull(Icon/Bitmap)
     if (actualSize.x == -1)
-        actualSize.x = bitmap.Ok() ? bitmap.GetWidth() : 1;
+        actualSize.x = bitmap.IsOk() ? bitmap.GetWidth() : 1;
     if (actualSize.y == -1)
-        actualSize.y = bitmap.Ok() ? bitmap.GetHeight() : 1;
+        actualSize.y = bitmap.IsOk() ? bitmap.GetHeight() : 1;
+
+    PostCreation();
+    DoSetBitmap();
     AttachWidget (parent, m_mainWidget, (WXWidget) NULL,
                   pos.x, pos.y, actualSize.x, actualSize.y);
 
@@ -85,7 +80,7 @@ void wxStaticBitmap::DoSetBitmap()
     Widget widget = (Widget) m_mainWidget;
     int w2, h2;
 
-    if (m_messageBitmapOriginal.Ok())
+    if (m_messageBitmapOriginal.IsOk())
     {
         w2 = m_messageBitmapOriginal.GetWidth();
         h2 = m_messageBitmapOriginal.GetHeight();

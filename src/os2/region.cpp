@@ -4,7 +4,6 @@
 // Author:    David Webster
 // Modified by:
 // Created:   10/15/99
-// RCS-ID:    $Id: region.cpp 43288 2006-11-10 20:35:39Z ABX $
 // Copyright: (c) David Webster
 // Licence:   wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -221,7 +220,7 @@ wxRegion::wxRegion(const wxRect& rRect)
                                      );
 } // end of wxRegion::wxRegion
 
-wxRegion::wxRegion(size_t n, const wxPoint *points, int WXUNUSED(fillStyle))
+wxRegion::wxRegion(size_t n, const wxPoint *points, wxPolygonFillMode WXUNUSED(fillStyle))
 {
     // TO DO
 }
@@ -233,12 +232,12 @@ wxRegion::~wxRegion()
 {
 } // end of wxRegion::~wxRegion
 
-wxObjectRefData *wxRegion::CreateData() const
+wxGDIRefData *wxRegion::CreateGDIRefData() const
 {
     return new wxRegionRefData;
 }
 
-wxObjectRefData *wxRegion::CloneData(const wxObjectRefData *data) const
+wxGDIRefData *wxRegion::CloneGDIRefData(const wxGDIRefData *data) const
 {
     return new wxRegionRefData(*(wxRegionRefData *)data);
 }
@@ -260,7 +259,7 @@ bool wxRegion::DoOffset( wxCoord x, wxCoord y )
 #if 0
     if ( ::OffsetRgn(GetHrgn(), x, y) == ERROR )
     {
-        wxLogLastError(_T("OffsetRgn"));
+        wxLogLastError(wxT("OffsetRgn"));
 
         return false;
     }
@@ -297,7 +296,7 @@ bool wxRegion::DoCombine( const wxRegion& rRegion, wxRegionOp eOp )
                 break;
 
             default:
-                wxFAIL_MSG( _T("unknown region operation") );
+                wxFAIL_MSG( wxT("unknown region operation") );
                 // fall through
 
             case wxRGN_AND:

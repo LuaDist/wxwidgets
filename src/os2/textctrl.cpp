@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/17/99
-// RCS-ID:      $Id: textctrl.cpp 41739 2006-10-08 17:46:12Z VZ $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -54,8 +53,6 @@
 // ----------------------------------------------------------------------------
 // event tables and other macros
 // ----------------------------------------------------------------------------
-
-IMPLEMENT_DYNAMIC_CLASS(wxTextCtrl, wxTextCtrlBase)
 
 BEGIN_EVENT_TABLE(wxTextCtrl, wxTextCtrlBase)
     EVT_CHAR(wxTextCtrl::OnChar)
@@ -160,7 +157,7 @@ bool wxTextCtrl::Create(
     {
         m_hWnd = (WXHWND)::WinCreateWindow( (HWND)GetHwndOf(pParent) // Parent window handle
                                            ,WC_MLE                   // Window class
-                                           ,(PSZ)rsValue.c_str()     // Initial Text
+                                           ,rsValue.c_str()     // Initial Text
                                            ,(ULONG)lSstyle           // Style flags
                                            ,(LONG)0                  // X pos of origin
                                            ,(LONG)0                  // Y pos of origin
@@ -177,7 +174,7 @@ bool wxTextCtrl::Create(
     {
         m_hWnd = (WXHWND)::WinCreateWindow( (HWND)GetHwndOf(pParent) // Parent window handle
                                            ,WC_ENTRYFIELD            // Window class
-                                           ,(PSZ)rsValue.c_str()     // Initial Text
+                                           ,rsValue.c_str()     // Initial Text
                                            ,(ULONG)lSstyle           // Style flags
                                            ,(LONG)0                  // X pos of origin
                                            ,(LONG)0                  // Y pos of origin
@@ -329,7 +326,8 @@ void wxTextCtrl::SetupColours()
 wxString wxTextCtrl::GetValue() const
 {
     wxString                        sStr = wxGetWindowText(GetHWND());
-    char*                           zStr = (char*)sStr.c_str();
+    wxCharBuffer                    buf(sStr.char_str());
+    char*                           zStr = buf.data();
 
     for ( ; *zStr; zStr++ )
     {
@@ -341,7 +339,7 @@ wxString wxTextCtrl::GetValue() const
         if (*zStr == '\r')
             *zStr = '\n';
     }
-    return sStr;
+    return zStr;
 } // end of wxTextCtrl::GetValue
 
 void wxTextCtrl::DoSetValue(
@@ -360,7 +358,7 @@ void wxTextCtrl::DoSetValue(
         if ( flags & SetValue_SendEvent )
             m_bSkipUpdate = true;
 
-        ::WinSetWindowText(GetHwnd(), (PSZ)rsValue.c_str());
+        ::WinSetWindowText(GetHwnd(), rsValue.c_str());
         AdjustSpaceLimit();
     }
 } // end of wxTextCtrl::SetValue
@@ -370,9 +368,9 @@ void wxTextCtrl::WriteText(
 )
 {
     if (m_bIsMLE)
-        ::WinSendMsg(GetHwnd(), MLM_INSERT, MPARAM((PCHAR)rsValue.c_str()), MPARAM(0));
+        ::WinSendMsg(GetHwnd(), MLM_INSERT, MPARAM(rsValue.wx_str()), MPARAM(0));
     else
-        ::WinSetWindowText(GetHwnd(), (PSZ)rsValue.c_str());
+        ::WinSetWindowText(GetHwnd(), rsValue.c_str());
     AdjustSpaceLimit();
 } // end of wxTextCtrl::WriteText
 
@@ -717,7 +715,7 @@ void wxTextCtrl::MarkDirty()
         ::WinSendMsg(GetHwnd(), MLM_SETCHANGED, MPFROMLONG(TRUE), 0);
     else
         // EM controls do not have a SETCHANGED, what can we do??
-        wxFAIL_MSG( _T("not implemented") );
+        wxFAIL_MSG( wxT("not implemented") );
 }
 
 //
@@ -1045,10 +1043,10 @@ void wxTextCtrl::OnChar(
         case WXK_RETURN:
             if ( !(m_windowStyle & wxTE_MULTILINE) )
             {
-                wxCommandEvent      vEvent(wxEVT_COMMAND_TEXT_ENTER, m_windowId);
+                wxCommandEvent      vEvent(wxEVT_TEXT_ENTER, m_windowId);
 
                 vEvent.SetEventObject(this);
-                if ( GetEventHandler()->ProcessEvent(vEvent))
+                if ( HandleWindowEvent(vEvent))
                     return;
             }
             //else: multiline controls need Enter for themselves
@@ -1070,7 +1068,7 @@ void wxTextCtrl::OnChar(
                 vEventNav.SetWindowChange(false);
                 vEventNav.SetEventObject(this);
 
-                if ( GetEventHandler()->ProcessEvent(vEventNav) )
+                if ( HandleWindowEvent(vEventNav) )
                     return;
             }
             break;
@@ -1094,7 +1092,7 @@ bool wxTextCtrl::OS2Command(
                                           );
 
                 vEvent.SetEventObject(this);
-                GetEventHandler()->ProcessEvent(vEvent);
+                HandleWindowEvent(vEvent);
             }
             break;
 
@@ -1106,7 +1104,7 @@ bool wxTextCtrl::OS2Command(
                     break;
                 }
 
-                wxCommandEvent      vEvent( wxEVT_COMMAND_TEXT_UPDATED
+                wxCommandEvent      vEvent( wxEVT_TEXT
                                            ,m_windowId
                                           );
 
@@ -1170,11 +1168,17 @@ void wxTextCtrl::AdjustSpaceLimit()
     }
     if (uLen >= uLimit)
     {
-        uLimit = uLen + 0x8000;    // 32Kb
-        if (uLimit > 0xffff)
+        if (m_bIsMLE)
         {
-            uLimit = 0L;
+            uLimit = uLen + 0x8000;    // 32Kb
+            if (uLimit > 0xffff)
+            {
+                uLimit = 0L;
+            }
         }
+        else
+            uLimit = 0x7fff;
+
         if (m_bIsMLE)
             ::WinSendMsg(GetHwnd(), MLM_SETTEXTLIMIT, MPFROMLONG(uLimit), 0);
         else

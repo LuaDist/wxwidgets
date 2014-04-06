@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: dcscreen.h 42077 2006-10-17 14:44:52Z ABX $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -13,32 +12,23 @@
 #define _WX_DCSCREEN_H_
 
 #include "wx/dcclient.h"
+#include "wx/x11/dcclient.h"
 
 //-----------------------------------------------------------------------------
 // wxScreenDC
 //-----------------------------------------------------------------------------
 
-class WXDLLIMPEXP_CORE wxScreenDC : public wxPaintDC
+class WXDLLIMPEXP_CORE wxScreenDCImpl : public wxPaintDCImpl
 {
 public:
-    wxScreenDC();
-    virtual ~wxScreenDC();
-
-    static bool StartDrawingOnTop( wxWindow *window );
-    static bool StartDrawingOnTop( wxRect *rect = (wxRect *) NULL );
-    static bool EndDrawingOnTop();
-
-    // implementation
-
-    static WXWindow   *sm_overlayWindow;
-    static int         sm_overlayWindowX;
-    static int         sm_overlayWindowY;
+    wxScreenDCImpl( wxDC *owner);
+    virtual ~wxScreenDCImpl();
 
 protected:
     virtual void DoGetSize(int *width, int *height) const;
 
 private:
-    DECLARE_DYNAMIC_CLASS(wxScreenDC)
+    DECLARE_CLASS(wxScreenDCImpl)
 };
 
 

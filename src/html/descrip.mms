@@ -2,7 +2,7 @@
 #                                                                            *
 # Make file for VMS                                                          *
 # Author : J.Jansen (joukj@hrem.nano.tudelft.nl)                             *
-# Date : 13 February 2006                                                    *
+# Date : 14 December 2010                                                    *
 #                                                                            *
 #*****************************************************************************
 .first
@@ -47,13 +47,15 @@ OBJECTS = \
 	helpctrl.obj,helpdata.obj,helpfrm.obj,htmlcell.obj,htmlfilt.obj,\
 	htmlpars.obj,htmltag.obj,htmlwin.obj,htmprint.obj,m_dflist.obj,\
 	m_fonts.obj,m_hline.obj,m_image.obj,m_layout.obj,m_links.obj,\
-	m_list.obj,m_pre.obj,m_tables.obj,winpars.obj,chm.obj,m_style.obj
+	m_list.obj,m_pre.obj,m_tables.obj,winpars.obj,chm.obj,m_style.obj,\
+	styleparams.obj,m_span.obj
 
 SOURCES = \
 	helpctrl.cpp,helpdata.cpp,helpfrm.cpp,htmlcell.cpp,htmlfilt.cpp,\
 	htmlpars.cpp,htmltag.cpp,htmlwin.cpp,htmprint.cpp,m_dflist.cpp,\
 	m_fonts.cpp,m_hline.cpp,m_image.cpp,m_layout.cpp,m_links.cpp,\
-	m_list.cpp,m_pre.cpp,m_tables.cpp,winpars.cpp,chm.cpp,m_style.cpp
+	m_list.cpp,m_pre.cpp,m_tables.cpp,winpars.cpp,chm.cpp,m_style.cpp,\
+	styleparams.cpp,m_span.cpp
   
 all : $(SOURCES)
 	$(MMS)$(MMSQUALIFIERS) $(OBJECTS)
@@ -72,6 +74,8 @@ all : $(SOURCES)
 .endif
 .endif
 .endif
+
+$(OBJECTS) : [--.include.wx]setup.h
 
 helpctrl.obj : helpctrl.cpp
 helpdata.obj : helpdata.cpp
@@ -92,5 +96,8 @@ m_list.obj : m_list.cpp
 m_pre.obj : m_pre.cpp
 m_tables.obj : m_tables.cpp
 winpars.obj : winpars.cpp
+	cxx $(CXXFLAGS)$(CXX_DEFINE)/nowarn winpars.cpp
 chm.obj : chm.cpp
 m_style.obj : m_style.cpp
+styleparams.obj : styleparams.cpp
+m_span.obj : m_span.cpp

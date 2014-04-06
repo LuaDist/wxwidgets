@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/13/99
-// RCS-ID:      $Id: button.cpp 40333 2006-07-26 05:23:40Z JG $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -38,8 +37,6 @@
 #ifndef BST_CHECKED
 #define BST_CHECKED 0x0001
 #endif
-
-IMPLEMENT_DYNAMIC_CLASS(wxButton, wxControl)
 
 // Button
 
@@ -80,7 +77,7 @@ bool wxButton::Create( wxWindow*          pParent,
 
     m_hWnd = (WXHWND)::WinCreateWindow( GetHwndOf(pParent)   // Parent handle
                                        ,WC_BUTTON            // A Button class window
-                                       ,(PSZ)sLabel.c_str()  // Button text
+                                       ,sLabel.c_str()  // Button text
                                        ,lStyle               // Button style
                                        ,0, 0, 0, 0           // Location and size
                                        ,GetHwndOf(pParent)   // Owner handle
@@ -223,7 +220,7 @@ void wxButton::Command (
 
 bool wxButton::SendClickEvent()
 {
-    wxCommandEvent                  vEvent( wxEVT_COMMAND_BUTTON_CLICKED
+    wxCommandEvent                  vEvent( wxEVT_BUTTON
                                            ,GetId()
                                           );
 
@@ -231,26 +228,24 @@ bool wxButton::SendClickEvent()
     return ProcessCommand(vEvent);
 } // end of wxButton::SendClickEvent
 
-void wxButton::SetDefault()
+wxWindow *wxButton::SetDefault()
 {
-    wxTopLevelWindow *tlw = wxDynamicCast(wxGetTopLevelParent(this), wxTopLevelWindow);
-
-    wxCHECK_RET( tlw, _T("button without top level window?") );
-
     //
     // Set this one as the default button both for wxWidgets and Windows
     //
-    wxWindow*                       pWinOldDefault = tlw->SetDefaultItem(this);
+    wxWindow* pWinOldDefault = wxButtonBase::SetDefault();
 
     SetDefaultStyle( wxDynamicCast(pWinOldDefault, wxButton), false);
     SetDefaultStyle( this, true );
+
+    return pWinOldDefault;
 } // end of wxButton::SetDefault
 
 void wxButton::SetTmpDefault()
 {
     wxTopLevelWindow *tlw = wxDynamicCast(wxGetTopLevelParent(this), wxTopLevelWindow);
 
-    wxCHECK_RET( tlw, _T("button without top level window?") );
+    wxCHECK_RET( tlw, wxT("button without top level window?") );
 
     wxWindow*                       pWinOldDefault = tlw->GetDefaultItem();
 
@@ -263,7 +258,7 @@ void wxButton::UnsetTmpDefault()
 {
     wxTopLevelWindow *tlw = wxDynamicCast(wxGetTopLevelParent(this), wxTopLevelWindow);
 
-    wxCHECK_RET( tlw, _T("button without top level window?") );
+    wxCHECK_RET( tlw, wxT("button without top level window?") );
 
     tlw->SetTmpDefaultItem(NULL);
 
@@ -385,7 +380,7 @@ WXDWORD wxButton::OS2GetStyle(
 
     //
     // We must use WS_CLIPSIBLINGS with the buttons or they would draw over
-    // each other in any resizeable dialog which has more than one button in
+    // each other in any resizable dialog which has more than one button in
     // the bottom
     //
     dwStyle |= WS_CLIPSIBLINGS;

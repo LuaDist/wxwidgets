@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: palette.cpp 39021 2006-05-04 07:57:04Z ABX $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -77,7 +76,7 @@ wxPaletteRefData::wxPaletteRefData()
 
 wxPaletteRefData::~wxPaletteRefData()
 {
-    Display *display = (Display*) NULL;
+    Display *display = NULL;
 
     wxList::compatibility_iterator node, next;
 
@@ -170,7 +169,22 @@ bool wxPalette::Create(int n, const unsigned char *red, const unsigned char *gre
     return true;
 }
 
-int wxPalette::GetPixel(unsigned char red, unsigned char green, unsigned char blue) const
+wxGDIRefData *wxPalette::CreateGDIRefData() const
+{
+    return new wxPaletteRefData;
+}
+
+wxGDIRefData *
+wxPalette::CloneGDIRefData(const wxGDIRefData * WXUNUSED(data)) const
+{
+    wxFAIL_MSG( wxS("Cloning palettes is not implemented in wxX11.") );
+
+    return new wxPaletteRefData;
+}
+
+int wxPalette::GetPixel(unsigned char WXUNUSED(red),
+                        unsigned char WXUNUSED(green),
+                        unsigned char WXUNUSED(blue)) const
 {
     if ( !m_refData )
         return wxNOT_FOUND;

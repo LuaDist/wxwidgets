@@ -3,7 +3,6 @@
 // Purpose:     wxDC class
 // Author:      Vaclav Slavik
 // Created:     2006-08-07
-// RCS-ID:      $Id: dc.h 43550 2006-11-20 20:45:57Z VS $
 // Copyright:   (c) 2006 REA Elektronik GmbH
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -13,23 +12,28 @@
 
 #include "wx/defs.h"
 #include "wx/region.h"
+#include "wx/dc.h"
 #include "wx/dfb/dfbptr.h"
 
 wxDFB_DECLARE_INTERFACE(IDirectFBSurface);
 
 //-----------------------------------------------------------------------------
-// wxDC
+// wxDFBDCImpl
 //-----------------------------------------------------------------------------
 
-class WXDLLIMPEXP_CORE wxDC : public wxDCBase
+class WXDLLIMPEXP_CORE wxDFBDCImpl : public wxDCImpl
 {
 public:
-    wxDC();
+    // ctors
+    wxDFBDCImpl(wxDC *owner) : wxDCImpl(owner) { m_surface = NULL; }
+    wxDFBDCImpl(wxDC *owner, const wxIDirectFBSurfacePtr& surface)
+        : wxDCImpl(owner)
+    {
+        DFBInit(surface);
+    }
 
-    // Ctor.
-    wxDC(const wxIDirectFBSurfacePtr& surface);
+    bool IsOk() const { return m_surface != NULL; }
 
-public:
     // implement base class pure virtuals
     // ----------------------------------
 
@@ -50,6 +54,8 @@ public:
     virtual void SetPalette(const wxPalette& palette);
 #endif
 
+    virtual void SetLogicalFunction(wxRasterOperationMode function);
+
     virtual void DestroyClippingRegion();
 
     virtual wxCoord GetCharHeight() const;
@@ -58,69 +64,33 @@ public:
                                  wxCoord *x, wxCoord *y,
                                  wxCoord *descent = NULL,
                                  wxCoord *externalLeading = NULL,
-                                 wxFont *theFont = NULL) const;
+                                 const wxFont *theFont = NULL) const;
 
     virtual bool CanDrawBitmap() const { return true; }
     virtual bool CanGetTextExtent() const { return true; }
     virtual int GetDepth() const;
     virtual wxSize GetPPI() const;
 
-    virtual void SetMapMode(int mode);
-    virtual void SetUserScale(double x, double y);
-    virtual void SetLogicalScale(double x, double y);
-    virtual void SetLogicalOrigin(wxCoord x, wxCoord y);
-    virtual void SetDeviceOrigin(wxCoord x, wxCoord y);
-    virtual void SetAxisOrientation(bool xLeftRight, bool yBottomUp);
-    virtual void SetLogicalFunction(int function);
-
-    // implementation from now on
-    // --------------------------
-
-    virtual void ComputeScaleAndOrigin();
-
-    wxCoord XDEV2LOG(wxCoord x) const
-    {
-        return wxRound((double)(x - m_deviceOriginX) / m_scaleX) * m_signX + m_logicalOriginX;
-    }
-    wxCoord XDEV2LOGREL(wxCoord x) const
-    {
-        return wxRound((double)(x) / m_scaleX);
-    }
-    wxCoord YDEV2LOG(wxCoord y) const
-    {
-        return wxRound((double)(y - m_deviceOriginY) / m_scaleY) * m_signY + m_logicalOriginY;
-    }
-    wxCoord YDEV2LOGREL(wxCoord y) const
-    {
-        return wxRound((double)(y) / m_scaleY);
-    }
-    wxCoord XLOG2DEV(wxCoord x) const
-    {
-        return wxRound((double)(x - m_logicalOriginX) * m_scaleX) * m_signX + m_deviceOriginX;
-    }
-    wxCoord XLOG2DEVREL(wxCoord x) const
-    {
-        return wxRound((double)(x) * m_scaleX);
-    }
-    wxCoord YLOG2DEV(wxCoord y) const
-    {
-        return wxRound((double)(y - m_logicalOriginY) * m_scaleY) * m_signY + m_deviceOriginY;
-    }
-    wxCoord YLOG2DEVREL(wxCoord y) const
-    {
-        return wxRound((double)(y) * m_scaleY);
-    }
-
     // Returns the surface (and increases its ref count)
     wxIDirectFBSurfacePtr GetDirectFBSurface() const { return m_surface; }
 
 protected:
+    // implementation
+    wxCoord XDEV2LOG(wxCoord x) const       { return DeviceToLogicalX(x); }
+    wxCoord XDEV2LOGREL(wxCoord x) const    { return DeviceToLogicalXRel(x); }
+    wxCoord YDEV2LOG(wxCoord y) const       { return DeviceToLogicalY(y); }
+    wxCoord YDEV2LOGREL(wxCoord y) const    { return DeviceToLogicalYRel(y); }
+    wxCoord XLOG2DEV(wxCoord x) const       { return LogicalToDeviceX(x); }
+    wxCoord XLOG2DEVREL(wxCoord x) const    { return LogicalToDeviceXRel(x); }
+    wxCoord YLOG2DEV(wxCoord y) const       { return LogicalToDeviceY(y); }
+    wxCoord YLOG2DEVREL(wxCoord y) const    { return LogicalToDeviceYRel(y); }
+
     // initializes the DC from a surface, must be called if default ctor
     // was used
     void DFBInit(const wxIDirectFBSurfacePtr& surface);
 
     virtual bool DoFloodFill(wxCoord x, wxCoord y, const wxColour& col,
-                             int style = wxFLOOD_SURFACE);
+                             wxFloodFillStyle style = wxFLOOD_SURFACE);
 
     virtual bool DoGetPixel(wxCoord x, wxCoord y, wxColour *col) const;
 
@@ -151,22 +121,21 @@ protected:
 
     virtual bool DoBlit(wxCoord xdest, wxCoord ydest, wxCoord width, wxCoord height,
                         wxDC *source, wxCoord xsrc, wxCoord ysrc,
-                        int rop = wxCOPY, bool useMask = false, wxCoord xsrcMask = -1, wxCoord ysrcMask = -1);
+                        wxRasterOperationMode rop = wxCOPY, bool useMask = false,
+                        wxCoord xsrcMask = -1, wxCoord ysrcMask = -1);
 
-    // this is gnarly - we can't even call this function DoSetClippingRegion()
-    // because of virtual function hiding
-    virtual void DoSetClippingRegionAsRegion(const wxRegion& region);
     virtual void DoSetClippingRegion(wxCoord x, wxCoord y,
                                      wxCoord width, wxCoord height);
+    virtual void DoSetDeviceClippingRegion(const wxRegion& region);
 
     virtual void DoGetSize(int *width, int *height) const;
     virtual void DoGetSizeMM(int* width, int* height) const;
 
-    virtual void DoDrawLines(int n, wxPoint points[],
+    virtual void DoDrawLines(int n, const wxPoint points[],
                              wxCoord xoffset, wxCoord yoffset);
-    virtual void DoDrawPolygon(int n, wxPoint points[],
+    virtual void DoDrawPolygon(int n, const wxPoint points[],
                                wxCoord xoffset, wxCoord yoffset,
-                               int fillStyle = wxODDEVEN_RULE);
+                               wxPolygonFillMode fillStyle = wxODDEVEN_RULE);
 
     // implementation from now on:
 protected:
@@ -190,9 +159,9 @@ protected:
 
     double            m_mm_to_pix_x, m_mm_to_pix_y;
 
-    friend class WXDLLIMPEXP_CORE wxOverlayImpl; // for Init
+    friend class WXDLLIMPEXP_FWD_CORE wxOverlayImpl; // for Init
 
-    DECLARE_DYNAMIC_CLASS(wxDC)
+    DECLARE_ABSTRACT_CLASS(wxDFBDCImpl)
 };
 
 #endif // _WX_DFB_DC_H_

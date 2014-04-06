@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: filedlg.cpp 50982 2008-01-01 20:38:33Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -23,6 +22,7 @@
 
 #include "wx/tokenzr.h"
 #include "wx/stockitem.h"
+#include "wx/modalhook.h"
 
 #ifdef __VMS__
 #pragma message disable nosimpint
@@ -88,21 +88,20 @@ void wxFileSelOk(Widget WXUNUSED(fs), XtPointer WXUNUSED(client_data), XmFileSel
 
 static wxString ParseWildCard( const wxString& wild )
 {
-#ifdef __WXDEBUG__
-    static const wxChar* msg =
-        _T("Motif file dialog does not understand this ")
-        _T("wildcard syntax");
+#if wxDEBUG_LEVEL
+    static const char *msg =
+        "Motif file dialog does not understand this wildcard syntax";
 #endif
 
     wxArrayString wildDescriptions, wildFilters;
     const size_t count = wxParseCommonDialogsFilter(wild,
                                                     wildDescriptions,
                                                     wildFilters);
-    wxCHECK_MSG( count, _T("*.*"), wxT("wxFileDialog: bad wildcard string") );
-    wxCHECK_MSG( count == 1, _T("*.*"), msg );
+    wxCHECK_MSG( count, wxT("*.*"), wxT("wxFileDialog: bad wildcard string") );
+    wxCHECK_MSG( count == 1, wxT("*.*"), msg );
 
     // check for *.txt;*.rtf
-    wxStringTokenizer tok2( wildFilters[0], _T(";") );
+    wxStringTokenizer tok2( wildFilters[0], wxT(";") );
     wxString wildcard = tok2.GetNextToken();
 
     wxCHECK_MSG( tok2.CountTokens() <= 1, wildcard, msg );
@@ -114,7 +113,6 @@ wxFileDialog::wxFileDialog(wxWindow *parent, const wxString& message,
                            long style, const wxPoint& pos, const wxSize& sz, const wxString& name)
              :wxFileDialogBase(parent, message, defaultDir, defaultFileName, wildCard, style, pos, sz, name)
 {
-    m_filterIndex = 1;
 }
 
 static void wxChangeListBoxColours(wxWindow* WXUNUSED(win), Widget widget)
@@ -153,6 +151,8 @@ static void wxChangeListBoxColours(wxWindow* WXUNUSED(win), Widget widget)
 
 int wxFileDialog::ShowModal()
 {
+    WX_HOOK_MODAL_DIALOG();
+
     wxBeginBusyCursor();
 
     //  static char fileBuf[512];
@@ -166,12 +166,15 @@ int wxFileDialog::ShowModal()
     Arg args[10];
     int ac = 0;
 
-    wxComputeColours (dpy, & m_backgroundColour, (wxColour*) NULL);
+    if (m_backgroundColour.IsOk())
+    {
+        wxComputeColours (dpy, & m_backgroundColour, NULL);
 
-    XtSetArg(args[ac], XmNbackground, g_itemColors[wxBACK_INDEX].pixel); ac++;
-    XtSetArg(args[ac], XmNtopShadowColor, g_itemColors[wxTOPS_INDEX].pixel); ac++;
-    XtSetArg(args[ac], XmNbottomShadowColor, g_itemColors[wxBOTS_INDEX].pixel); ac++;
-    XtSetArg(args[ac], XmNforeground, g_itemColors[wxFORE_INDEX].pixel); ac++;
+        XtSetArg(args[ac], XmNbackground, g_itemColors[wxBACK_INDEX].pixel); ac++;
+        XtSetArg(args[ac], XmNtopShadowColor, g_itemColors[wxTOPS_INDEX].pixel); ac++;
+        XtSetArg(args[ac], XmNbottomShadowColor, g_itemColors[wxBOTS_INDEX].pixel); ac++;
+        XtSetArg(args[ac], XmNforeground, g_itemColors[wxFORE_INDEX].pixel); ac++;
+    }
 
     wxFont font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
 
@@ -226,9 +229,9 @@ int wxFileDialog::ShowModal()
 
     Widget shell = XtParent(fileSel);
 
-    if (!m_message.IsNull())
+    if ( !m_message.empty() )
         XtVaSetValues(shell,
-                      XmNtitle, wxConstCast(m_message.c_str(), char),
+                      XmNtitle, (const char*)m_message.mb_str(),
                       NULL);
 
     if (!m_wildCard.empty())
@@ -241,7 +244,7 @@ int wxFileDialog::ShowModal()
         else
             filter = wildCard;
 
-        XmTextSetString(filterWidget, wxConstCast(filter.c_str(), char));
+        XmTextSetString(filterWidget, filter.char_str());
         XmFileSelectionDoSearch(fileSel, NULL);
     }
 
@@ -269,8 +272,7 @@ int wxFileDialog::ShowModal()
 
     if (!entirePath.empty())
     {
-        XmTextSetString(selectionWidget,
-                        wxConstCast(entirePath.c_str(), char));
+        XmTextSetString(selectionWidget, entirePath.char_str());
     }
 
     XtAddCallback(fileSel, XmNcancelCallback,

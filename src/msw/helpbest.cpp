@@ -4,7 +4,6 @@
 // Author:      Mattia Barbon
 // Modified by:
 // Created:     02/04/2001
-// RCS-ID:      $Id: helpbest.cpp 39398 2006-05-28 23:07:02Z VZ $
 // Copyright:   (c) Mattia Barbon
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -20,7 +19,7 @@
     #include "wx/log.h"
 #endif
 
-#include "wx/filefn.h"
+#include "wx/filename.h"
 
 #if wxUSE_HELP && wxUSE_MS_HTML_HELP \
     && wxUSE_WXHTML_HELP && !defined(__WXUNIVERSAL__)
@@ -70,24 +69,29 @@ bool wxBestHelpController::Initialize( const wxString& filename )
 
 wxString wxBestHelpController::GetValidFilename( const wxString& filename ) const
 {
-    wxString tmp = filename;
-    ::wxStripExtension( tmp );
+    wxFileName fn(filename);
 
     switch( m_helpControllerType )
     {
         case wxUseChmHelp:
-            if( ::wxFileExists( tmp + wxT(".chm") ) )
-                return tmp + wxT(".chm");
+            fn.SetExt("chm");
+            if( fn.FileExists() )
+                return fn.GetFullPath();
 
             return filename;
 
         case wxUseHtmlHelp:
-            if( ::wxFileExists( tmp + wxT(".htb") ) )
-                return tmp + wxT(".htb");
-            if( ::wxFileExists( tmp + wxT(".zip") ) )
-                return tmp + wxT(".zip");
-            if( ::wxFileExists( tmp + wxT(".hhp") ) )
-                return tmp + wxT(".hhp");
+            fn.SetExt("htb");
+            if( fn.FileExists() )
+                return fn.GetFullPath();
+
+            fn.SetExt("zip");
+            if( fn.FileExists() )
+                return fn.GetFullPath();
+
+            fn.SetExt("hhp");
+            if( fn.FileExists() )
+                return fn.GetFullPath();
 
             return filename;
 

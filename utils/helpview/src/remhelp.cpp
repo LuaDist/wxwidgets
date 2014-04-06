@@ -4,7 +4,6 @@
 // Author:      Eric Dowty
 // Modified by:
 // Created:     2002-11-18
-// RCS-ID:      $Id: remhelp.cpp 35650 2005-09-23 12:56:45Z MR $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -31,7 +30,7 @@
 //#include "ddesetup.h"
 //#define wxUSE_DDE_FOR_IPC 0
 
-#if defined(__WXGTK__) || defined(__WXMOTIF__)
+#ifndef wxHAS_IMAGES_IN_RESOURCES
 #include "mondrian.xpm"
 #endif
 
@@ -53,10 +52,10 @@ rhhcClient::rhhcClient( bool *isconn_a )
 
 wxConnectionBase *rhhcClient::OnMakeConnection()
 {
-    return new rhhcConnection( isconn_2 ); 
+    return new rhhcConnection( isconn_2 );
 }
 
-rhhcConnection::rhhcConnection( bool *isconn_a ) 
+rhhcConnection::rhhcConnection( bool *isconn_a )
 : wxConnection()
 {
     isconn_3 = isconn_a;
@@ -89,8 +88,8 @@ IMPLEMENT_CLASS(wxRemoteHtmlHelpController, wxHelpControllerBase)
 
 wxRemoteHtmlHelpController::wxRemoteHtmlHelpController(int style )
 {
-    m_style = style;  
-    m_connection = NULL; 
+    m_style = style;
+    m_connection = NULL;
     m_client  = NULL;
     m_pid = 0;
     isconn_1 = false;
@@ -113,7 +112,7 @@ wxRemoteHtmlHelpController::wxRemoteHtmlHelpController(int style )
     m_appname = wxT("./helpview");
     m_service = wxT("/tmp/") + thename + wxString(wxT("_helpservice"));
 #else
-    m_appname = wxT("./helpview");   
+    m_appname = wxT("./helpview");
     m_service = wxT("4242");
 #endif
 
@@ -154,7 +153,7 @@ wxRemoteHtmlHelpController::~wxRemoteHtmlHelpController()
         delete m_process;
         m_process = NULL;
     }
-    if( m_client ) 
+    if( m_client )
         delete m_client; //should be automatic?
 
 }
@@ -179,7 +178,7 @@ bool wxRemoteHtmlHelpController::DoConnection()
         wxLogNull nolog;
 
         //first try to connect assuming server is running
-        if( !isconn_1 ) 
+        if( !isconn_1 )
             m_connection = (rhhcConnection *)m_client->MakeConnection(hostName, m_service, wxT("HELP") );
 
         //if not, start server
@@ -201,20 +200,20 @@ bool wxRemoteHtmlHelpController::DoConnection()
         }
 
         while ( !isconn_1 )
-        { 
+        {
             //try every second for a while, then leave it to user
             wxSleep(1);
             if( nsleep > 4 ) {
                 if ( wxMessageBox( wxT("Failed to make connection to Help server.\nRetry?") ,
                                    wxT("wxRemoteHtmlHelpController Error"),
                                    wxICON_ERROR | wxYES_NO | wxCANCEL ) != wxYES )
-                {           
+                {
                     // no server
                     return false;
                 }
             }
             nsleep++;
-            
+
             m_connection = (rhhcConnection *)m_client->MakeConnection(hostName, m_service, wxT("HELP") );
         }
     }
@@ -252,13 +251,13 @@ bool wxRemoteHtmlHelpController::Quit()
                     switch ( sig )
                     {
                     default:
-                    wxFAIL_MSG( _T("unexpected return value") );
+                    wxFAIL_MSG( wxT("unexpected return value") );
                     // fall through
-                    
+
                       case -1:
                       // cancelled
                       return false;
-                      
+
                         case wxSIGNONE:
                         case wxSIGHUP:
                         case wxSIGINT:
@@ -282,32 +281,36 @@ bool wxRemoteHtmlHelpController::Quit()
     if ( sig == 0 )
     {
         if ( wxProcess::Exists(m_pid) )
-            wxLogStatus(_T("Process %ld is running."), m_pid);
+        {
+            wxLogStatus(wxT("Process %ld is running."), m_pid);
+        }
         else
-            wxLogStatus(_T("No process with pid = %ld."), m_pid);
+        {
+            wxLogStatus(wxT("No process with pid = %ld."), m_pid);
+        }
     }
     else // not SIGNONE
     {
         wxKillError rc = wxProcess::Kill(m_pid, (wxSignal)sig);
         if ( rc == wxKILL_OK )
         {
-            wxLogStatus(_T("Process %ld killed with signal %d."), m_pid, sig);
+            wxLogStatus(wxT("Process %ld killed with signal %d."), m_pid, sig);
         }
         else
         {
             static const wxChar *errorText[] =
             {
-                _T(""), // no error
-                    _T("signal not supported"),
-                    _T("permission denied"),
-                    _T("no such process"),
-                    _T("unspecified error"),
+                wxT(""), // no error
+                    wxT("signal not supported"),
+                    wxT("permission denied"),
+                    wxT("no such process"),
+                    wxT("unspecified error"),
             };
-            
+
             // sig = 3, 6, 9 or 12 all kill server with no apparent problem
             // but give error message on MSW - timout?
             //
-            //wxLogError(_T("Failed to kill process %ld with signal %d: %s"),
+            //wxLogError(wxT("Failed to kill process %ld with signal %d: %s"),
             //            m_pid, sig, errorText[rc]);
         }
     }
@@ -321,8 +324,8 @@ void wxRemoteHtmlHelpController::Display(const wxString& helpfile)
     if( !isconn_1 ) {
         if( !DoConnection() ) return;
     }
-    
-    if (!m_connection->Execute( helpfile, -1 ) ) 
+
+    if (!m_connection->Execute( helpfile, -1 ) )
         wxLogError(wxT("wxRemoteHtmlHelpController - Display Failed"));
 
 }
@@ -335,8 +338,8 @@ void wxRemoteHtmlHelpController::Display(const int id)
 
     wxString intstring;
     intstring.Printf( "--intstring%d", id );
-    
-    if (!m_connection->Execute( intstring, -1 ) ) 
+
+    if (!m_connection->Execute( intstring, -1 ) )
         wxLogError(wxT("wxRemoteHtmlHelpController - Display Failed"));
 
 }
@@ -349,7 +352,9 @@ bool wxRemoteHtmlHelpController::AddBook(const wxString& book, bool show_wait_ms
 
     if( isconn_1 ) {
         if (!m_connection->Poke( wxT("--AddBook"), (char*)book.c_str() ) )
+        {
             wxLogError(wxT("wxRemoteHtmlHelpController - AddBook Failed"));
+        }
         return false;
     }
 
@@ -370,7 +375,9 @@ void wxRemoteHtmlHelpController::DisplayIndex()
 {
     if( isconn_1 ) {
         if (!m_connection->Poke( wxT("--DisplayIndex"), wxT("") ) )
+        {
             wxLogError(wxT("wxRemoteHtmlHelpController - DisplayIndex Failed"));
+        }
     }
 }
 bool wxRemoteHtmlHelpController::KeywordSearch(const wxString& keyword)
@@ -391,7 +398,9 @@ void wxRemoteHtmlHelpController::SetTitleFormat(const wxString& format)
 
     if( isconn_1 ) {
         if (!m_connection->Poke( wxT("--SetTitleFormat"), (char*)format.c_str() ) )
+        {
             wxLogError(wxT("wxRemoteHtmlHelpController - SetTitleFormat Failed"));
+        }
     }
 }
 
@@ -399,7 +408,9 @@ void wxRemoteHtmlHelpController::SetTempDir(const wxString& path)
 {
     if( isconn_1 ) {
         if (!m_connection->Poke( wxT("--SetTempDir"), (char*)path.c_str() ) )
+        {
             wxLogError(wxT("wxRemoteHtmlHelpController - SetTempDir Failed"));
+        }
     }
 }
 

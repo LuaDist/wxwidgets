@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/17/99
-// RCS-ID:      $Id: stattext.cpp 39479 2006-05-30 17:39:22Z ABX $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -23,8 +22,6 @@
 
 #include "wx/os2/private.h"
 #include <stdio.h>
-
-IMPLEMENT_DYNAMIC_CLASS(wxStaticText, wxControl)
 
 bool wxStaticText::Create( wxWindow*        pParent,
                            wxWindowID       vId,
@@ -66,11 +63,9 @@ bool wxStaticText::Create( wxWindow*        pParent,
     else
         lSstyle |= DT_LEFT;
 
-    wxString sLabel = ::wxPMTextToLabel(rsLabel);
-
     m_hWnd = (WXHWND)::WinCreateWindow( (HWND)GetHwndOf(pParent) // Parent window handle
                                        ,WC_STATIC                // Window class
-                                       ,(PSZ)sLabel.c_str()      // Initial Text
+                                       ,NULL                     // Initial Text
                                        ,(ULONG)lSstyle           // Style flags
                                        ,0L, 0L, 0L, 0L           // Origin -- 0 size
                                        ,(HWND)GetHwndOf(pParent) // owner window handle (same as parent
@@ -103,12 +98,14 @@ bool wxStaticText::Create( wxWindow*        pParent,
     SetYComp(0);
     SetSize( nX, nY, nWidth, nHeight );
 
+    SetLabel(rsLabel);
+
     return true;
 } // end of wxStaticText::Create
 
 wxSize wxStaticText::DoGetBestSize() const
 {
-    wxString sText(wxGetWindowText(GetHWND()));
+    wxString sText(GetLabel());
     int      nWidthTextMax = 0;
     int      nWidthLine = 0;
     int      nHeightTextTotal = 0;
@@ -131,7 +128,7 @@ wxSize wxStaticText::DoGetBestSize() const
                 if (!nHeightLineDefault)
                     nHeightLineDefault = nHeightLine;
                 if (!nHeightLineDefault)
-                    GetTextExtent(_T("W"), NULL, &nHeightLineDefault);
+                    GetTextExtent(wxT("W"), NULL, &nHeightLineDefault);
                 nHeightTextTotal += nHeightLineDefault;
             }
             else
@@ -162,7 +159,7 @@ wxSize wxStaticText::DoGetBestSize() const
             // when it is preceded by another '~' in which case it stands for a
             // literal tilde
             //
-            if (*pc == _T('~'))
+            if (*pc == wxT('~'))
             {
                 if (!bLastWasTilde)
                 {
@@ -205,6 +202,10 @@ void wxStaticText::DoSetSize(
                                 ,nHeight
                                 ,nSizeFlags
                                );
+
+    // eventually update label (if ellipsizing is on):
+    UpdateLabel();
+
     Refresh();
 } // end of wxStaticText::DoSetSize
 
@@ -229,14 +230,17 @@ void wxStaticText::SetLabel(
   const wxString&                   rsLabel
 )
 {
-    wxString                        sLabel = ::wxPMTextToLabel(rsLabel);
-    ::WinSetWindowText(GetHwnd(), (PSZ)sLabel.c_str());
+    m_labelOrig = rsLabel;       // save original label
+
+    // OS/2 does not support ellipsized labels in static text:
+    DoSetLabel(GetEllipsizedLabel());
 
     //
     // Adjust the size of the window to fit to the label unless autoresizing is
     // disabled
     //
-    if (!(GetWindowStyle() & wxST_NO_AUTORESIZE))
+    if (!(GetWindowStyle() & wxST_NO_AUTORESIZE) &&
+        !IsEllipsized())
     {
         wxCoord                     vX;
         wxCoord                     vY;
@@ -263,3 +267,18 @@ MRESULT wxStaticText::OS2WindowProc(
                                    ,lParam
                                   );
 } // end of wxStaticText::OS2WindowProc
+
+
+// for wxST_ELLIPSIZE_* support:
+
+void wxStaticText::DoSetLabel(const wxString& str)
+{
+    wxString sLabel = ::wxPMTextToLabel(str);
+    ::WinSetWindowText(GetHwnd(), sLabel.c_str());
+}
+
+wxString wxStaticText::DoGetLabel() const
+{
+    return wxGetWindowText(GetHwnd());
+}
+

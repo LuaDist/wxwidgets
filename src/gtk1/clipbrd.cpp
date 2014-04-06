@@ -2,7 +2,6 @@
 // Name:        src/gtk1/clipbrd.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: clipbrd.cpp 44193 2007-01-11 01:34:08Z VZ $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -35,7 +34,7 @@ GdkAtom  g_timestampAtom   = 0;
 // the trace mask we use with wxLogTrace() - call
 // wxLog::AddTraceMask(TRACE_CLIPBOARD) to enable the trace messages from here
 // (there will be a *lot* of them!)
-static const wxChar *TRACE_CLIPBOARD = _T("clipboard");
+#define TRACE_CLIPBOARD "clipboard"
 
 //-----------------------------------------------------------------------------
 // reminder
@@ -83,7 +82,7 @@ targets_selection_received( GtkWidget *WXUNUSED(widget),
             if ( strcmp(atom_name, "TARGETS") )
             {
                 wxLogTrace( TRACE_CLIPBOARD,
-                            _T("got unsupported clipboard target") );
+                            wxT("got unsupported clipboard target") );
 
                 clipboard->m_waiting = false;
                 g_free(atom_name);
@@ -92,12 +91,10 @@ targets_selection_received( GtkWidget *WXUNUSED(widget),
             g_free(atom_name);
         }
 
-#ifdef __WXDEBUG__
         wxDataFormat clip( selection_data->selection );
         wxLogTrace( TRACE_CLIPBOARD,
                     wxT("selection received for targets, clipboard %s"),
                     clip.GetId().c_str() );
-#endif // __WXDEBUG__
 
         // the atoms we received, holding a list of targets (= formats)
         GdkAtom *atoms = (GdkAtom *)selection_data->data;
@@ -218,8 +215,7 @@ selection_clear_clip( GtkWidget *WXUNUSED(widget), GdkEventSelection *event )
         {
             wxLogTrace(TRACE_CLIPBOARD, wxT("wxClipboard will get cleared" ));
 
-            delete wxTheClipboard->m_data;
-            wxTheClipboard->m_data = (wxDataObject*) NULL;
+            wxDELETE(wxTheClipboard->m_data);
         }
     }
 
@@ -259,23 +255,21 @@ selection_handler( GtkWidget *WXUNUSED(widget),
                                (guchar*)&(timestamp),
                                sizeof(timestamp));
         wxLogTrace(TRACE_CLIPBOARD,
-                   _T("Clipboard TIMESTAMP requested, returning timestamp=%u"),
+                   wxT("Clipboard TIMESTAMP requested, returning timestamp=%u"),
                    timestamp);
         return;
     }
 
     wxDataFormat format( selection_data->target );
 
-#ifdef __WXDEBUG__
     wxLogTrace(TRACE_CLIPBOARD,
-               _T("clipboard data in format %s, GtkSelectionData is target=%s type=%s selection=%s timestamp=%u"),
+               wxT("clipboard data in format %s, GtkSelectionData is target=%s type=%s selection=%s timestamp=%u"),
                format.GetId().c_str(),
                wxString::FromAscii(gdk_atom_name(selection_data->target)).c_str(),
                wxString::FromAscii(gdk_atom_name(selection_data->type)).c_str(),
                wxString::FromAscii(gdk_atom_name(selection_data->selection)).c_str(),
                GPOINTER_TO_UINT( signal_data )
                );
-#endif
 
     if (!data->IsSupportedFormat( format )) return;
 
@@ -313,8 +307,8 @@ wxClipboard::wxClipboard()
     m_ownsClipboard = false;
     m_ownsPrimarySelection = false;
 
-    m_data = (wxDataObject*) NULL;
-    m_receivedData = (wxDataObject*) NULL;
+    m_data = NULL;
+    m_receivedData = NULL;
 
     /* we use m_targetsWidget to query what formats are available */
 
@@ -347,8 +341,6 @@ wxClipboard::wxClipboard()
 
     m_formatSupported = false;
     m_targetRequested = 0;
-
-    m_usePrimary = false;
 }
 
 wxClipboard::~wxClipboard()
@@ -373,7 +365,7 @@ void wxClipboard::Clear()
         {
             m_waiting = true;
 
-            gtk_selection_owner_set( (GtkWidget*) NULL, g_clipboardAtom,
+            gtk_selection_owner_set( NULL, g_clipboardAtom,
                                      (guint32) GDK_CURRENT_TIME );
 
             while (m_waiting) gtk_main_iteration();
@@ -383,17 +375,13 @@ void wxClipboard::Clear()
         {
             m_waiting = true;
 
-            gtk_selection_owner_set( (GtkWidget*) NULL, GDK_SELECTION_PRIMARY,
+            gtk_selection_owner_set( NULL, GDK_SELECTION_PRIMARY,
                                      (guint32) GDK_CURRENT_TIME );
 
             while (m_waiting) gtk_main_iteration();
         }
 
-        if (m_data)
-        {
-            delete m_data;
-            m_data = (wxDataObject*) NULL;
-        }
+        wxDELETE(m_data);
 
 #if wxUSE_THREADS
         /* re-enable GUI threads */

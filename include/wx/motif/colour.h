@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: colour.h 41751 2006-10-08 21:56:55Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -16,15 +15,12 @@
 #include "wx/string.h"
 
 // Colour
-class WXDLLEXPORT wxColour : public wxColourBase
+class WXDLLIMPEXP_CORE wxColour : public wxColourBase
 {
     DECLARE_DYNAMIC_CLASS(wxColour)
 public:
     // constructors
     // ------------
-
-    // default
-    wxColour() { Init(); }
     DEFINE_STD_WXCOLOUR_CONSTRUCTORS
 
     // copy ctors and assignment operators
@@ -36,14 +32,13 @@ public:
 
 
     // accessors
-    bool Ok() const { return IsOk(); }
-    bool IsOk() const {return m_isInit; }
+    virtual bool IsOk() const {return m_isInit; }
     unsigned char Red() const { return m_red; }
     unsigned char Green() const { return m_green; }
     unsigned char Blue() const { return m_blue; }
 
-    WXPixel GetPixel() const { return m_pixel; };
-    void SetPixel(WXPixel pixel) { m_pixel = pixel; m_isInit = true; };
+    WXPixel GetPixel() const { return m_pixel; }
+    void SetPixel(WXPixel pixel) { m_pixel = pixel; m_isInit = true; }
 
     inline bool operator == (const wxColour& colour) const { return (m_red == colour.m_red && m_green == colour.m_green && m_blue == colour.m_blue); }
 

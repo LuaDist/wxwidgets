@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: statbox.h 41020 2006-09-05 20:47:48Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -13,7 +12,7 @@
 #define _WX_STATBOX_H_
 
 // Group box
-class WXDLLEXPORT wxStaticBox: public wxStaticBoxBase
+class WXDLLIMPEXP_CORE wxStaticBox: public wxStaticBoxBase
 {
     DECLARE_DYNAMIC_CLASS(wxStaticBox)
 

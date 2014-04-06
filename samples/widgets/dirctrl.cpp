@@ -4,9 +4,8 @@
 // Purpose:     Part of the widgets sample showing wxGenericDirCtrl
 // Author:      Wlodzimierz 'ABX' Skiba
 // Created:     4 Oct 2006
-// Id:          $Id: dirctrl.cpp 43755 2006-12-03 13:43:44Z VZ $
 // Copyright:   (c) 2006 wxWindows team
-// License:     wxWindows license
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -35,12 +34,14 @@
     #include "wx/radiobox.h"
     #include "wx/checkbox.h"
     #include "wx/button.h"
+    #include "wx/filedlg.h"
 #endif
 
 #include "wx/generic/dirctrlg.h"
 
 #include "wx/wupdlock.h"
 #include "wx/stdpaths.h"
+#include "wx/filename.h"
 
 #include "widgets.h"
 
@@ -60,16 +61,16 @@ enum
 
 static const wxString stdPaths[] =
 {
-    _T("&none"),
-    _T("&config"),
-    _T("&data"),
-    _T("&documents"),
-    _T("&local data"),
-    _T("&plugins"),
-    _T("&resources"),
-    _T("&user config"),
-    _T("&user data"),
-    _T("&user local data")
+    wxT("&none"),
+    wxT("&config"),
+    wxT("&data"),
+    wxT("&documents"),
+    wxT("&local data"),
+    wxT("&plugins"),
+    wxT("&resources"),
+    wxT("&user config"),
+    wxT("&user data"),
+    wxT("&user local data")
 };
 
 enum
@@ -110,6 +111,8 @@ protected:
     void OnStdPath(wxCommandEvent& event);
     void OnCheckBox(wxCommandEvent& event);
     void OnRadioBox(wxCommandEvent& event);
+    void OnSelChanged(wxTreeEvent& event);
+    void OnFileActivated(wxTreeEvent& event);
 
     // reset the control parameters
     void Reset();
@@ -133,7 +136,11 @@ protected:
                *m_chk3D,
                *m_chkFirst,
                *m_chkFilters,
-               *m_chkLabels;
+               *m_chkLabels,
+               *m_chkMulti;
+
+    // filters
+    wxCheckBox *m_fltr[3];
 
 private:
     DECLARE_EVENT_TABLE()
@@ -149,6 +156,8 @@ BEGIN_EVENT_TABLE(DirCtrlWidgetsPage, WidgetsPage)
     EVT_BUTTON(DirCtrlPage_SetPath, DirCtrlWidgetsPage::OnButtonSetPath)
     EVT_CHECKBOX(wxID_ANY, DirCtrlWidgetsPage::OnCheckBox)
     EVT_RADIOBOX(wxID_ANY, DirCtrlWidgetsPage::OnRadioBox)
+    EVT_DIRCTRL_SELECTIONCHANGED(DirCtrlPage_Ctrl, DirCtrlWidgetsPage::OnSelChanged)
+    EVT_DIRCTRL_FILEACTIVATED(DirCtrlPage_Ctrl, DirCtrlWidgetsPage::OnFileActivated)
 END_EVENT_TABLE()
 
 // ============================================================================
@@ -163,6 +172,7 @@ DirCtrlWidgetsPage::DirCtrlWidgetsPage(WidgetsBookCtrl *book,
                                        wxImageList *imaglist)
                    :WidgetsPage(book, imaglist, dirctrl_xpm)
 {
+    m_dirCtrl = NULL;
 }
 
 void DirCtrlWidgetsPage::CreateContent()
@@ -178,22 +188,31 @@ void DirCtrlWidgetsPage::CreateContent()
                     0, wxALL | wxALIGN_RIGHT , 5 );
 
     wxSizer *sizerUseFlags =
-        new wxStaticBoxSizer(wxVERTICAL, this, _T("&Flags"));
-    m_chkDirOnly = CreateCheckBoxAndAddToSizer(sizerUseFlags, _T("wxDIRCTRL_DIR_ONLY"));
-    m_chk3D      = CreateCheckBoxAndAddToSizer(sizerUseFlags, _T("wxDIRCTRL_3D_INTERNAL"));
-    m_chkFirst   = CreateCheckBoxAndAddToSizer(sizerUseFlags, _T("wxDIRCTRL_SELECT_FIRST"));
-    m_chkFilters = CreateCheckBoxAndAddToSizer(sizerUseFlags, _T("wxDIRCTRL_SHOW_FILTERS"));
-    m_chkLabels  = CreateCheckBoxAndAddToSizer(sizerUseFlags, _T("wxDIRCTRL_EDIT_LABELS"));
+        new wxStaticBoxSizer(wxVERTICAL, this, wxT("&Flags"));
+    m_chkDirOnly = CreateCheckBoxAndAddToSizer(sizerUseFlags, wxT("wxDIRCTRL_DIR_ONLY"));
+    m_chk3D      = CreateCheckBoxAndAddToSizer(sizerUseFlags, wxT("wxDIRCTRL_3D_INTERNAL"));
+    m_chkFirst   = CreateCheckBoxAndAddToSizer(sizerUseFlags, wxT("wxDIRCTRL_SELECT_FIRST"));
+    m_chkFilters = CreateCheckBoxAndAddToSizer(sizerUseFlags, wxT("wxDIRCTRL_SHOW_FILTERS"));
+    m_chkLabels  = CreateCheckBoxAndAddToSizer(sizerUseFlags, wxT("wxDIRCTRL_EDIT_LABELS"));
+    m_chkMulti   = CreateCheckBoxAndAddToSizer(sizerUseFlags, wxT("wxDIRCTRL_MULTIPLE"));
     sizerLeft->Add(sizerUseFlags, wxSizerFlags().Expand().Border());
 
-    wxButton *btn = new wxButton(this, DirCtrlPage_Reset, _T("&Reset"));
+    wxSizer *sizerFilters =
+        new wxStaticBoxSizer(wxVERTICAL, this, wxT("&Filters"));
+    m_fltr[0] = CreateCheckBoxAndAddToSizer(sizerFilters, wxString::Format(wxT("all files (%s)|%s"),
+                            wxFileSelectorDefaultWildcardStr, wxFileSelectorDefaultWildcardStr));
+    m_fltr[1] = CreateCheckBoxAndAddToSizer(sizerFilters, wxT("C++ files (*.cpp; *.h)|*.cpp;*.h"));
+    m_fltr[2] = CreateCheckBoxAndAddToSizer(sizerFilters, wxT("PNG images (*.png)|*.png"));
+    sizerLeft->Add(sizerFilters, wxSizerFlags().Expand().Border());
+
+    wxButton *btn = new wxButton(this, DirCtrlPage_Reset, wxT("&Reset"));
     sizerLeft->Add(btn, 0, wxALIGN_CENTRE_HORIZONTAL | wxALL, 15);
 
     // keep consistency between enum and labels of radiobox
     wxCOMPILE_TIME_ASSERT( stdPathMax == WXSIZEOF(stdPaths), EnumForRadioBoxMismatch);
 
     // middle pane
-    m_radioStdPath = new wxRadioBox(this, wxID_ANY, _T("Standard path"),
+    m_radioStdPath = new wxRadioBox(this, wxID_ANY, wxT("Standard path"),
                                     wxDefaultPosition, wxDefaultSize,
                                     WXSIZEOF(stdPaths), stdPaths, 1);
 
@@ -237,8 +256,21 @@ void DirCtrlWidgetsPage::CreateDirCtrl()
         ( m_chk3D->IsChecked() ? wxDIRCTRL_3D_INTERNAL : 0 ) |
         ( m_chkFirst->IsChecked() ? wxDIRCTRL_SELECT_FIRST : 0 ) |
         ( m_chkFilters->IsChecked() ? wxDIRCTRL_SHOW_FILTERS : 0 ) |
-        ( m_chkLabels->IsChecked() ? wxDIRCTRL_EDIT_LABELS : 0 )
+        ( m_chkLabels->IsChecked() ? wxDIRCTRL_EDIT_LABELS : 0 ) |
+        ( m_chkMulti->IsChecked() ? wxDIRCTRL_MULTIPLE : 0)
     );
+
+    wxString filter;
+    for (int i = 0; i < 3; ++i)
+    {
+        if (m_fltr[i]->IsChecked())
+        {
+            if (!filter.IsEmpty())
+                filter += wxT("|");
+            filter += m_fltr[i]->GetLabel();
+        }
+    }
+    dirCtrl->SetFilter(filter);
 
     // update sizer's child window
     GetSizer()->Replace(m_dirCtrl, dirCtrl, true);
@@ -276,7 +308,7 @@ void DirCtrlWidgetsPage::OnRadioBox(wxCommandEvent& WXUNUSED(event))
 {
     wxString path;
 
-    wxTheApp->SetAppName(_T("widgets"));
+    wxTheApp->SetAppName(wxT("widgets"));
     wxStandardPathsBase& stdp = wxStandardPaths::Get();
 
     switch ( m_radioStdPath->GetSelection() )
@@ -325,11 +357,36 @@ void DirCtrlWidgetsPage::OnRadioBox(wxCommandEvent& WXUNUSED(event))
     }
 
     m_dirCtrl->SetPath(path);
-    if(!m_dirCtrl->GetPath().IsSameAs(path))
+
+    // Notice that we must use wxFileName comparison instead of simple wxString
+    // comparison as the paths returned may differ by case only.
+    if ( wxFileName(m_dirCtrl->GetPath()) != path )
     {
-        wxLogMessage(_T("Selected standard path and path from control do not match!"));
-        m_radioStdPath->SetSelection(stdPathUnknown);
+        wxLogMessage("Failed to go to \"%s\", the current path is \"%s\".",
+                     path, m_dirCtrl->GetPath());
     }
+}
+
+void DirCtrlWidgetsPage::OnSelChanged(wxTreeEvent& event)
+{
+    if ( m_dirCtrl )
+    {
+        wxLogMessage("Selection changed to \"%s\"",
+                     m_dirCtrl->GetPath(event.GetItem()));
+    }
+
+    event.Skip();
+}
+
+void DirCtrlWidgetsPage::OnFileActivated(wxTreeEvent& event)
+{
+    if ( m_dirCtrl )
+    {
+        wxLogMessage("File activated \"%s\"",
+                     m_dirCtrl->GetPath(event.GetItem()));
+    }
+
+    event.Skip();
 }
 
 #endif // wxUSE_DIRDLG

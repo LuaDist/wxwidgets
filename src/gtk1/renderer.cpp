@@ -4,9 +4,8 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     20.07.2003
-// RCS-ID:      $Id: renderer.cpp 41810 2006-10-09 16:39:34Z VZ $
 // Copyright:   (c) 2003 Vadim Zeitlin <vadim@wxwindows.org>
-// License:     wxWindows licence
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -29,11 +28,11 @@
 #ifndef WX_PRECOMP
     #include "wx/window.h"
     #include "wx/dc.h"
-    #include "wx/dcclient.h"
 #endif
 
 #include <gtk/gtk.h>
 #include "wx/gtk1/win_gtk.h"
+#include "wx/gtk1/dcclient.h"
 
 // RR: After a correction to the orientation of the sash
 //     this doesn't seem to be required anymore and it
@@ -48,10 +47,12 @@ class WXDLLEXPORT wxRendererGTK : public wxDelegateRendererNative
 {
 public:
     // draw the header control button (used by wxListCtrl)
-    virtual void DrawHeaderButton(wxWindow *win,
-                                  wxDC& dc,
-                                  const wxRect& rect,
-                                  int flags = 0);
+    virtual int DrawHeaderButton(wxWindow *win,
+                                 wxDC& dc,
+                                 const wxRect& rect,
+                                 int flags = 0,
+                                 wxHeaderSortIconType sortArrow = wxHDR_SORT_ICON_NONE,
+                                 wxHeaderButtonParams* params=NULL);
 
     virtual void DrawSplitterBorder(wxWindow *win,
                                     wxDC& dc,
@@ -121,11 +122,13 @@ wxRendererGTK::GetButtonWidget()
 // list/tree controls drawing
 // ----------------------------------------------------------------------------
 
-void
+int
 wxRendererGTK::DrawHeaderButton(wxWindow *win,
                                 wxDC& dc,
                                 const wxRect& rect,
-                                int flags)
+                                int flags,
+                                wxHeaderSortIconType WXUNUSED(sortArrow),
+                                wxHeaderButtonParams* WXUNUSED(params))
 {
 
     GtkWidget *button = GetButtonWidget();
@@ -141,8 +144,10 @@ wxRendererGTK::DrawHeaderButton(wxWindow *win,
         NULL,
         button,
         "button",
-        dc.XLOG2DEV(rect.x) -1, rect.y -1, rect.width +2, rect.height +2
+        dc.LogicalToDeviceX(rect.x) -1, rect.y -1, rect.width +2, rect.height +2
     );
+
+    return rect.width + 2;
 }
 
 // ----------------------------------------------------------------------------
@@ -183,7 +188,7 @@ wxRendererGTK::DrawSplitterBorder(wxWindow * WXUNUSED(win),
 
 void
 wxRendererGTK::DrawSplitterSash(wxWindow *win,
-                                wxDC& dc,
+                                wxDC& WXUNUSED(dc),
                                 const wxSize& size,
                                 wxCoord position,
                                 wxOrientation orient,
@@ -287,7 +292,7 @@ wxRendererGTK::DrawSplitterSash(wxWindow *win,
         GTK_PIZZA(win->m_wxwindow)->bin_window,
         GTK_STATE_NORMAL,
         GTK_SHADOW_OUT,
-        (GdkRectangle*) NULL,
+        NULL,
         win->m_wxwindow,
         (char *)"paned", // const_cast
         isVert ? position : size.x - 2*SASH_SIZE,
@@ -297,7 +302,7 @@ wxRendererGTK::DrawSplitterSash(wxWindow *win,
 }
 
 void
-wxRendererGTK::DrawDropArrow(wxWindow *win,
+wxRendererGTK::DrawDropArrow(wxWindow *WXUNUSED(win),
                              wxDC& dc,
                              const wxRect& rect,
                              int flags)
@@ -309,9 +314,10 @@ wxRendererGTK::DrawDropArrow(wxWindow *win,
     // work for wxMemoryDC. So that is why we assume wxDC
     // is wxWindowDC (wxClientDC, wxMemoryDC and wxPaintDC
     // are derived from it) and use its m_window.
-    GdkWindow* gdk_window = dc.GetGDKWindow();
-    wxASSERT_MSG( gdk_window,
-                  wxT("cannot use wxRendererNative on wxDC of this type") );
+    wxWindowDCImpl * const impl = wxDynamicCast(dc.GetImpl(), wxWindowDCImpl);
+    wxCHECK_RET( impl, "must have a window DC" );
+
+    GdkWindow* gdk_window = impl->GetGDKWindow();
 
     // draw arrow so that there is even space horizontally
     // on both sides
@@ -362,9 +368,10 @@ wxRendererGTK::DrawComboBoxDropButton(wxWindow *win,
     GtkWidget *button = GetButtonWidget();
 
     // for reason why we do this, see DrawDropArrow
-    GdkWindow* gdk_window = dc.GetGDKWindow();
-    wxASSERT_MSG( gdk_window,
-                  wxT("cannot use wxRendererNative on wxDC of this type") );
+    wxWindowDCImpl * const impl = wxDynamicCast(dc.GetImpl(), wxWindowDCImpl);
+    wxCHECK_RET( impl, "must have a window DC" );
+
+    GdkWindow* gdk_window = impl->GetGDKWindow();
 
     // draw button
     GtkStateType state;

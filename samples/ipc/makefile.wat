@@ -36,15 +36,14 @@ PORTNAME =
 PORTNAME = base
 !endif
 !ifeq USE_GUI 1
-PORTNAME = msw
+PORTNAME = msw$(TOOLKIT_VERSION)
+!endif
+COMPILER_VERSION =
+!ifeq OFFICIAL_BUILD 1
+COMPILER_VERSION = ERROR-COMPILER-VERSION-MUST-BE-SET-FOR-OFFICIAL-BUILD
 !endif
 WXDEBUGFLAG =
 !ifeq BUILD debug
-!ifeq DEBUG_FLAG default
-WXDEBUGFLAG = d
-!endif
-!endif
-!ifeq DEBUG_FLAG 1
 WXDEBUGFLAG = d
 !endif
 WXUNICODEFLAG =
@@ -71,7 +70,42 @@ EXTRALIBS_FOR_BASE =
 EXTRALIBS_FOR_BASE = 
 !endif
 !ifeq MONOLITHIC 1
-EXTRALIBS_FOR_BASE =  
+EXTRALIBS_FOR_BASE =   
+!endif
+__ipcclient___depname =
+!ifeq USE_GUI 1
+__ipcclient___depname = $(OBJS)\ipcclient.exe
+!endif
+__ipcserver___depname =
+!ifeq USE_GUI 1
+__ipcserver___depname = $(OBJS)\ipcserver.exe
+!endif
+__LIB_PNG_IF_MONO_p =
+!ifeq MONOLITHIC 1
+__LIB_PNG_IF_MONO_p = $(__LIB_PNG_p)
+!endif
+__LIB_PNG_IF_MONO_p_1 =
+!ifeq MONOLITHIC 1
+__LIB_PNG_IF_MONO_p_1 = $(__LIB_PNG_p)
+!endif
+__WXLIB_CORE_p =
+!ifeq MONOLITHIC 0
+__WXLIB_CORE_p = &
+	wx$(PORTNAME)$(WXUNIVNAME)$(WX_RELEASE_NODOT)$(WXUNICODEFLAG)$(WXDEBUGFLAG)$(WX_LIB_FLAVOUR)_core.lib
+!endif
+__LIB_SCINTILLA_IF_MONO_p =
+!ifeq MONOLITHIC 1
+!ifeq USE_STC 1
+__LIB_SCINTILLA_IF_MONO_p = wxscintilla$(WXDEBUGFLAG).lib
+!endif
+!endif
+__LIB_TIFF_p =
+!ifeq USE_GUI 1
+__LIB_TIFF_p = wxtiff$(WXDEBUGFLAG).lib
+!endif
+__LIB_JPEG_p =
+!ifeq USE_GUI 1
+__LIB_JPEG_p = wxjpeg$(WXDEBUGFLAG).lib
 !endif
 __DEBUGINFO =
 !ifeq BUILD debug
@@ -90,22 +124,22 @@ __DEBUGINFO = -d0
 !ifeq DEBUG_INFO 1
 __DEBUGINFO = -d2
 !endif
-__DEBUGINFO_1 =
+__DEBUGINFO_3 =
 !ifeq BUILD debug
 !ifeq DEBUG_INFO default
-__DEBUGINFO_1 = debug all
+__DEBUGINFO_3 = debug all
 !endif
 !endif
 !ifeq BUILD release
 !ifeq DEBUG_INFO default
-__DEBUGINFO_1 = 
+__DEBUGINFO_3 = 
 !endif
 !endif
 !ifeq DEBUG_INFO 0
-__DEBUGINFO_1 = 
+__DEBUGINFO_3 = 
 !endif
 !ifeq DEBUG_INFO 1
-__DEBUGINFO_1 = debug all
+__DEBUGINFO_3 = debug all
 !endif
 __OPTIMIZEFLAG =
 !ifeq BUILD debug
@@ -142,62 +176,13 @@ __EXCEPTIONSFLAG =
 !ifeq USE_EXCEPTIONS 1
 __EXCEPTIONSFLAG = -xs
 !endif
-__WXLIB_CORE_p =
-!ifeq MONOLITHIC 0
-__WXLIB_CORE_p = &
-	wx$(PORTNAME)$(WXUNIVNAME)$(WX_RELEASE_NODOT)$(WXUNICODEFLAG)$(WXDEBUGFLAG)$(WX_LIB_FLAVOUR)_core.lib
-!endif
-__WXLIB_NET_p =
-!ifeq MONOLITHIC 0
-__WXLIB_NET_p = &
-	wxbase$(WX_RELEASE_NODOT)$(WXUNICODEFLAG)$(WXDEBUGFLAG)$(WX_LIB_FLAVOUR)_net.lib
-!endif
-__WXLIB_BASE_p =
-!ifeq MONOLITHIC 0
-__WXLIB_BASE_p = &
-	wxbase$(WX_RELEASE_NODOT)$(WXUNICODEFLAG)$(WXDEBUGFLAG)$(WX_LIB_FLAVOUR).lib
-!endif
-__WXLIB_MONO_p =
-!ifeq MONOLITHIC 1
-__WXLIB_MONO_p = &
-	wx$(PORTNAME)$(WXUNIVNAME)$(WX_RELEASE_NODOT)$(WXUNICODEFLAG)$(WXDEBUGFLAG)$(WX_LIB_FLAVOUR).lib
-!endif
-__LIB_TIFF_p =
-!ifeq USE_GUI 1
-__LIB_TIFF_p = wxtiff$(WXDEBUGFLAG).lib
-!endif
-__LIB_JPEG_p =
-!ifeq USE_GUI 1
-__LIB_JPEG_p = wxjpeg$(WXDEBUGFLAG).lib
-!endif
-__LIB_PNG_p =
-!ifeq USE_GUI 1
-__LIB_PNG_p = wxpng$(WXDEBUGFLAG).lib
-!endif
-__GDIPLUS_LIB_p =
-!ifeq USE_GDIPLUS 1
-__GDIPLUS_LIB_p = gdiplus.lib
-!endif
-__CAIRO_LIB_p =
-!ifeq USE_CAIRO 1
-__CAIRO_LIB_p = cairo.lib
-!endif
-____CAIRO_LIBDIR_FILENAMES =
-!ifeq USE_CAIRO 1
-____CAIRO_LIBDIR_FILENAMES = libpath $(CAIRO_ROOT)\lib
-!endif
 __WXUNIV_DEFINE_p =
 !ifeq WXUNIV 1
 __WXUNIV_DEFINE_p = -d__WXUNIVERSAL__
 !endif
 __DEBUG_DEFINE_p =
-!ifeq BUILD debug
-!ifeq DEBUG_FLAG default
-__DEBUG_DEFINE_p = -d__WXDEBUG__
-!endif
-!endif
-!ifeq DEBUG_FLAG 1
-__DEBUG_DEFINE_p = -d__WXDEBUG__
+!ifeq DEBUG_FLAG 0
+__DEBUG_DEFINE_p = -dwxDEBUG_LEVEL=0
 !endif
 __NDEBUG_DEFINE_p =
 !ifeq BUILD release
@@ -216,12 +201,11 @@ __THREAD_DEFINE_p =
 __THREAD_DEFINE_p = -dwxNO_THREADS
 !endif
 __UNICODE_DEFINE_p =
+!ifeq UNICODE 0
+__UNICODE_DEFINE_p = -dwxUSE_UNICODE=0
+!endif
 !ifeq UNICODE 1
 __UNICODE_DEFINE_p = -d_UNICODE
-!endif
-__GFXCTX_DEFINE_p =
-!ifeq USE_GDIPLUS 1
-__GFXCTX_DEFINE_p = -dwxUSE_GRAPHICS_CONTEXT=1
 !endif
 ____CAIRO_INCLUDEDIR_FILENAMES =
 !ifeq USE_CAIRO 1
@@ -231,33 +215,80 @@ __DLLFLAG_p =
 !ifeq SHARED 1
 __DLLFLAG_p = -dWXUSINGDLL
 !endif
+__WXLIB_NET_p =
+!ifeq MONOLITHIC 0
+__WXLIB_NET_p = &
+	wxbase$(WX_RELEASE_NODOT)$(WXUNICODEFLAG)$(WXDEBUGFLAG)$(WX_LIB_FLAVOUR)_net.lib
+!endif
+__WXLIB_BASE_p =
+!ifeq MONOLITHIC 0
+__WXLIB_BASE_p = &
+	wxbase$(WX_RELEASE_NODOT)$(WXUNICODEFLAG)$(WXDEBUGFLAG)$(WX_LIB_FLAVOUR).lib
+!endif
+__WXLIB_MONO_p =
+!ifeq MONOLITHIC 1
+__WXLIB_MONO_p = &
+	wx$(PORTNAME)$(WXUNIVNAME)$(WX_RELEASE_NODOT)$(WXUNICODEFLAG)$(WXDEBUGFLAG)$(WX_LIB_FLAVOUR).lib
+!endif
+__LIB_PNG_p =
+!ifeq USE_GUI 1
+__LIB_PNG_p = wxpng$(WXDEBUGFLAG).lib
+!endif
+__CAIRO_LIB_p =
+!ifeq USE_CAIRO 1
+__CAIRO_LIB_p = cairo.lib
+!endif
+____CAIRO_LIBDIR_FILENAMES =
+!ifeq USE_CAIRO 1
+____CAIRO_LIBDIR_FILENAMES = libpath $(CAIRO_ROOT)\lib
+!endif
 
 ### Variables: ###
 
-WX_RELEASE_NODOT = 28
+WX_RELEASE_NODOT = 30
+COMPILER_PREFIX = wat
 OBJS = &
-	wat_$(PORTNAME)$(WXUNIVNAME)$(WXUNICODEFLAG)$(WXDEBUGFLAG)$(WXDLLFLAG)$(CFG)
-LIBDIRNAME = .\..\..\lib\wat_$(LIBTYPE_SUFFIX)$(CFG)
+	$(COMPILER_PREFIX)$(COMPILER_VERSION)_$(PORTNAME)$(WXUNIVNAME)$(WXUNICODEFLAG)$(WXDEBUGFLAG)$(WXDLLFLAG)$(CFG)
+LIBDIRNAME = &
+	.\..\..\lib\$(COMPILER_PREFIX)$(COMPILER_VERSION)_$(LIBTYPE_SUFFIX)$(CFG)
 SETUPHDIR = &
 	$(LIBDIRNAME)\$(PORTNAME)$(WXUNIVNAME)$(WXUNICODEFLAG)$(WXDEBUGFLAG)
 IPCCLIENT_CXXFLAGS = $(__DEBUGINFO) $(__OPTIMIZEFLAG) $(__THREADSFLAG) &
 	$(__RUNTIME_LIBS) -d__WXMSW__ $(__WXUNIV_DEFINE_p) $(__DEBUG_DEFINE_p) &
 	$(__NDEBUG_DEFINE_p) $(__EXCEPTIONS_DEFINE_p) $(__RTTI_DEFINE_p) &
-	$(__THREAD_DEFINE_p) $(__UNICODE_DEFINE_p) $(__GFXCTX_DEFINE_p) &
-	-i=$(SETUPHDIR) -i=.\..\..\include $(____CAIRO_INCLUDEDIR_FILENAMES) -wx &
-	-wcd=549 -wcd=656 -wcd=657 -wcd=667 -i=. $(__DLLFLAG_p) -i=.\..\..\samples &
-	-dNOPCH $(__RTTIFLAG) $(__EXCEPTIONSFLAG) $(CPPFLAGS) $(CXXFLAGS)
+	$(__THREAD_DEFINE_p) $(__UNICODE_DEFINE_p) -i=$(SETUPHDIR) &
+	-i=.\..\..\include $(____CAIRO_INCLUDEDIR_FILENAMES) -wx -wcd=549 -wcd=656 &
+	-wcd=657 -wcd=667 -i=. $(__DLLFLAG_p) -i=.\..\..\samples -dNOPCH $(__RTTIFLAG) &
+	$(__EXCEPTIONSFLAG) $(CPPFLAGS) $(CXXFLAGS)
 IPCCLIENT_OBJECTS =  &
 	$(OBJS)\ipcclient_client.obj
 IPCSERVER_CXXFLAGS = $(__DEBUGINFO) $(__OPTIMIZEFLAG) $(__THREADSFLAG) &
 	$(__RUNTIME_LIBS) -d__WXMSW__ $(__WXUNIV_DEFINE_p) $(__DEBUG_DEFINE_p) &
 	$(__NDEBUG_DEFINE_p) $(__EXCEPTIONS_DEFINE_p) $(__RTTI_DEFINE_p) &
-	$(__THREAD_DEFINE_p) $(__UNICODE_DEFINE_p) $(__GFXCTX_DEFINE_p) &
-	-i=$(SETUPHDIR) -i=.\..\..\include $(____CAIRO_INCLUDEDIR_FILENAMES) -wx &
-	-wcd=549 -wcd=656 -wcd=657 -wcd=667 -i=. $(__DLLFLAG_p) -i=.\..\..\samples &
-	-dNOPCH $(__RTTIFLAG) $(__EXCEPTIONSFLAG) $(CPPFLAGS) $(CXXFLAGS)
+	$(__THREAD_DEFINE_p) $(__UNICODE_DEFINE_p) -i=$(SETUPHDIR) &
+	-i=.\..\..\include $(____CAIRO_INCLUDEDIR_FILENAMES) -wx -wcd=549 -wcd=656 &
+	-wcd=657 -wcd=667 -i=. $(__DLLFLAG_p) -i=.\..\..\samples -dNOPCH $(__RTTIFLAG) &
+	$(__EXCEPTIONSFLAG) $(CPPFLAGS) $(CXXFLAGS)
 IPCSERVER_OBJECTS =  &
 	$(OBJS)\ipcserver_server.obj
+BASEIPCCLIENT_CXXFLAGS = $(__DEBUGINFO) $(__OPTIMIZEFLAG) $(__THREADSFLAG) &
+	$(__RUNTIME_LIBS) -d__WXMSW__ $(__WXUNIV_DEFINE_p) $(__DEBUG_DEFINE_p) &
+	$(__NDEBUG_DEFINE_p) $(__EXCEPTIONS_DEFINE_p) $(__RTTI_DEFINE_p) &
+	$(__THREAD_DEFINE_p) $(__UNICODE_DEFINE_p) -i=$(SETUPHDIR) &
+	-i=.\..\..\include $(____CAIRO_INCLUDEDIR_FILENAMES) -wx -wcd=549 -wcd=656 &
+	-wcd=657 -wcd=667 -i=. $(__DLLFLAG_p) -dwxUSE_GUI=0 $(__RTTIFLAG) &
+	$(__EXCEPTIONSFLAG) $(CPPFLAGS) $(CXXFLAGS)
+BASEIPCCLIENT_OBJECTS =  &
+	$(OBJS)\baseipcclient_baseclient.obj
+BASEIPCSERVER_CXXFLAGS = $(__DEBUGINFO) $(__OPTIMIZEFLAG) $(__THREADSFLAG) &
+	$(__RUNTIME_LIBS) -d__WXMSW__ $(__WXUNIV_DEFINE_p) $(__DEBUG_DEFINE_p) &
+	$(__NDEBUG_DEFINE_p) $(__EXCEPTIONS_DEFINE_p) $(__RTTI_DEFINE_p) &
+	$(__THREAD_DEFINE_p) $(__UNICODE_DEFINE_p) -i=$(SETUPHDIR) &
+	-i=.\..\..\include $(____CAIRO_INCLUDEDIR_FILENAMES) -wx -wcd=549 -wcd=656 &
+	-wcd=657 -wcd=667 -i=. $(__DLLFLAG_p) -dwxUSE_GUI=0 $(__RTTIFLAG) &
+	$(__EXCEPTIONSFLAG) $(CPPFLAGS) $(CXXFLAGS)
+BASEIPCSERVER_OBJECTS =  &
+	$(OBJS)\baseipcserver_baseserver.obj
 
 
 all : $(OBJS)
@@ -266,7 +297,7 @@ $(OBJS) :
 
 ### Targets: ###
 
-all : .SYMBOLIC $(OBJS)\ipcclient.exe $(OBJS)\ipcserver.exe
+all : .SYMBOLIC $(__ipcclient___depname) $(__ipcserver___depname) $(OBJS)\baseipcclient.exe $(OBJS)\baseipcserver.exe
 
 clean : .SYMBOLIC 
 	-if exist $(OBJS)\*.obj del $(OBJS)\*.obj
@@ -276,40 +307,76 @@ clean : .SYMBOLIC
 	-if exist $(OBJS)\*.pch del $(OBJS)\*.pch
 	-if exist $(OBJS)\ipcclient.exe del $(OBJS)\ipcclient.exe
 	-if exist $(OBJS)\ipcserver.exe del $(OBJS)\ipcserver.exe
+	-if exist $(OBJS)\baseipcclient.exe del $(OBJS)\baseipcclient.exe
+	-if exist $(OBJS)\baseipcserver.exe del $(OBJS)\baseipcserver.exe
 
+!ifeq USE_GUI 1
 $(OBJS)\ipcclient.exe :  $(IPCCLIENT_OBJECTS) $(OBJS)\ipcclient_sample.res
 	@%create $(OBJS)\ipcclient.lbc
 	@%append $(OBJS)\ipcclient.lbc option quiet
 	@%append $(OBJS)\ipcclient.lbc name $^@
 	@%append $(OBJS)\ipcclient.lbc option caseexact
-	@%append $(OBJS)\ipcclient.lbc  $(__DEBUGINFO_1)  libpath $(LIBDIRNAME) system nt_win ref '_WinMain@16' $(____CAIRO_LIBDIR_FILENAMES) $(LDFLAGS)
+	@%append $(OBJS)\ipcclient.lbc  $(__DEBUGINFO_3)  libpath $(LIBDIRNAME) system nt_win ref '_WinMain@16' $(____CAIRO_LIBDIR_FILENAMES) $(LDFLAGS)
 	@for %i in ($(IPCCLIENT_OBJECTS)) do @%append $(OBJS)\ipcclient.lbc file %i
-	@for %i in ( $(__WXLIB_CORE_p)  $(__WXLIB_NET_p)  $(__WXLIB_BASE_p)  $(__WXLIB_MONO_p) $(__LIB_TIFF_p) $(__LIB_JPEG_p) $(__LIB_PNG_p)  wxzlib$(WXDEBUGFLAG).lib  wxregex$(WXUNICODEFLAG)$(WXDEBUGFLAG).lib wxexpat$(WXDEBUGFLAG).lib $(EXTRALIBS_FOR_BASE)  $(__GDIPLUS_LIB_p) $(__CAIRO_LIB_p) kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib) do @%append $(OBJS)\ipcclient.lbc library %i
+	@for %i in ( $(__WXLIB_CORE_p)  $(__WXLIB_NET_p)  $(__WXLIB_BASE_p)  $(__WXLIB_MONO_p) $(__LIB_SCINTILLA_IF_MONO_p) $(__LIB_TIFF_p) $(__LIB_JPEG_p) $(__LIB_PNG_p)   wxzlib$(WXDEBUGFLAG).lib wxregex$(WXUNICODEFLAG)$(WXDEBUGFLAG).lib wxexpat$(WXDEBUGFLAG).lib $(EXTRALIBS_FOR_BASE)  $(__CAIRO_LIB_p) kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib wininet.lib) do @%append $(OBJS)\ipcclient.lbc library %i
 	@%append $(OBJS)\ipcclient.lbc option resource=$(OBJS)\ipcclient_sample.res
 	@for %i in () do @%append $(OBJS)\ipcclient.lbc option stack=%i
 	wlink @$(OBJS)\ipcclient.lbc
+!endif
 
+!ifeq USE_GUI 1
 $(OBJS)\ipcserver.exe :  $(IPCSERVER_OBJECTS) $(OBJS)\ipcserver_sample.res
 	@%create $(OBJS)\ipcserver.lbc
 	@%append $(OBJS)\ipcserver.lbc option quiet
 	@%append $(OBJS)\ipcserver.lbc name $^@
 	@%append $(OBJS)\ipcserver.lbc option caseexact
-	@%append $(OBJS)\ipcserver.lbc  $(__DEBUGINFO_1)  libpath $(LIBDIRNAME) system nt_win ref '_WinMain@16' $(____CAIRO_LIBDIR_FILENAMES) $(LDFLAGS)
+	@%append $(OBJS)\ipcserver.lbc  $(__DEBUGINFO_3)  libpath $(LIBDIRNAME) system nt_win ref '_WinMain@16' $(____CAIRO_LIBDIR_FILENAMES) $(LDFLAGS)
 	@for %i in ($(IPCSERVER_OBJECTS)) do @%append $(OBJS)\ipcserver.lbc file %i
-	@for %i in ( $(__WXLIB_CORE_p)  $(__WXLIB_NET_p)  $(__WXLIB_BASE_p)  $(__WXLIB_MONO_p) $(__LIB_TIFF_p) $(__LIB_JPEG_p) $(__LIB_PNG_p)  wxzlib$(WXDEBUGFLAG).lib  wxregex$(WXUNICODEFLAG)$(WXDEBUGFLAG).lib wxexpat$(WXDEBUGFLAG).lib $(EXTRALIBS_FOR_BASE)  $(__GDIPLUS_LIB_p) $(__CAIRO_LIB_p) kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib odbc32.lib) do @%append $(OBJS)\ipcserver.lbc library %i
+	@for %i in ( $(__WXLIB_CORE_p)  $(__WXLIB_NET_p)  $(__WXLIB_BASE_p)  $(__WXLIB_MONO_p) $(__LIB_SCINTILLA_IF_MONO_p) $(__LIB_TIFF_p) $(__LIB_JPEG_p) $(__LIB_PNG_p)   wxzlib$(WXDEBUGFLAG).lib wxregex$(WXUNICODEFLAG)$(WXDEBUGFLAG).lib wxexpat$(WXDEBUGFLAG).lib $(EXTRALIBS_FOR_BASE)  $(__CAIRO_LIB_p) kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib wininet.lib) do @%append $(OBJS)\ipcserver.lbc library %i
 	@%append $(OBJS)\ipcserver.lbc option resource=$(OBJS)\ipcserver_sample.res
 	@for %i in () do @%append $(OBJS)\ipcserver.lbc option stack=%i
 	wlink @$(OBJS)\ipcserver.lbc
+!endif
+
+$(OBJS)\baseipcclient.exe :  $(BASEIPCCLIENT_OBJECTS)
+	@%create $(OBJS)\baseipcclient.lbc
+	@%append $(OBJS)\baseipcclient.lbc option quiet
+	@%append $(OBJS)\baseipcclient.lbc name $^@
+	@%append $(OBJS)\baseipcclient.lbc option caseexact
+	@%append $(OBJS)\baseipcclient.lbc  $(__DEBUGINFO_3)  libpath $(LIBDIRNAME) system nt ref 'main_' $(____CAIRO_LIBDIR_FILENAMES) $(LDFLAGS)
+	@for %i in ($(BASEIPCCLIENT_OBJECTS)) do @%append $(OBJS)\baseipcclient.lbc file %i
+	@for %i in ( $(__WXLIB_NET_p)  $(__WXLIB_BASE_p)  $(__WXLIB_MONO_p) $(__LIB_PNG_IF_MONO_p) wxzlib$(WXDEBUGFLAG).lib wxregex$(WXUNICODEFLAG)$(WXDEBUGFLAG).lib wxexpat$(WXDEBUGFLAG).lib $(EXTRALIBS_FOR_BASE)  $(__CAIRO_LIB_p) kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib wininet.lib) do @%append $(OBJS)\baseipcclient.lbc library %i
+	@%append $(OBJS)\baseipcclient.lbc
+	@for %i in () do @%append $(OBJS)\baseipcclient.lbc option stack=%i
+	wlink @$(OBJS)\baseipcclient.lbc
+
+$(OBJS)\baseipcserver.exe :  $(BASEIPCSERVER_OBJECTS)
+	@%create $(OBJS)\baseipcserver.lbc
+	@%append $(OBJS)\baseipcserver.lbc option quiet
+	@%append $(OBJS)\baseipcserver.lbc name $^@
+	@%append $(OBJS)\baseipcserver.lbc option caseexact
+	@%append $(OBJS)\baseipcserver.lbc  $(__DEBUGINFO_3)  libpath $(LIBDIRNAME) system nt ref 'main_' $(____CAIRO_LIBDIR_FILENAMES) $(LDFLAGS)
+	@for %i in ($(BASEIPCSERVER_OBJECTS)) do @%append $(OBJS)\baseipcserver.lbc file %i
+	@for %i in ( $(__WXLIB_NET_p)  $(__WXLIB_BASE_p)  $(__WXLIB_MONO_p) $(__LIB_PNG_IF_MONO_p_1) wxzlib$(WXDEBUGFLAG).lib wxregex$(WXUNICODEFLAG)$(WXDEBUGFLAG).lib wxexpat$(WXDEBUGFLAG).lib $(EXTRALIBS_FOR_BASE)  $(__CAIRO_LIB_p) kernel32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib winmm.lib shell32.lib comctl32.lib ole32.lib oleaut32.lib uuid.lib rpcrt4.lib advapi32.lib wsock32.lib wininet.lib) do @%append $(OBJS)\baseipcserver.lbc library %i
+	@%append $(OBJS)\baseipcserver.lbc
+	@for %i in () do @%append $(OBJS)\baseipcserver.lbc option stack=%i
+	wlink @$(OBJS)\baseipcserver.lbc
 
 $(OBJS)\ipcclient_sample.res :  .AUTODEPEND .\..\..\samples\sample.rc
-	wrc -q -ad -bt=nt -r -fo=$^@    -d__WXMSW__ $(__WXUNIV_DEFINE_p) $(__DEBUG_DEFINE_p) $(__NDEBUG_DEFINE_p) $(__EXCEPTIONS_DEFINE_p) $(__RTTI_DEFINE_p) $(__THREAD_DEFINE_p) $(__UNICODE_DEFINE_p)  $(__GFXCTX_DEFINE_p) -i=$(SETUPHDIR) -i=.\..\..\include $(____CAIRO_INCLUDEDIR_FILENAMES) -i=. $(__DLLFLAG_p) -i=.\..\..\samples -dNOPCH $<
+	wrc -q -ad -bt=nt -r -fo=$^@    -d__WXMSW__ $(__WXUNIV_DEFINE_p) $(__DEBUG_DEFINE_p) $(__NDEBUG_DEFINE_p) $(__EXCEPTIONS_DEFINE_p) $(__RTTI_DEFINE_p) $(__THREAD_DEFINE_p) $(__UNICODE_DEFINE_p)  -i=$(SETUPHDIR) -i=.\..\..\include $(____CAIRO_INCLUDEDIR_FILENAMES) -i=. $(__DLLFLAG_p) -i=.\..\..\samples -dNOPCH $<
 
 $(OBJS)\ipcclient_client.obj :  .AUTODEPEND .\client.cpp
 	$(CXX) -bt=nt -zq -fo=$^@ $(IPCCLIENT_CXXFLAGS) $<
 
 $(OBJS)\ipcserver_sample.res :  .AUTODEPEND .\..\..\samples\sample.rc
-	wrc -q -ad -bt=nt -r -fo=$^@    -d__WXMSW__ $(__WXUNIV_DEFINE_p) $(__DEBUG_DEFINE_p) $(__NDEBUG_DEFINE_p) $(__EXCEPTIONS_DEFINE_p) $(__RTTI_DEFINE_p) $(__THREAD_DEFINE_p) $(__UNICODE_DEFINE_p)  $(__GFXCTX_DEFINE_p) -i=$(SETUPHDIR) -i=.\..\..\include $(____CAIRO_INCLUDEDIR_FILENAMES) -i=. $(__DLLFLAG_p) -i=.\..\..\samples -dNOPCH $<
+	wrc -q -ad -bt=nt -r -fo=$^@    -d__WXMSW__ $(__WXUNIV_DEFINE_p) $(__DEBUG_DEFINE_p) $(__NDEBUG_DEFINE_p) $(__EXCEPTIONS_DEFINE_p) $(__RTTI_DEFINE_p) $(__THREAD_DEFINE_p) $(__UNICODE_DEFINE_p)  -i=$(SETUPHDIR) -i=.\..\..\include $(____CAIRO_INCLUDEDIR_FILENAMES) -i=. $(__DLLFLAG_p) -i=.\..\..\samples -dNOPCH $<
 
 $(OBJS)\ipcserver_server.obj :  .AUTODEPEND .\server.cpp
 	$(CXX) -bt=nt -zq -fo=$^@ $(IPCSERVER_CXXFLAGS) $<
+
+$(OBJS)\baseipcclient_baseclient.obj :  .AUTODEPEND .\baseclient.cpp
+	$(CXX) -bt=nt -zq -fo=$^@ $(BASEIPCCLIENT_CXXFLAGS) $<
+
+$(OBJS)\baseipcserver_baseserver.obj :  .AUTODEPEND .\baseserver.cpp
+	$(CXX) -bt=nt -zq -fo=$^@ $(BASEIPCSERVER_CXXFLAGS) $<
 

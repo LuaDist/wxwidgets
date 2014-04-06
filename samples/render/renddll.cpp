@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     04.08.03
-// RCS-ID:      $Id: renddll.cpp 38940 2006-04-27 13:50:20Z VZ $
 // Copyright:   (c) 2003 Vadim Zeitlin <vadim@wxwidgets.org>
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -27,15 +26,19 @@ class MyDllRenderer : public wxDelegateRendererNative
 {
 public:
     // draw the header control button (used by wxListCtrl)
-    virtual void DrawHeaderButton(wxWindow *win,
-                                  wxDC& dc,
-                                  const wxRect& rect,
-                                  int flags = 0)
+    virtual int DrawHeaderButton(wxWindow * WXUNUSED(win),
+                                 wxDC& dc,
+                                 const wxRect& rect,
+                                 int WXUNUSED(flags) = 0,
+                                 wxHeaderSortIconType WXUNUSED(sortArrow) = wxHDR_SORT_ICON_NONE,
+                                 wxHeaderButtonParams* WXUNUSED(params) = NULL)
     {
         dc.SetBrush(*wxCYAN_BRUSH);
         dc.SetTextForeground(*wxRED);
         dc.DrawRoundedRectangle(rect, 10);
-        dc.DrawLabel(_T("MyDllRenderer"), wxNullBitmap, rect, wxALIGN_CENTER);
+        dc.DrawLabel("MyDllRenderer", wxNullBitmap, rect, wxALIGN_CENTER);
+
+        return dc.GetTextExtent("MyDllRenderer").x;
     }
 
     virtual wxRendererVersion GetVersion() const
@@ -47,12 +50,12 @@ public:
 #if 0 // just for debugging
     MyDllRenderer()
     {
-        wxMessageBox(_T("Creating MyDllRenderer"), _T("Renderer Sample"));
+        wxMessageBox(wxT("Creating MyDllRenderer"), wxT("Renderer Sample"));
     }
 
     virtual ~MyDllRenderer()
     {
-        wxMessageBox(_T("Deleting MyDllRenderer"), _T("Renderer Sample"));
+        wxMessageBox(wxT("Deleting MyDllRenderer"), wxT("Renderer Sample"));
     }
 #endif // 0
 };

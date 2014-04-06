@@ -74,6 +74,18 @@ Package=<4>
 
 ###############################################################################
 
+Project: "wxscintilla"=wx_wxscintilla.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "base"=wx_base.dsp - Package Owner=<4>
 
 Package=<5>
@@ -134,31 +146,19 @@ Package=<4>
 
 ###############################################################################
 
-Project: "odbc"=wx_odbc.dsp - Package Owner=<4>
-
-Package=<5>
-{{{
-}}}
-
-Package=<4>
-{{{
-}}}
-
-###############################################################################
-
-Project: "dbgrid"=wx_dbgrid.dsp - Package Owner=<4>
-
-Package=<5>
-{{{
-}}}
-
-Package=<4>
-{{{
-}}}
-
-###############################################################################
-
 Project: "html"=wx_html.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "webview"=wx_webview.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -218,6 +218,30 @@ Package=<4>
 
 ###############################################################################
 
+Project: "ribbon"=wx_ribbon.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "propgrid"=wx_propgrid.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "richtext"=wx_richtext.dsp - Package Owner=<4>
 
 Package=<5>
@@ -226,6 +250,21 @@ Package=<5>
 
 Package=<4>
 {{{
+}}}
+
+###############################################################################
+
+Project: "stc"=wx_stc.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+Begin Project Dependency
+Project_Dep_Name wxscintilla
+End Project Dependency
 }}}
 
 ###############################################################################

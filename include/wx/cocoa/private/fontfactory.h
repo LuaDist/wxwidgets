@@ -1,10 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        wx/cocoa/fontfactory.h
+// Name:        wx/cocoa/private/fontfactory.h
 // Purpose:     wxFontFactory class
 // Author:      David Elliott
 // Modified by:
 // Created:     2007-10-13
-// RCS-ID:      $Id: fontfactory.h 60554 2009-05-08 23:10:00Z VZ $
 // Copyright:   2007 David Elliott
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////

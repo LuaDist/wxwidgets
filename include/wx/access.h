@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     2003-02-12
-// RCS-ID:      $Id: access.h 51246 2008-01-16 12:56:37Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -228,9 +227,9 @@ class WXDLLIMPEXP_FWD_CORE wxAccessible;
 class WXDLLIMPEXP_FWD_CORE wxWindow;
 class WXDLLIMPEXP_FWD_CORE wxPoint;
 class WXDLLIMPEXP_FWD_CORE wxRect;
-class WXDLLEXPORT wxAccessibleBase : public wxObject
+class WXDLLIMPEXP_CORE wxAccessibleBase : public wxObject
 {
-    DECLARE_NO_COPY_CLASS(wxAccessibleBase)
+    wxDECLARE_NO_COPY_CLASS(wxAccessibleBase);
 
 public:
     wxAccessibleBase(wxWindow* win): m_window(win) {}

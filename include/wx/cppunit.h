@@ -3,7 +3,6 @@
 // Purpose:     wrapper header for CppUnit headers
 // Author:      Vadim Zeitlin
 // Created:     15.02.04
-// RCS-ID:      $Id: cppunit.h 61872 2009-09-09 22:37:05Z VZ $
 // Copyright:   (c) 2004 Vadim Zeitlin
 // Licence:     wxWindows Licence
 /////////////////////////////////////////////////////////////////////////////
@@ -48,12 +47,30 @@
 //
 
 #include "wx/beforestd.h"
+#ifdef __VISUALC__
+    #pragma warning(push)
+
+    // with cppunit 1.12 we get many bogus warnings 4701 (local variable may be
+    // used without having been initialized) in TestAssert.h
+    #pragma warning(disable:4701)
+
+    // and also 4100 (unreferenced formal parameter) in extensions/
+    // ExceptionTestCaseDecorator.h
+    #pragma warning(disable:4100)
+#endif
+
 #include <cppunit/extensions/TestFactoryRegistry.h>
 #include <cppunit/ui/text/TestRunner.h>
 #include <cppunit/TestCase.h>
 #include <cppunit/extensions/HelperMacros.h>
 #include <cppunit/CompilerOutputter.h>
+
+#ifdef __VISUALC__
+    #pragma warning(pop)
+#endif
 #include "wx/afterstd.h"
+
+#include "wx/string.h"
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -81,28 +98,183 @@
 #define WXTEST_FAIL_WITH_CONDITION(suiteName, Condition, testMethod) \
     WXTEST_ANY_WITH_CONDITION(suiteName, Condition, testMethod, CPPUNIT_TEST_FAIL(testMethod))
 
-// Use this macro to compare a wxString with a literal string.
-#define WX_ASSERT_STR_EQUAL(p, s) CPPUNIT_ASSERT_EQUAL(wxString(p), s)
+CPPUNIT_NS_BEGIN
 
-// Use this macro to compare a size_t with a literal integer
-#define WX_ASSERT_SIZET_EQUAL(n, m) CPPUNIT_ASSERT_EQUAL(((size_t)n), m)
+// provide an overload of cppunit assertEquals(T, T) which can be used to
+// compare wxStrings directly with C strings
+inline void
+assertEquals(const char *expected,
+             const char *actual,
+             CppUnit::SourceLine sourceLine,
+             const std::string& message)
+{
+    assertEquals(wxString(expected), wxString(actual), sourceLine, message);
+}
 
-// Use this macro to compare the expected time_t value with the result of not
-// necessarily time_t type
-#define WX_ASSERT_TIME_T_EQUAL(t, n) CPPUNIT_ASSERT_EQUAL((t), (time_t)(n))
+inline void
+assertEquals(const char *expected,
+             const wxString& actual,
+             CppUnit::SourceLine sourceLine,
+             const std::string& message)
+{
+    assertEquals(wxString(expected), actual, sourceLine, message);
+}
 
+inline void
+assertEquals(const wxString& expected,
+             const char *actual,
+             CppUnit::SourceLine sourceLine,
+             const std::string& message)
+{
+    assertEquals(expected, wxString(actual), sourceLine, message);
+}
+
+inline void
+assertEquals(const wchar_t *expected,
+             const wxString& actual,
+             CppUnit::SourceLine sourceLine,
+             const std::string& message)
+{
+    assertEquals(wxString(expected), actual, sourceLine, message);
+}
+
+inline void
+assertEquals(const wxString& expected,
+             const wchar_t *actual,
+             CppUnit::SourceLine sourceLine,
+             const std::string& message)
+{
+    assertEquals(expected, wxString(actual), sourceLine, message);
+}
+
+CPPUNIT_NS_END
+
+// define an assertEquals() overload for the given types, this is a helper and
+// shouldn't be used directly because of VC6 complications, see below
+#define WX_CPPUNIT_ASSERT_EQUALS(T1, T2)                                      \
+    inline void                                                               \
+    assertEquals(T1 expected,                                                 \
+                 T2 actual,                                                   \
+                 CppUnit::SourceLine sourceLine,                              \
+                 const std::string& message)                                  \
+    {                                                                         \
+        if ( !assertion_traits<T1>::equal(expected,actual) )                  \
+        {                                                                     \
+            Asserter::failNotEqual( assertion_traits<T1>::toString(expected), \
+                                    assertion_traits<T2>::toString(actual),   \
+                                    sourceLine,                               \
+                                    message );                                \
+        }                                                                     \
+    }
+
+// this macro allows us to specify (usually literal) ints as expected values
+// for functions returning integral types different from "int"
+//
+// FIXME-VC6: due to incorrect resolution of overloaded/template functions in
+//            this compiler (it basically doesn't use the template version at
+//            all if any overloaded function matches partially even if none of
+//            them matches fully) we also need to provide extra overloads
+
+#ifdef __VISUALC6__
+    #define WX_CPPUNIT_ALLOW_EQUALS_TO_INT(T) \
+        CPPUNIT_NS_BEGIN \
+            WX_CPPUNIT_ASSERT_EQUALS(int, T) \
+            WX_CPPUNIT_ASSERT_EQUALS(T, int) \
+            WX_CPPUNIT_ASSERT_EQUALS(T, T) \
+        CPPUNIT_NS_END
+
+    CPPUNIT_NS_BEGIN
+        WX_CPPUNIT_ASSERT_EQUALS(int, int)
+    CPPUNIT_NS_END
+#else // !VC6
+    #define WX_CPPUNIT_ALLOW_EQUALS_TO_INT(T) \
+        CPPUNIT_NS_BEGIN \
+            WX_CPPUNIT_ASSERT_EQUALS(int, T) \
+            WX_CPPUNIT_ASSERT_EQUALS(T, int) \
+        CPPUNIT_NS_END
+#endif // VC6/!VC6
+
+WX_CPPUNIT_ALLOW_EQUALS_TO_INT(long)
+WX_CPPUNIT_ALLOW_EQUALS_TO_INT(short)
+WX_CPPUNIT_ALLOW_EQUALS_TO_INT(unsigned)
+WX_CPPUNIT_ALLOW_EQUALS_TO_INT(unsigned long)
+
+#if defined( __VMS ) && defined( __ia64 )
+WX_CPPUNIT_ALLOW_EQUALS_TO_INT(std::basic_streambuf<char>::pos_type);
+#endif
+
+#ifdef wxHAS_LONG_LONG_T_DIFFERENT_FROM_LONG
+WX_CPPUNIT_ALLOW_EQUALS_TO_INT(wxLongLong_t)
+WX_CPPUNIT_ALLOW_EQUALS_TO_INT(unsigned wxLongLong_t)
+#endif // wxHAS_LONG_LONG_T_DIFFERENT_FROM_LONG
+
+// Use this macro to compare a wxArrayString with the pipe-separated elements
+// of the given string
+//
+// NB: it's a macro and not a function to have the correct line numbers in the
+//     test failure messages
+#define WX_ASSERT_STRARRAY_EQUAL(s, a)                                        \
+    {                                                                         \
+        wxArrayString expected(wxSplit(s, '|', '\0'));                        \
+                                                                              \
+        CPPUNIT_ASSERT_EQUAL( expected.size(), a.size() );                    \
+                                                                              \
+        for ( size_t n = 0; n < a.size(); n++ )                               \
+        {                                                                     \
+            CPPUNIT_ASSERT_EQUAL( expected[n], a[n] );                        \
+        }                                                                     \
+    }
+
+// Use this macro to assert with the given formatted message (it should contain
+// the format string and arguments in a separate pair of parentheses)
+#define WX_ASSERT_MESSAGE(msg, cond) \
+    CPPUNIT_ASSERT_MESSAGE(std::string(wxString::Format msg .mb_str()), (cond))
+
+#define WX_ASSERT_EQUAL_MESSAGE(msg, expected, actual) \
+    CPPUNIT_ASSERT_EQUAL_MESSAGE(std::string(wxString::Format msg .mb_str()), \
+                                 (expected), (actual))
 
 ///////////////////////////////////////////////////////////////////////////////
-// stream inserter for wxString
-//
+// define stream inserter for wxString if it's not defined in the main library,
+// we need it to output the test failures involving wxString
+#if !wxUSE_STD_IOSTREAM
 
 #include "wx/string.h"
 
+#include <iostream>
+
 inline std::ostream& operator<<(std::ostream& o, const wxString& s)
 {
-    return o << s.mb_str();
+#if wxUSE_UNICODE
+    return o << (const char *)wxSafeConvertWX2MB(s.wc_str());
+#else
+    return o << s.c_str();
+#endif
 }
 
+#endif // !wxUSE_STD_IOSTREAM
+
+// VC6 doesn't provide overloads for operator<<(__int64) in its stream classes
+// so do it ourselves
+#if defined(__VISUALC6__) && defined(wxLongLong_t)
+
+#include "wx/longlong.h"
+
+inline std::ostream& operator<<(std::ostream& ostr, wxLongLong_t ll)
+{
+    ostr << wxLongLong(ll).ToString();
+
+    return ostr;
+}
+
+inline std::ostream& operator<<(std::ostream& ostr, unsigned wxLongLong_t llu)
+{
+    ostr << wxULongLong(llu).ToString();
+
+    return ostr;
+}
+
+#endif // VC6 && wxLongLong_t
 
 ///////////////////////////////////////////////////////////////////////////////
 // Some more compiler warning tweaking and auto linking.

@@ -4,9 +4,8 @@
 // Author:      Mark Oxenham
 // Modified by: David Elliott
 // Created:     2007/08/10
-// RCS-ID:      $Id: NSSlider.mm 48080 2007-08-15 04:42:44Z DE $
 // Copyright:   (c) 2007 Software 2000 Ltd. All rights reserved.
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #include "wx/wxprec.h"

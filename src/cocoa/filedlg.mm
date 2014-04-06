@@ -4,7 +4,6 @@
 // Author:      Ryan Norton
 // Modified by:
 // Created:     2004-10-02
-// RCS-ID:      $Id: filedlg.mm 40007 2006-07-05 13:10:46Z SC $
 // Copyright:   (c) Ryan Norton
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -33,6 +32,7 @@
 
 #include "wx/cocoa/autorelease.h"
 #include "wx/cocoa/string.h"
+#include "wx/modalhook.h"
 
 #import <AppKit/NSOpenPanel.h>
 #import <AppKit/NSSavePanel.h>
@@ -168,8 +168,8 @@ void wxFileDialog::GetPaths(wxArrayString& paths) const
     paths.Empty();
 
     wxString dir(m_dir);
-    if ( m_dir.Last() != _T('\\') )
-        dir += _T('\\');
+    if ( m_dir.Last() != wxT('\\') )
+        dir += wxT('\\');
 
     size_t count = m_fileNames.GetCount();
     for ( size_t n = 0; n < count; n++ )
@@ -189,13 +189,15 @@ void wxFileDialog::GetFilenames(wxArrayString& files) const
 void wxFileDialog::SetPath(const wxString& path)
 {
     wxString ext;
-    wxSplitPath(path, &m_dir, &m_fileName, &ext);
+    wxFileName::SplitPath(path, &m_dir, &m_fileName, &ext);
     if ( !ext.empty() )
-        m_fileName << _T('.') << ext;
+        m_fileName << wxT('.') << ext;
 }
 
 int wxFileDialog::ShowModal()
 {
+    WX_HOOK_MODAL_DIALOG();
+
     wxAutoNSAutoreleasePool thePool;
 
     m_fileNames.Empty();

@@ -2,7 +2,6 @@
 // Name:        wx/gtk1/bmpbutton.h
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: bmpbuttn.h 37065 2006-01-23 02:28:01Z MR $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -46,14 +45,13 @@ public:
     void SetLabel( const wxString &label );
     virtual void SetLabel( const wxBitmap& bitmap ) { SetBitmapLabel(bitmap); }
 
-    virtual void SetDefault();
     virtual bool Enable(bool enable = TRUE);
 
     // implementation
     // --------------
 
-    void HasFocus();
-    void NotFocus();
+    void GTKSetHasFocus();
+    void GTKSetNotFocus();
     void StartSelect();
     void EndSelect();
     void DoApplyWidgetStyle(GtkRcStyle *style);

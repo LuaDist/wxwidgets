@@ -3,7 +3,6 @@
 // Purpose:     XRC resource handler for wxTreebook
 // Author:      Evgeniy Tarassov
 // Created:     2005/09/28
-// RCS-ID:      $Id: xh_treebk.cpp 38920 2006-04-26 08:21:31Z ABX $
 // Copyright:   (c) 2005 TT-Solutions <vadim@tt-solutions.com>
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -25,6 +24,8 @@
 
 #include "wx/treebook.h"
 #include "wx/imaglist.h"
+
+#include "wx/xml/xml.h"
 
 IMPLEMENT_DYNAMIC_CLASS(wxTreebookXmlHandler, wxXmlResourceHandler)
 
@@ -61,6 +62,10 @@ wxObject *wxTreebookXmlHandler::DoCreateResource()
                     GetStyle(wxT("style")),
                     GetName());
 
+        wxImageList *imagelist = GetImageList();
+        if ( imagelist )
+            tbk->AssignImageList(imagelist);
+
         wxTreebook * old_par = m_tbk;
         m_tbk = tbk;
 
@@ -71,6 +76,24 @@ wxObject *wxTreebookXmlHandler::DoCreateResource()
         m_treeContext.Clear();
 
         CreateChildren(m_tbk, true/*only this handler*/);
+
+        wxXmlNode *node = GetParamNode("object");
+        int pageIndex = 0;
+        for (unsigned int i = 0; i < m_tbk->GetPageCount(); i++)
+        {
+            if ( m_tbk->GetPage(i) )
+            {
+                wxXmlNode *child = node->GetChildren();
+                while (child)
+                {
+                    if (child->GetName() == "expanded" && child->GetNodeContent() == "1")
+                        m_tbk->ExpandNode(pageIndex, true);
+
+                    child = child->GetNext();
+                }
+                pageIndex++;
+            }
+        }
 
         m_treeContext = old_treeContext;
         m_isInside = old_ins;
@@ -95,12 +118,14 @@ wxObject *wxTreebookXmlHandler::DoCreateResource()
         wnd = wxDynamicCast(item, wxWindow);
 
         if (wnd == NULL && item != NULL)
-            wxLogError(wxT("Error in resource: control within treebook's <page> tag is not a window."));
+        {
+            ReportError(n, "treebookpage child must be a window");
+        }
     }
 
     size_t depth = GetLong( wxT("depth") );
 
-    if( depth <= m_treeContext.Count() )
+    if( depth <= m_treeContext.GetCount() )
     {
         // first prepare the icon
         int imgIndex = wxNOT_FOUND;
@@ -115,10 +140,22 @@ wxObject *wxTreebookXmlHandler::DoCreateResource()
             }
             imgIndex = imgList->Add(bmp);
         }
+        else if ( HasParam(wxT("image")) )
+        {
+            if ( m_tbk->GetImageList() )
+            {
+                imgIndex = GetLong(wxT("image"));
+            }
+            else // image without image list?
+            {
+                ReportError(n, "image can only be used in conjunction "
+                               "with imagelist");
+            }
+        }
 
         // then add the page to the corresponding parent
-        if( depth < m_treeContext.Count() )
-            m_treeContext.RemoveAt(depth, m_treeContext.Count() - depth );
+        if( depth < m_treeContext.GetCount() )
+            m_treeContext.RemoveAt(depth, m_treeContext.GetCount() - depth );
         if( depth == 0)
         {
             m_tbk->AddPage(wnd,
@@ -134,7 +171,10 @@ wxObject *wxTreebookXmlHandler::DoCreateResource()
 
     }
     else
-        wxLogError(wxT("Error in resource. wxTreebookPage has an invalid depth."));
+    {
+        ReportParamError("depth", "invalid depth");
+    }
+
     return wnd;
 }
 

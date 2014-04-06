@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/10/99
-// RCS-ID:      $Id: menu.cpp 63709 2010-03-18 15:14:42Z VZ $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -54,9 +53,6 @@ USHORT                              wxMenu::m_nextMenuId = 0;
 // ----------------------------------------------------------------------------
 // macros
 // ----------------------------------------------------------------------------
-
-    IMPLEMENT_DYNAMIC_CLASS(wxMenu, wxEvtHandler)
-    IMPLEMENT_DYNAMIC_CLASS(wxMenuBar, wxEvtHandler)
 
 // ============================================================================
 // implementation
@@ -201,7 +197,7 @@ void wxMenu::UpdateAccel(
         //
         // Find the (new) accel for this item
         //
-        wxAcceleratorEntry*         pAccel = wxAcceleratorEntry::Create(pItem->GetText());
+        wxAcceleratorEntry*         pAccel = wxAcceleratorEntry::Create(pItem->GetItemLabel());
 
         if (pAccel)
             pAccel->m_command = pItem->GetId();
@@ -287,7 +283,7 @@ bool wxMenu::DoInsertOrAppend( wxMenuItem* pItem,
         rItem.id = (USHORT)pItem->GetId();
     }
 
-    BYTE*                           pData=NULL;
+    char *pData = NULL;
 
 #if wxUSE_OWNER_DRAWN
     if (pItem->IsOwnerDrawn())
@@ -298,7 +294,7 @@ bool wxMenu::DoInsertOrAppend( wxMenuItem* pItem,
         // Will eventually need to set the image handle somewhere into vItem.hItem
         //
         rItem.afStyle             |= MIS_OWNERDRAW;
-        pData                      = (BYTE*)NULL;
+        pData                      = NULL;
         rItem.hItem                = (HBITMAP)pItem->GetBitmap().GetHBITMAP();
         pItem->m_vMenuData.afStyle = rItem.afStyle;
         pItem->m_vMenuData.hItem   = rItem.hItem;
@@ -323,7 +319,7 @@ bool wxMenu::DoInsertOrAppend( wxMenuItem* pItem,
             //
             rItem.afStyle |= MIS_TEXT;
         }
-        pData = (BYTE*)pItem->GetText().c_str();
+        pData = (char*) pItem->GetItemLabel().wx_str();
     }
 
     if (nPos == (size_t)-1)
@@ -387,7 +383,7 @@ void wxMenu::EndRadioGroup()
 
 wxMenuItem* wxMenu::DoAppend( wxMenuItem* pItem )
 {
-    wxCHECK_MSG( pItem, NULL, _T("NULL item in wxMenu::DoAppend") );
+    wxCHECK_MSG( pItem, NULL, wxT("NULL item in wxMenu::DoAppend") );
 
     bool bCheck = false;
 
@@ -428,7 +424,7 @@ wxMenuItem* wxMenu::DoAppend( wxMenuItem* pItem )
             }
             else
             {
-                wxFAIL_MSG( _T("where is the radio group start item?") );
+                wxFAIL_MSG( wxT("where is the radio group start item?") );
             }
         }
     }
@@ -562,7 +558,7 @@ void wxMenu::SetTitle( const wxString& rLabel )
     {
         if (!rLabel.empty())
         {
-            if (!::WinSetWindowText(hMenu, (PSZ)rLabel.c_str()))
+            if (!::WinSetWindowText(hMenu, rLabel.c_str()))
             {
                 wxLogLastError(wxT("SetMenuTitle"));
             }
@@ -583,7 +579,7 @@ void wxMenu::SetTitle( const wxString& rLabel )
             //
             // Modify the title
             //
-            if (!::WinSetWindowText(hMenu, (PSZ)rLabel.c_str()))
+            if (!::WinSetWindowText(hMenu, rLabel.c_str()))
             {
                 wxLogLastError(wxT("SetMenuTitle"));
             }
@@ -756,7 +752,7 @@ WXHMENU wxMenuBar::Create()
     //
     if ((m_hMenu =  ::WinCreateWindow( hFrame
                                       ,WC_MENU
-                                      ,(PSZ)NULL
+                                      ,NULL
                                       ,MS_ACTIONBAR | WS_SYNCPAINT | WS_VISIBLE
                                       ,0L
                                       ,0L
@@ -804,7 +800,7 @@ WXHMENU wxMenuBar::Create()
 
             (*it)->m_vMenuData.iPosition = (SHORT)i;
 
-            rc = (APIRET)::WinSendMsg(m_hMenu, MM_INSERTITEM, (MPARAM)&(*it)->m_vMenuData, (MPARAM)m_titles[i].c_str());
+            rc = (APIRET)::WinSendMsg(m_hMenu, MM_INSERTITEM, (MPARAM)&(*it)->m_vMenuData, (MPARAM)m_titles[i].wx_str());
             if (rc == (APIRET)MIT_MEMERROR || rc == (APIRET)MIT_ERROR)
             {
                 vError = ::WinGetLastError(vHabmain);
@@ -847,7 +843,7 @@ void wxMenuBar::EnableTop(
     Refresh();
 } // end of wxMenuBar::EnableTop
 
-void wxMenuBar::SetLabelTop(
+void wxMenuBar::SetMenuLabel(
   size_t                            nPos
 , const wxString&                   rLabel
 )
@@ -879,31 +875,21 @@ void wxMenuBar::SetLabelTop(
     }
     nId = vItem.id;
 
-    if (::WinSendMsg(GetHmenu(), MM_SETITEMTEXT, MPFROMSHORT(nId), (MPARAM)rLabel.c_str()));
+    if (::WinSendMsg(GetHmenu(), MM_SETITEMTEXT, MPFROMSHORT(nId), (MPARAM)rLabel.wx_str()));
     {
         wxLogLastError(wxT("ModifyMenu"));
     }
     Refresh();
-} // end of wxMenuBar::SetLabelTop
+} // end of wxMenuBar::SetMenuLabel
 
-wxString wxMenuBar::GetLabelTop(
+wxString wxMenuBar::GetMenuLabel(
   size_t                            nPos
 ) const
 {
     wxCHECK_MSG( nPos < GetMenuCount(), wxEmptyString,
-                 wxT("invalid menu index in wxMenuBar::GetLabelTop") );
-    return wxStripMenuCodes(m_titles[nPos]);
-} // end of wxMenuBar::GetLabelTop
-
-// Gets the original label at the top-level of the menubar
-wxString wxMenuBar::GetMenuLabel(size_t pos) const
-{
-    wxCHECK_MSG( pos < GetMenuCount(), wxEmptyString,
                  wxT("invalid menu index in wxMenuBar::GetMenuLabel") );
-
-    return m_titles[pos];
-}
-
+    return m_titles[nPos];
+} // end of wxMenuBar::GetMenuLabel
 
 // ---------------------------------------------------------------------------
 // wxMenuBar construction
@@ -935,7 +921,7 @@ wxMenu* wxMenuBar::Replace(
     if (IsAttached())
     {
         ::WinSendMsg((HWND)m_hMenu, MM_REMOVEITEM, MPFROM2SHORT(nId, TRUE), (MPARAM)0);
-        ::WinSendMsg((HWND)m_hMenu, MM_INSERTITEM, (MPARAM)&pMenu->m_vMenuData, (MPARAM)sTitle.c_str());
+        ::WinSendMsg((HWND)m_hMenu, MM_INSERTITEM, (MPARAM)&pMenu->m_vMenuData, (MPARAM)sTitle.wx_str());
 
 #if wxUSE_ACCEL
         if (pMenuOld->HasAccels() || pMenu->HasAccels())
@@ -968,7 +954,7 @@ bool wxMenuBar::Insert( size_t          nPos,
         ::WinSendMsg( (HWND)m_hMenu
                      ,MM_INSERTITEM
                      ,(MPARAM)&pMenu->m_vMenuData
-                     ,(MPARAM)sTitle.c_str()
+                     ,(MPARAM)sTitle.wx_str()
                     );
 #if wxUSE_ACCEL
         if (pMenu->HasAccels())
@@ -1000,7 +986,7 @@ bool wxMenuBar::Append( wxMenu* pMenu,
     if ( IsAttached() )
     {
         pMenu->m_vMenuData.iPosition = MIT_END;
-        ::WinSendMsg((HWND)m_hMenu, MM_INSERTITEM, (MPARAM)&pMenu->m_vMenuData, (MPARAM)sTitle.c_str());
+        ::WinSendMsg((HWND)m_hMenu, MM_INSERTITEM, (MPARAM)&pMenu->m_vMenuData, (MPARAM)sTitle.wx_str());
 #if wxUSE_ACCEL
         if (pMenu->HasAccels())
         {
@@ -1107,7 +1093,9 @@ void wxMenuBar::Attach(
                             ,m_vAccelTable.GetHACCEL()
                             ,(HWND)pFrame->GetFrame()
                            ))
+    {
         wxLogLastError(wxT("WinSetAccelTable"));
+    }
 #endif // wxUSE_ACCEL
 } // end of wxMenuBar::Attach
 

@@ -2,9 +2,8 @@
 // Name:        wx/cocoa/ObjcRef.h
 // Purpose:     wxObjcAutoRef template class
 // Author:      David Elliott
-// Modified by: 
+// Modified by:
 // Created:     2004/03/28
-// RCS-ID:      $Id: ObjcRef.h 51591 2008-02-08 08:06:26Z DE $
 // Copyright:   (c) 2004 David Elliott <dfe@cox.net>
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -13,7 +12,7 @@
 #define _WX_COCOA_OBJCREF_H__
 
 // Reuse wxCFRef-related code (e.g. wxCFRetain/wxCFRelease)
-#include "wx/mac/corefoundation/cfref.h"
+#include "wx/osx/core/cfref.h"
 
 // NOTE WELL: We can only know whether or not GC can be used when compiling Objective-C.
 // Therefore we cannot implement these functions except when compiling Objective-C.
@@ -47,7 +46,7 @@
     wxGCSafeRelease(m_obj); // release current object (if any)
     m_obj = wxGCSafeRetain([[NSObject alloc] init]);
     [m_obj release]; // balance alloc
-    
+
     Consider the effect on the retain count from each statement (alloc, CFRetain, release)
     In RR mode:     retainCount = 1, +1, -1
     In GC mode:     strongRetainCount = 0, +1, -0
@@ -150,7 +149,7 @@ protected:
     it will use a method (currently CFRetain/CFRelease) to ensure the object will never be
     finalized until this object is destroyed.
  */
-    
+
 template <class T>
 class wxObjcAutoRefFromAlloc: wxObjcAutoRefBase
 {

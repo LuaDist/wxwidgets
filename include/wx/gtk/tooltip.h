@@ -1,16 +1,14 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        tooltip.h
+// Name:        wx/gtk/tooltip.h
 // Purpose:     wxToolTip class
 // Author:      Robert Roebling
-// Id:          $Id: tooltip.h 39041 2006-05-04 23:34:10Z VZ $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
-#ifndef __GTKTOOLTIPH__
-#define __GTKTOOLTIPH__
+#ifndef _WX_GTKTOOLTIP_H_
+#define _WX_GTKTOOLTIP_H_
 
-#include "wx/defs.h"
 #include "wx/string.h"
 #include "wx/object.h"
 
@@ -18,8 +16,7 @@
 // forward declarations
 //-----------------------------------------------------------------------------
 
-class WXDLLIMPEXP_CORE wxToolTip;
-class WXDLLIMPEXP_CORE wxWindow;
+class WXDLLIMPEXP_FWD_CORE wxWindow;
 
 //-----------------------------------------------------------------------------
 // wxToolTip
@@ -33,24 +30,20 @@ public:
     // globally change the tooltip parameters
     static void Enable( bool flag );
     static void SetDelay( long msecs );
+        // set the delay after which the tooltip disappears or how long the tooltip remains visible
+    static void SetAutoPop(long msecs);
+        // set the delay between subsequent tooltips to appear
+    static void SetReshow(long msecs);
 
     // get/set the tooltip text
     void SetTip( const wxString &tip );
     wxString GetTip() const { return m_text; }
 
     wxWindow *GetWindow() const { return m_window; }
-    bool IsOk() const { return m_window != NULL; }
 
-
-    // wxGTK-only from now on
-
-    // this forwards back to wxWindow::ApplyToolTip()
-    void Apply( wxWindow *win );
-
-    // this just sets the given tooltip for the specified widget
-    //
-    // tip must be already UTF-8 encoded
-    static void Apply(GtkWidget *w, const wxCharBuffer& tip);
+    // Implementation
+    void GTKSetWindow(wxWindow* win);
+    static void GTKApply(GtkWidget* widget, const char* tip);
 
 private:
     wxString     m_text;
@@ -59,4 +52,4 @@ private:
     DECLARE_ABSTRACT_CLASS(wxToolTip)
 };
 
-#endif // __GTKTOOLTIPH__
+#endif // _WX_GTKTOOLTIP_H_

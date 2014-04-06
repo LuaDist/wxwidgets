@@ -4,9 +4,8 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2003/08/11
-// RCS-ID:      $Id: icon.mm 50318 2007-11-29 07:24:19Z DE $
 // Copyright:   (c) 2003 David Elliott
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #include "wx/wxprec.h"
@@ -31,6 +30,8 @@ public:
     wxIconRefData();
     wxIconRefData( const wxIconRefData& data );
     virtual ~wxIconRefData();
+
+    virtual bool IsOk() const { return m_ok; }
 
 protected:
     int                 m_width;
@@ -98,11 +99,21 @@ wxIcon::~wxIcon()
 {
 }
 
-bool wxIcon::CreateFromXpm(const char **xpm)
+wxGDIRefData *wxIcon::CreateGDIRefData() const
+{
+    return new wxIconRefData;
+}
+
+wxGDIRefData *wxIcon::CloneGDIRefData(const wxGDIRefData *data) const
+{
+    return new wxIconRefData(*static_cast<const wxIconRefData *>(data));
+}
+
+bool wxIcon::CreateFromXpm(const char* const* xpm)
 {
     wxBitmap bitmap(xpm);
     CopyFromBitmap(bitmap);
-    return Ok();
+    return IsOk();
 }
 
 bool wxIcon::LoadFile(const wxString& filename, wxBitmapType type,
@@ -110,7 +121,7 @@ bool wxIcon::LoadFile(const wxString& filename, wxBitmapType type,
 {
     wxBitmap bitmap(filename, type);
     CopyFromBitmap(bitmap);
-    return bitmap.Ok();
+    return bitmap.IsOk();
 }
 
 void wxIcon::CopyFromBitmap(const wxBitmap& bitmap)
@@ -121,14 +132,9 @@ void wxIcon::CopyFromBitmap(const wxBitmap& bitmap)
     M_ICONDATA->m_height = bitmap.GetHeight();
     wxAutoNSAutoreleasePool pool;
     M_ICONDATA->m_cocoaNSImage = [bitmap.GetNSImage(true) retain];
-    M_ICONDATA->m_ok = bitmap.Ok();
+    M_ICONDATA->m_ok = bitmap.IsOk();
     M_ICONDATA->m_numColors = 0;
     M_ICONDATA->m_quality = 0;
-}
-
-bool wxIcon::IsOk() const
-{
-    return m_refData && M_ICONDATA->m_ok;
 }
 
 int wxIcon::GetWidth() const

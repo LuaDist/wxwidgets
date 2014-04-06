@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     20.09.01
-// RCS-ID:      $Id: toplevel.h 36088 2005-11-04 21:13:03Z ABX $
 // Copyright:   (c) 2001 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -23,7 +22,7 @@ enum ETemplateID
 // wxTopLevelWindowOS2
 // ----------------------------------------------------------------------------
 
-class WXDLLEXPORT wxTopLevelWindowOS2 : public wxTopLevelWindowBase
+class WXDLLIMPEXP_CORE wxTopLevelWindowOS2 : public wxTopLevelWindowBase
 {
 public:
     // constructors and such
@@ -66,8 +65,7 @@ public:
     virtual bool IsMaximized(void) const;
     virtual void Maximize(bool bMaximize = true);
     virtual void Restore(void);
-    virtual void SendSizeEvent(void);
-    virtual void SetIcon(const wxIcon& rIcon);
+    virtual void SendSizeEvent(int flags = 0);
     virtual void SetIcons(const wxIconBundle& rIcons);
 
     virtual bool Show(bool bShow = true);

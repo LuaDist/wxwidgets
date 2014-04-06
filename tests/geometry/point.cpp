@@ -3,7 +3,6 @@
 // Purpose:     wxPoint unit test
 // Author:      Wlodzimierz ABX Skiba
 // Created:     2004-12-14
-// RCS-ID:      $Id: point.cpp 32219 2005-02-19 22:48:26Z VZ $
 // Copyright:   (c) 2004 wxWindows
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -61,7 +60,7 @@ private:
 CPPUNIT_TEST_SUITE_REGISTRATION( PointTestCase );
 CPPUNIT_TEST_SUITE_REGISTRATION( RealPointTestCase );
 
-// also include in it's own registry so that these tests can be run alone
+// also include in its own registry so that these tests can be run alone
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( PointTestCase, "PointTestCase" );
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( RealPointTestCase, "RealPointTestCase" );
 
@@ -87,6 +86,10 @@ void PointTestCase::Operators()
     p6 = p2; p6 = p2 - s;
     CPPUNIT_ASSERT( p3 == p5 );
     CPPUNIT_ASSERT( p4 == p6 );
+    p5 = p2; p5 = s + p2;
+    p6 = p2; p6 = s - p2;
+    CPPUNIT_ASSERT( p3 == p5 );
+    CPPUNIT_ASSERT( p4 == -p6 );
     p5 = p2; p5 += s;
     p6 = p2; p6 -= s;
     CPPUNIT_ASSERT( p3 == p5 );

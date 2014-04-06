@@ -3,7 +3,6 @@
 // Purpose:     XRC resource handler for wxPropertySheetDialog
 // Author:      Sander Berents
 // Created:     2007/07/12
-// RCS-ID:      $Id: xh_propdlg.cpp 48088 2007-08-15 11:43:32Z VZ $
 // Copyright:   (c) 2007 Sander Berents
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -89,12 +88,14 @@ wxObject *wxPropertySheetDialogXmlHandler::DoCreateResource()
                 }
             }
             else
-                wxLogError(wxT("Error in resource."));
+            {
+                ReportError(n, "propertysheetpage child must be a window");
+            }
             return wnd;
         }
         else
         {
-            wxLogError(wxT("Error in resource: no control within wxPropertySheetDialog's <page> tag."));
+            ReportError("propertysheetpage must have a window child");
             return NULL;
         }
     }
@@ -111,7 +112,8 @@ wxObject *wxPropertySheetDialogXmlHandler::DoCreateResource()
                    GetStyle(),
                    GetName());
 
-        if (HasParam(wxT("icon"))) dlg->SetIcon(GetIcon(wxT("icon"), wxART_FRAME_ICON));
+        if (HasParam(wxT("icon")))
+            dlg->SetIcons(GetIconBundle(wxT("icon"), wxART_FRAME_ICON));
 
         SetupWindow(dlg);
 

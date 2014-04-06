@@ -2,7 +2,6 @@
 // Name:        src/gtk1/utilsres.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: utilsres.cpp 38945 2006-04-28 12:44:37Z ABX $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -91,7 +90,7 @@ bool wxGetResource(const wxString& section, const wxString& entry, float *value,
     bool succ = wxGetResource(section, entry, (wxChar **)&s, file);
     if (succ)
     {
-        *value = (float)wxStrtod(s, NULL);
+        *value = (float)wxStrtod(s, (wchar_t **) NULL);
         delete[] s;
         return true;
     }
@@ -104,7 +103,7 @@ bool wxGetResource(const wxString& section, const wxString& entry, long *value, 
     bool succ = wxGetResource(section, entry, (wxChar **)&s, file);
     if (succ)
     {
-        *value = wxStrtol(s, NULL, 10);
+        *value = wxStrtol(s, (wchar_t **) NULL, 10);
         delete[] s;
         return true;
     }
@@ -117,7 +116,7 @@ bool wxGetResource(const wxString& section, const wxString& entry, int *value, c
     bool succ = wxGetResource(section, entry, (wxChar **)&s, file);
     if (succ)
     {
-        *value = (int)wxStrtol(s, NULL, 10);
+        *value = (int)wxStrtol(s, (wchar_t **) NULL, 10);
         delete[] s;
         return true;
     }

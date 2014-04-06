@@ -1,10 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        helpfrm.h
+// Name:        wx/html/helpfrm.h
 // Purpose:     wxHtmlHelpFrame
 // Notes:       Based on htmlhelp.cpp, implementing a monolithic
 //              HTML Help controller class,  by Vaclav Slavik
 // Author:      Harm van der Heijden and Vaclav Slavik
-// RCS-ID:      $Id: helpfrm.h 50202 2007-11-23 21:29:29Z VZ $
 // Copyright:   (c) Harm van der Heijden and Vaclav Slavik
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -74,11 +73,17 @@ public:
     wxHtmlHelpFrame(wxHtmlHelpData* data = NULL) { Init(data); }
     wxHtmlHelpFrame(wxWindow* parent, wxWindowID wxWindowID,
                     const wxString& title = wxEmptyString,
-                    int style = wxHF_DEFAULT_STYLE, wxHtmlHelpData* data = NULL,
-                    wxConfigBase *config=NULL, const wxString& rootpath = wxEmptyString);
+                    int style = wxHF_DEFAULT_STYLE, wxHtmlHelpData* data = NULL
+#if wxUSE_CONFIG
+                    , wxConfigBase *config=NULL, const wxString& rootpath = wxEmptyString
+#endif // wxUSE_CONFIG
+                    );
     bool Create(wxWindow* parent, wxWindowID id, const wxString& title = wxEmptyString,
-                int style = wxHF_DEFAULT_STYLE,
-                wxConfigBase *config=NULL, const wxString& rootpath = wxEmptyString);
+                int style = wxHF_DEFAULT_STYLE
+#if wxUSE_CONFIG
+                , wxConfigBase *config=NULL, const wxString& rootpath = wxEmptyString
+#endif // wxUSE_CONFIG
+                );
     virtual ~wxHtmlHelpFrame();
 
     /// Returns the data associated with the window.
@@ -88,7 +93,7 @@ public:
     wxHtmlHelpController* GetController() const { return m_helpController; }
 
     /// Sets the help controller associated with the window.
-    void SetController(wxHtmlHelpController* controller) { m_helpController = controller; }
+    void SetController(wxHtmlHelpController* controller);
 
     /// Returns the help window.
     wxHtmlHelpWindow* GetHelpWindow() const { return m_HtmlHelpWin; }
@@ -97,8 +102,10 @@ public:
     // (for title of displayed HTML page)
     void SetTitleFormat(const wxString& format);
 
+#if wxUSE_CONFIG
     // For compatibility
     void UseConfig(wxConfigBase *config, const wxString& rootpath = wxEmptyString);
+#endif // wxUSE_CONFIG
 
     // Make the help controller's frame 'modal' if
     // needed
@@ -107,9 +114,11 @@ public:
     // Override to add custom buttons to the toolbar
     virtual void AddToolbarButtons(wxToolBar* WXUNUSED(toolBar), int WXUNUSED(style)) {}
 
+    void SetShouldPreventAppExit(bool enable);
+
     // we don't want to prevent the app from closing just because a help window
     // remains opened
-    virtual bool ShouldPreventAppExit() const { return false; }
+    virtual bool ShouldPreventAppExit() const { return m_shouldPreventAppExit; }
 
 protected:
     void Init(wxHtmlHelpData* data = NULL);
@@ -135,11 +144,12 @@ protected:
     wxString m_TitleFormat;  // title of the help frame
     wxHtmlHelpWindow *m_HtmlHelpWin;
     wxHtmlHelpController* m_helpController;
+    bool m_shouldPreventAppExit;
 
 private:
 
     DECLARE_EVENT_TABLE()
-    DECLARE_NO_COPY_CLASS(wxHtmlHelpFrame)
+    wxDECLARE_NO_COPY_CLASS(wxHtmlHelpFrame);
 };
 
 #endif // wxUSE_WXHTML_HELP

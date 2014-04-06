@@ -1,3 +1,2 @@
 #!/bin/sh
-#autoconf
-make -f build/autogen.mk
+autoconf -B build/autoconf_prepend-include

@@ -5,7 +5,6 @@
 // Author:      Vaclav Slavik, Julian Smart
 // Modified by:
 // Created:     2002-07-09
-// RCS-ID:      $Id: helpview.cpp 44611 2007-03-05 11:34:19Z JS $
 // Copyright:   (c) 2002 Vaclav Slavik, Julian Smart and others
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -42,16 +41,11 @@ protected:
 
 IMPLEMENT_APP(hvApp)
 
-BEGIN_EVENT_TABLE(hvApp, wxApp)
-    EVT_IDLE(hvApp::OnIdle)
-END_EVENT_TABLE()
-
 hvApp::hvApp()
 {
 #if wxUSE_IPC
     m_server = NULL;
 #endif
-    m_exitIfNoMainWindow = false;
 }
 
 bool hvApp::OnInit()
@@ -60,19 +54,14 @@ bool hvApp::OnInit()
     delete wxLog::SetActiveTarget(new wxLogStderr); // So dialog boxes aren't used
 #endif
 
-    // Don't exit on frame deletion, since the help window is programmed
-    // to cause the app to exit even if it is still open. We need to have the app
-    // close by other means.
-    SetExitOnFrameDelete(false);
-
     wxArtProvider::Push(new AlternateArtProvider);
 
-#ifdef __WXMAC__
+#if defined( __WXOSX_MAC__ ) && wxOSX_USE_CARBON
     wxApp::s_macAboutMenuItemId = wxID_ABOUT;
     wxFileName::MacRegisterDefaultTypeAndCreator( wxT("htb") , 'HTBD' , 'HTBA' ) ;
 #endif
 
-    int istyle = wxHF_DEFAULT_STYLE|wxHF_OPEN_FILES;
+    int istyle = wxHF_DEFAULT_STYLE;
 
     wxString service, windowName, titleFormat, argStr;
     wxString book[10];
@@ -228,20 +217,10 @@ bool hvApp::OnInit()
 #endif
 
     m_helpController->DisplayContents();
-    SetTopWindow(m_helpController->GetFrame());
-    m_exitIfNoMainWindow = true;
 
     return true;
 }
 
-void hvApp::OnIdle(wxIdleEvent& event)
-{
-    if (m_exitIfNoMainWindow && !GetTopWindow())
-        ExitMainLoop();
-
-    event.Skip();
-    event.RequestMore();
-}
 
 int hvApp::OnExit()
 {
@@ -285,7 +264,7 @@ bool hvApp::OpenBook(wxHtmlHelpController* controller)
     if ( !s.empty() )
     {
         wxString ext = s.Right(4).Lower();
-        if (ext == _T(".zip") || ext == _T(".htb") || ext == _T(".hhp"))
+        if (ext == wxT(".zip") || ext == wxT(".htb") || ext == wxT(".hhp"))
         {
             wxBusyCursor bcur;
             wxFileName fileName(s);
@@ -299,10 +278,10 @@ bool hvApp::OpenBook(wxHtmlHelpController* controller)
 
 #ifdef __WXMAC__
 /// Respond to Apple Event for opening a document
-void hvApp::MacOpenFile(const wxString& filename)
+void hvApp::MacOpenFiles(const wxArrayString& fileNames)
 {
     wxBusyCursor bcur;
-    wxFileName fileName(filename);
+    wxFileName fileName(fileNames[0]);
     m_helpController->AddBook(fileName);
     m_helpController->DisplayContents();
 }
@@ -332,7 +311,7 @@ if ( id == artId ) return wxBitmap(xpmRc##_xpm);
 #else
 #define CREATE_STD_ICON(iconId, xpmRc) \
 { \
-    wxIcon icon(_T(iconId)); \
+    wxIcon icon(wxT(iconId)); \
     wxBitmap bmp; \
     bmp.CopyFromIcon(icon); \
     return bmp; \
@@ -427,14 +406,12 @@ hvConnection::~hvConnection()
     wxGetApp().GetConnections().DeleteObject(this);
 }
 
-bool hvConnection::OnExecute(const wxString& WXUNUSED(topic),
-                             wxChar *data,
-                             int WXUNUSED(size),
-                             wxIPCFormat WXUNUSED(format))
+bool hvConnection::OnExec(const wxString& WXUNUSED(topic),
+                          const wxString& data)
 {
     //    wxLogStatus("Execute command: %s", data);
 
-    if ( !wxStrncmp( data, wxT("--intstring"), 11 ) )
+    if ( data == "--intstring" )
     {
         long i;
         wxString argStr = data;
@@ -458,10 +435,12 @@ bool hvConnection::OnExecute(const wxString& WXUNUSED(topic),
 
 bool hvConnection::OnPoke(const wxString& WXUNUSED(topic),
                           const wxString& item,
-                          wxChar *data,
-                          int WXUNUSED(size),
-                          wxIPCFormat WXUNUSED(format))
+                          const void *buf,
+                          size_t size,
+                          wxIPCFormat format)
 {
+    const wxString data = GetTextFromData(buf, size, format);
+
     //    wxLogStatus("Poke command: %s = %s", item.c_str(), data);
     //topic is not tested
 
@@ -505,20 +484,6 @@ bool hvConnection::OnPoke(const wxString& WXUNUSED(topic),
         }
     }
 
-    return true;
-}
-
-wxChar *hvConnection::OnRequest(const wxString& WXUNUSED(topic),
-                                const wxString& WXUNUSED(item),
-                                int * WXUNUSED(size),
-                                wxIPCFormat WXUNUSED(format))
-{
-    return NULL;
-}
-
-bool hvConnection::OnStartAdvise(const wxString& WXUNUSED(topic),
-                                 const wxString& WXUNUSED(item))
-{
     return true;
 }
 

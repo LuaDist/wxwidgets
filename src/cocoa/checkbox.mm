@@ -4,9 +4,8 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2003/03/16
-// RCS-ID:      $Id: checkbox.mm 47907 2007-08-06 14:55:00Z DE $
 // Copyright:   (c) 2003 David Elliott
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 #include "wx/wxprec.h"
@@ -26,7 +25,6 @@
 #import <AppKit/NSButton.h>
 #import <Foundation/NSString.h>
 
-IMPLEMENT_DYNAMIC_CLASS(wxCheckBox, wxControl)
 BEGIN_EVENT_TABLE(wxCheckBox, wxCheckBoxBase)
 END_EVENT_TABLE()
 WX_IMPLEMENT_COCOA_OWNER(wxCheckBox,NSButton,NSControl,NSView)
@@ -131,7 +129,7 @@ void wxCheckBox::Cocoa_wxNSButtonAction(void)
         // skip mixed, go right back to on
         [GetNSButton() setState: NSOnState];
     }
-    wxCommandEvent event(wxEVT_COMMAND_CHECKBOX_CLICKED, GetId());
+    wxCommandEvent event(wxEVT_CHECKBOX, GetId());
     InitCommandEvent(event); //    event.SetEventObject(this);
     event.SetInt(Get3StateValue());
     Command(event);

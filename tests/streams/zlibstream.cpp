@@ -2,9 +2,8 @@
 // Name:        tests/streams/zlibstream.cpp
 // Purpose:     Test wxZlibInputStream/wxZlibOutputStream
 // Author:      Hans Van Leemputten
-// RCS-ID:      $Id: zlibstream.cpp 35903 2005-10-15 19:01:25Z MW $
 // Copyright:   (c) 2004 Hans Van Leemputten
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // For compilers that support precompilation, includes "wx/wx.h".
@@ -23,8 +22,8 @@
 #include "wx/zstream.h"
 #include "wx/wfstream.h"
 #include "wx/mstream.h"
-
 #include "wx/txtstrm.h"
+#include "wx/buffer.h"
 
 #include "bstream.h"
 
@@ -35,7 +34,7 @@ using std::string;
 
 #define DATABUFFER_SIZE 1024
 
-static const wxString FILENAME_GZ = _T("zlibtest.gz");
+static const wxString FILENAME_GZ = wxT("zlibtest.gz");
 
 ///////////////////////////////////////////////////////////////////////////////
 // The test case
@@ -55,6 +54,7 @@ public:
         CPPUNIT_TEST(Input_Read);
         CPPUNIT_TEST(Input_Eof);
         CPPUNIT_TEST(Input_LastRead);
+        CPPUNIT_TEST(Input_CanRead);
         CPPUNIT_TEST_FAIL(Input_SeekI);
         CPPUNIT_TEST(Input_TellI);
         CPPUNIT_TEST(Input_Peek);
@@ -71,6 +71,7 @@ public:
         CPPUNIT_TEST(TestStream_NoHeader_NoComp);
         CPPUNIT_TEST(TestStream_NoHeader_SpeedComp);
         CPPUNIT_TEST(TestStream_NoHeader_BestComp);
+        CPPUNIT_TEST(TestStream_NoHeader_Dictionary);
         CPPUNIT_TEST(TestStream_ZLib_Default);
         CPPUNIT_TEST(TestStream_ZLib_NoComp);
         CPPUNIT_TEST(TestStream_ZLib_SpeedComp);
@@ -79,11 +80,9 @@ public:
         WXTEST_WITH_GZIP_CONDITION(TestStream_GZip_NoComp);
         WXTEST_WITH_GZIP_CONDITION(TestStream_GZip_SpeedComp);
         WXTEST_WITH_GZIP_CONDITION(TestStream_GZip_BestComp);
+        WXTEST_WITH_GZIP_CONDITION(TestStream_GZip_Dictionary);
         WXTEST_WITH_GZIP_CONDITION(TestStream_ZLibGZip);
         CPPUNIT_TEST(Decompress_BadData);
-#if WXWIN_COMPATIBILITY_2_4
-        CPPUNIT_TEST(Decompress_wx24Data);
-#endif
         CPPUNIT_TEST(Decompress_wx251_zlib114_Data_NoHeader);
         CPPUNIT_TEST(Decompress_wx251_zlib114_Data_ZLib);
         WXTEST_WITH_GZIP_CONDITION(Decompress_gzip135Data);
@@ -95,6 +94,7 @@ protected:
     void TestStream_NoHeader_NoComp();
     void TestStream_NoHeader_SpeedComp();
     void TestStream_NoHeader_BestComp();
+    void TestStream_NoHeader_Dictionary();
     void TestStream_ZLib_Default();
     void TestStream_ZLib_NoComp();
     void TestStream_ZLib_SpeedComp();
@@ -103,15 +103,13 @@ protected:
     void TestStream_GZip_NoComp();
     void TestStream_GZip_SpeedComp();
     void TestStream_GZip_BestComp();
+    void TestStream_GZip_Dictionary();
     void TestStream_ZLibGZip();
     // Try to decompress bad data.
     void Decompress_BadData();
     // Decompress data that was compress by an external app.
     // (like test wx 2.4.2, 2.5.1 and gzip data)
     // Note: This test is limited in testing range!
-#if WXWIN_COMPATIBILITY_2_4
-    void Decompress_wx24Data();
-#endif
     void Decompress_wx251_zlib114_Data_NoHeader();
     void Decompress_wx251_zlib114_Data_ZLib();
     void Decompress_gzip135Data();
@@ -119,7 +117,7 @@ protected:
 private:
     const char *GetDataBuffer();
     const unsigned char *GetCompressedData();
-    void doTestStreamData(int input_flag, int output_flag, int compress_level);
+    void doTestStreamData(int input_flag, int output_flag, int compress_level, const wxMemoryBuffer *buf = NULL);
     void doDecompress_ExternalData(const unsigned char *data, const char *value, size_t data_size, size_t value_size, int flag = wxZLIB_AUTO);
 
 private:
@@ -137,6 +135,7 @@ private:
     char            m_DataBuffer[DATABUFFER_SIZE];
     size_t          m_SizeCompressedData;
     unsigned char  *m_pCompressedData;
+    wxMemoryBuffer  m_Dictionary;
 
     // Used by the base Creat[In|Out]Stream and Delete[In|Out]Stream.
     wxMemoryInputStream  *m_pTmpMemInStream;
@@ -153,13 +152,15 @@ zlibStream::zlibStream()
     for (size_t i = 0; i < DATABUFFER_SIZE; i++)
         m_DataBuffer[i] = (i % 0xFF);
 
+    m_Dictionary.AppendData(m_DataBuffer, sizeof(m_DataBuffer) / 2);
+
     // Set extra base config settings.
     m_bSimpleTellITest = true;
     m_bSimpleTellOTest = true;
 
 /* Example code on how to produce test data...
     {
-        wxFFileOutputStream fstream_out(_T("gentest.cpp"));
+        wxFFileOutputStream fstream_out(wxT("gentest.cpp"));
         wxTextOutputStream out( fstream_out );
 
         genExtTestData(out, "zlib data created with wxWidgets 2.5.x [March 27], wxZLIB_NO_HEADER, zlib 1.1.4", wxZLIB_NO_HEADER);
@@ -191,6 +192,10 @@ void zlibStream::TestStream_NoHeader_SpeedComp()
 void zlibStream::TestStream_NoHeader_BestComp()
 {
     doTestStreamData(wxZLIB_NO_HEADER, wxZLIB_NO_HEADER, wxZ_BEST_COMPRESSION);
+}
+void zlibStream::TestStream_NoHeader_Dictionary()
+{
+    doTestStreamData(wxZLIB_NO_HEADER, wxZLIB_NO_HEADER, wxZ_DEFAULT_COMPRESSION, &m_Dictionary);
 }
 
 void zlibStream::TestStream_ZLib_Default()
@@ -226,6 +231,10 @@ void zlibStream::TestStream_GZip_BestComp()
 {
     doTestStreamData(wxZLIB_GZIP, wxZLIB_GZIP, wxZ_BEST_COMPRESSION);
 }
+void zlibStream::TestStream_GZip_Dictionary()
+{
+    doTestStreamData(wxZLIB_GZIP, wxZLIB_GZIP, wxZ_DEFAULT_COMPRESSION, &m_Dictionary);
+}
 
 void zlibStream::TestStream_ZLibGZip()
 {
@@ -252,22 +261,6 @@ void zlibStream::Decompress_BadData()
     // stream should be marked as NOT OK.
     CPPUNIT_ASSERT(!zstream_in.IsOk());
 }
-
-#if WXWIN_COMPATIBILITY_2_4
-void zlibStream::Decompress_wx24Data()
-{
-    // The wx24_value was used in a wxWidgets 2.4(.2)
-    // application to produce wx24_data, using wxZlibOutputStream.
-    const unsigned char wx24_data[] = {120,156,242,72,205,201,201,87,40,207,47,202,73,97,0,0,0,0,255,255,0};
-    const char *wx24_value = "Hello world";
-    // Size of the value and date items.
-    const size_t data_size = sizeof(wx24_data);
-    const size_t value_size = strlen(wx24_value) + 1; // +1 because the wx24 app also did this.
-
-    // Perform a generic data test on the data.
-    doDecompress_ExternalData(wx24_data, wx24_value, data_size, value_size, wxZLIB_24COMPATIBLE);
-}
-#endif
 
 void zlibStream::Decompress_wx251_zlib114_Data_NoHeader()
 {
@@ -328,7 +321,7 @@ const unsigned char *zlibStream::GetCompressedData()
     return m_pCompressedData;
 }
 
-void zlibStream::doTestStreamData(int input_flag, int output_flag, int compress_level)
+void zlibStream::doTestStreamData(int input_flag, int output_flag, int compress_level, const wxMemoryBuffer *buf)
 {
     size_t fail_pos;
     char last_value = 0;
@@ -340,6 +333,9 @@ void zlibStream::doTestStreamData(int input_flag, int output_flag, int compress_
         {
             wxZlibOutputStream zstream_out(fstream_out, compress_level, output_flag);
             CPPUNIT_ASSERT_MESSAGE("Could not create the output stream", zstream_out.IsOk());
+
+            if (buf)
+                zstream_out.SetDictionary(*buf);
 
             // Next: Compress some data so the file is containing something.
             zstream_out.Write(GetDataBuffer(), DATABUFFER_SIZE);
@@ -356,6 +352,9 @@ void zlibStream::doTestStreamData(int input_flag, int output_flag, int compress_
         CPPUNIT_ASSERT(fstream_in.IsOk());
         wxZlibInputStream zstream_in(fstream_in, input_flag);
         CPPUNIT_ASSERT_MESSAGE("Could not create the input stream", zstream_in.IsOk());
+
+        if (buf)
+            zstream_in.SetDictionary(*buf);
 
         // Next: Check char per char if the returned data is valid.
         const char *pbuf = GetDataBuffer();
@@ -377,10 +376,10 @@ void zlibStream::doTestStreamData(int input_flag, int output_flag, int compress_
     if (fail_pos != DATABUFFER_SIZE || !bWasEOF)
     {
         wxString msg;
-        msg << _T("Wrong data item at pos ") << fail_pos
-            << _T(" (Org_val ") << GetDataBuffer()[fail_pos]
-            << _T(" != Zlib_val ") << last_value
-            << _T("), with compression level ") << compress_level;
+        msg << wxT("Wrong data item at pos ") << fail_pos
+            << wxT(" (Org_val ") << GetDataBuffer()[fail_pos]
+            << wxT(" != Zlib_val ") << last_value
+            << wxT("), with compression level ") << compress_level;
         CPPUNIT_FAIL(string(msg.mb_str()));
     }
 }
@@ -398,23 +397,26 @@ void zlibStream::doDecompress_ExternalData(const unsigned char *data, const char
     {
     case wxZLIB_NO_HEADER:
         break;
-#if WXWIN_COMPATIBILITY_2_4
-    case wxZLIB_24COMPATIBLE:
-#endif
     case wxZLIB_ZLIB:
         if (!(data_size >= 1 && data[0] == 0x78))
-            wxLogError(_T("zlib data seems to not be zlib data!"));
+        {
+            wxLogError(wxT("zlib data seems to not be zlib data!"));
+        }
         break;
     case wxZLIB_GZIP:
         if (!(data_size >= 2 && data[0] == 0x1F && data[1] == 0x8B))
-            wxLogError(_T("gzip data seems to not be gzip data!"));
+        {
+            wxLogError(wxT("gzip data seems to not be gzip data!"));
+        }
         break;
     case wxZLIB_AUTO:
         if (!(data_size >= 1 && data[0] == 0x78) ||
             !(data_size >= 2 && data[0] == 0x1F && data[1] == 0x8B))
-            wxLogError(_T("Data seems to not be zlib or gzip data!"));
+        {
+            wxLogError(wxT("Data seems to not be zlib or gzip data!"));
+        }
     default:
-        wxLogError(_T("Unknown flag, skipping quick test."));
+        wxLogError(wxT("Unknown flag, skipping quick test."));
     };
 
     // Creat the needed streams.
@@ -460,8 +462,8 @@ void zlibStream::doDecompress_ExternalData(const unsigned char *data, const char
 
                 // Check if we are in an infinite loop by multiplying value_size
                 // by 5 to have a *much* bigger range then the real range.
-                // Note: Incase you ask your self, why 5, the answer is no reason...
-                //       it is not to big and not to small a size, nothing more
+                // Note: In case you ask yourself, why 5, the answer is no reason...
+                //       it is not too big and not to small a size, nothing more
                 //       nothing less to it.
                 if (i > (value_size*5))
                 {
@@ -525,25 +527,25 @@ void zlibStream::genExtTestData(wxTextOutputStream &out, const char *buf, int fl
         memstream_out.CopyTo(data, size);
     }
 
-    out << _T("void zlibStream::Decompress_wxXXXData()") << _T("\n");
-    out << _T("{") << _T("\n") << _T("    const unsigned char data[] = {");
+    out << wxT("void zlibStream::Decompress_wxXXXData()") << wxT("\n");
+    out << wxT("{") << wxT("\n") << wxT("    const unsigned char data[] = {");
 
     size_t i;
     for (i = 0; i < size; i++)
     {
         if (i+1 != size)
-            out << wxString::Format(_T("%d,"), data[i]);
+            out << wxString::Format(wxT("%d,"), data[i]);
         else
-            out << wxString::Format(_T("%d"), data[i]);
+            out << wxString::Format(wxT("%d"), data[i]);
     }
     delete [] data;
 
-    out << _T("};") << _T("\n");
-    out << _T("    const char *value = \"") << wxString(buf, wxConvUTF8) << _T("\";") << _T("\n");
-    out << _T("    const size_t data_size = sizeof(data);") << _T("\n");
-    out << _T("    const size_t value_size = strlen(value);") << _T("\n");
-    out << _T("    doDecompress_ExternalData(data, value, data_size, value_size);") << _T("\n");
-    out << _T("}") << _T("\n");
+    out << wxT("};") << wxT("\n");
+    out << wxT("    const char *value = \"") << wxString(buf, wxConvUTF8) << wxT("\";") << wxT("\n");
+    out << wxT("    const size_t data_size = sizeof(data);") << wxT("\n");
+    out << wxT("    const size_t value_size = strlen(value);") << wxT("\n");
+    out << wxT("    doDecompress_ExternalData(data, value, data_size, value_size);") << wxT("\n");
+    out << wxT("}") << wxT("\n");
 }
 
 

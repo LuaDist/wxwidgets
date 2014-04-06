@@ -1,10 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        univ/button.cpp
+// Name:        src/univ/button.cpp
 // Purpose:     wxButton
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     14.08.00
-// RCS-ID:      $Id: button.cpp 42816 2006-10-31 08:50:17Z RD $
 // Copyright:   (c) 2000 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -79,8 +78,6 @@ static const wxCoord DEFAULT_BTN_MARGIN_Y = 0;
 // implementation
 // ============================================================================
 
-IMPLEMENT_DYNAMIC_CLASS(wxButton, wxControl)
-
 // ----------------------------------------------------------------------------
 // creation
 // ----------------------------------------------------------------------------
@@ -127,8 +124,8 @@ bool wxButton::Create(wxWindow *parent,
 
     SetLabel(label);
 
-    if (bitmap.Ok())
-        SetImageLabel(bitmap); // SetInitialSize called by SetImageLabel()
+    if (bitmap.IsOk())
+        SetBitmap(bitmap); // SetInitialSize called by SetBitmap()
     else
         SetInitialSize(size);
 
@@ -172,7 +169,7 @@ wxSize wxButton::DoGetBestClientSize() const
     wxCoord width, height;
     dc.GetMultiLineTextExtent(GetLabel(), &width, &height);
 
-    if ( m_bitmap.Ok() )
+    if ( m_bitmap.IsOk() )
     {
         // allocate extra space for the bitmap
         wxCoord heightBmp = m_bitmap.GetHeight() + 2*m_marginBmpY;
@@ -213,7 +210,7 @@ void wxButton::DoDraw(wxControlRenderer *renderer)
         renderer->DrawButtonBorder();
     }
 
-    renderer->DrawLabel(m_bitmap, m_marginBmpX, m_marginBmpY);
+    renderer->DrawButtonLabel(m_bitmap, m_marginBmpX, m_marginBmpY);
 }
 
 bool wxButton::DoDrawBackground(wxDC& dc)
@@ -223,7 +220,7 @@ bool wxButton::DoDrawBackground(wxDC& dc)
     rect.width = size.x;
     rect.height = size.y;
 
-    if ( GetBackgroundBitmap().Ok() )
+    if ( GetBackgroundBitmap().IsOk() )
     {
         // get the bitmap and the flags
         int alignment;
@@ -280,7 +277,7 @@ void wxButton::Toggle()
 
 void wxButton::Click()
 {
-    wxCommandEvent event(wxEVT_COMMAND_BUTTON_CLICKED, GetId());
+    wxCommandEvent event(wxEVT_BUTTON, GetId());
     InitCommandEvent(event);
     Command(event);
 }
@@ -315,14 +312,17 @@ wxInputHandler *wxButton::GetStdInputHandler(wxInputHandler *handlerDef)
 // misc
 // ----------------------------------------------------------------------------
 
-void wxButton::SetImageLabel(const wxBitmap& bitmap)
+void wxButton::DoSetBitmap(const wxBitmap& bitmap, State which)
 {
-    m_bitmap = bitmap;
+    // we support only one bitmap right now, although this wouldn't be
+    // difficult to change
+    if ( which == State_Normal )
+        m_bitmap = bitmap;
 
-    SetImageMargins(DEFAULT_BTN_MARGIN_X, DEFAULT_BTN_MARGIN_Y);
+    SetBitmapMargins(DEFAULT_BTN_MARGIN_X, DEFAULT_BTN_MARGIN_Y);
 }
 
-void wxButton::SetImageMargins(wxCoord x, wxCoord y)
+void wxButton::DoSetBitmapMargins(wxCoord x, wxCoord y)
 {
     m_marginBmpX = x + 2;
     m_marginBmpY = y + 2;
@@ -330,9 +330,11 @@ void wxButton::SetImageMargins(wxCoord x, wxCoord y)
     SetInitialSize(wxDefaultSize);
 }
 
-void wxButton::SetDefault()
+wxWindow *wxButton::SetDefault()
 {
     m_isDefault = true;
+
+    return wxButtonBase::SetDefault();
 }
 
 // ============================================================================

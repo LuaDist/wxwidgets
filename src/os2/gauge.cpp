@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/06/99
-// RCS-ID:      $Id: gauge.cpp 41193 2006-09-13 16:14:26Z ABX $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -26,8 +25,6 @@ static WXFARPROC fnWndProcGauge = (WXFARPROC)NULL;
 extern void  wxAssociateWinWithHandle( HWND         hWnd
                                       ,wxWindowOS2* pWin
                                      );
-
-IMPLEMENT_DYNAMIC_CLASS(wxGauge, wxGaugeBase)
 
 MRESULT EXPENTRY wxGaugeWndProc( HWND hWnd,
                                  UINT uMessage,

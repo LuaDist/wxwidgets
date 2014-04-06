@@ -2,7 +2,6 @@
 // Name:        src/gtk1/tooltip.cpp
 // Purpose:     wxToolTip implementation
 // Author:      Robert Roebling
-// Id:          $Id: tooltip.cpp 39021 2006-05-04 07:57:04Z ABX $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -24,7 +23,7 @@
 // global data
 //-----------------------------------------------------------------------------
 
-static GtkTooltips *ss_tooltips = (GtkTooltips*) NULL;
+static GtkTooltips *ss_tooltips = NULL;
 
 //-----------------------------------------------------------------------------
 // wxToolTip
@@ -35,7 +34,7 @@ IMPLEMENT_ABSTRACT_CLASS(wxToolTip, wxObject)
 wxToolTip::wxToolTip( const wxString &tip )
 {
     m_text = tip;
-    m_window = (wxWindow*) NULL;
+    m_window = NULL;
 }
 
 void wxToolTip::SetTip( const wxString &tip )
@@ -56,7 +55,7 @@ void wxToolTip::Apply( wxWindow *win )
     m_window = win;
 
     if (m_text.empty())
-        m_window->ApplyToolTip( ss_tooltips, (wxChar*) NULL );
+        m_window->ApplyToolTip( ss_tooltips, NULL );
     else
         m_window->ApplyToolTip( ss_tooltips, m_text );
 }
@@ -77,6 +76,14 @@ void wxToolTip::SetDelay( long msecs )
         return;
 
     gtk_tooltips_set_delay( ss_tooltips, (int)msecs );
+}
+
+void wxToolTip::SetAutoPop( long WXUNUSED(msecs) )
+{
+}
+
+void wxToolTip::SetReshow( long WXUNUSED(msecs) )
+{
 }
 
 #endif

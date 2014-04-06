@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     2003-07-12
-// RCS-ID:      $Id: tbarwce.cpp 61236 2009-06-28 17:01:27Z JS $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -42,7 +41,7 @@
     #include "wx/control.h"
 #endif
 
-#if !defined(__GNUWIN32__) && !defined(__SALFORDC__)
+#if !defined(__GNUWIN32__)
     #include "malloc.h"
 #endif
 
@@ -54,6 +53,7 @@
 #include <shellapi.h>
 #if defined(WINCE_WITHOUT_COMMANDBAR)
   #include <aygshell.h>
+  #include "wx/msw/wince/resources.h"
 #endif
 #include "wx/msw/wince/missing.h"
 
@@ -96,8 +96,8 @@ public:
         m_bitmapIndex = -1;
     }
 
-    wxToolMenuBarTool(wxToolBar *tbar, wxControl *control)
-        : wxToolBarToolBase(tbar, control)
+    wxToolMenuBarTool(wxToolBar *tbar, wxControl *control, const wxString& label)
+        : wxToolBarToolBase(tbar, control, label)
     {
         m_nSepCount = 1;
         m_bitmapIndex = -1;
@@ -151,9 +151,10 @@ wxToolBarToolBase *wxToolMenuBar::CreateTool(int id,
                              clientData, shortHelp, longHelp);
 }
 
-wxToolBarToolBase *wxToolMenuBar::CreateTool(wxControl *control)
+wxToolBarToolBase *
+wxToolMenuBar::CreateTool(wxControl *control, const wxString& label)
 {
-    return new wxToolMenuBarTool(this, control);
+    return new wxToolMenuBarTool(this, control, label);
 }
 
 // ----------------------------------------------------------------------------
@@ -191,38 +192,34 @@ bool wxToolMenuBar::Create(wxWindow *parent,
     return true;
 }
 
-bool wxToolMenuBar::MSWCreateToolbar(const wxPoint& WXUNUSED(pos), const wxSize& WXUNUSED(size), wxMenuBar* menuBar)
+bool wxToolMenuBar::MSWCreateToolbar(const wxPoint& WXUNUSED(pos),
+                                     const wxSize& WXUNUSED(size),
+                                     wxMenuBar *menuBar)
 {
     SetMenuBar(menuBar);
     if (m_menuBar)
         m_menuBar->SetToolBar(this);
 
-#if defined(WINCE_WITHOUT_COMMANDBAR)
-    // Create the menubar.
-    SHMENUBARINFO mbi;
+    HWND hwndParent = GetHwndOf(GetParent());
+    wxCHECK_MSG( hwndParent, false, wxT("should have valid parent HWND") );
 
-    memset (&mbi, 0, sizeof (SHMENUBARINFO));
-    mbi.cbSize     = sizeof (SHMENUBARINFO);
-    mbi.hwndParent = (HWND) GetParent()->GetHWND();
-#ifdef __SMARTPHONE__
-    mbi.nToolBarId = 5002;
-#else
-    mbi.nToolBarId = 5000;
-#endif
-    mbi.nBmpId     = 0;
-    mbi.cBmpImages = 0;
-    mbi.dwFlags = 0 ; // SHCMBF_EMPTYBAR;
+#if defined(WINCE_WITHOUT_COMMANDBAR)
+    // create the menubar.
+    WinStruct<SHMENUBARINFO> mbi;
+
+    mbi.hwndParent = hwndParent;
+    mbi.nToolBarId = wxIDM_SHMENU;
     mbi.hInstRes = wxGetInstance();
 
-    if (!SHCreateMenuBar(&mbi))
+    if ( !SHCreateMenuBar(&mbi) )
     {
-        wxFAIL_MSG( _T("SHCreateMenuBar failed") );
+        wxFAIL_MSG( wxT("SHCreateMenuBar failed") );
         return false;
     }
 
     SetHWND((WXHWND) mbi.hwndMB);
 #else
-    HWND hWnd = CommandBar_Create(wxGetInstance(), (HWND) GetParent()->GetHWND(), GetId());
+    HWND hWnd = CommandBar_Create(wxGetInstance(), hwndParent, GetId());
     SetHWND((WXHWND) hWnd);
 #endif
 
@@ -249,16 +246,14 @@ wxToolMenuBar::~wxToolMenuBar()
 // Return HMENU for the menu associated with the commandbar
 WXHMENU wxToolMenuBar::GetHMenu()
 {
-#if defined(__HANDHELDPC__)
-    return 0;
-#else
+#if !defined(__HANDHELDPC__)
     if (GetHWND())
     {
-        return (WXHMENU) (HMENU)::SendMessage((HWND) GetHWND(), SHCMBM_GETMENU, (WPARAM)0, (LPARAM)0);
+        return (WXHMENU)::SendMessage(GetHwnd(), SHCMBM_GETMENU, 0, 0);
     }
-    else
-        return 0;
 #endif
+
+    return NULL;
 }
 
 // ----------------------------------------------------------------------------
@@ -279,7 +274,7 @@ bool wxToolMenuBar::DoDeleteTool(size_t pos, wxToolBarToolBase *tool)
     // Skip over the menus
     if (GetMenuBar())
         pos += GetMenuBar()->GetMenuCount();
-        
+
     // the main difficulty we have here is with the controls in the toolbars:
     // as we (sometimes) use several separators to cover up the space used by
     // them, the indices are not the same for us and the toolbar
@@ -312,7 +307,7 @@ bool wxToolMenuBar::DoDeleteTool(size_t pos, wxToolBarToolBase *tool)
     RECT r;
     if ( !::SendMessage(GetHwnd(), TB_GETITEMRECT, pos, (LPARAM)&r) )
     {
-        wxLogLastError(_T("TB_GETITEMRECT"));
+        wxLogLastError(wxT("TB_GETITEMRECT"));
     }
 
     int width = r.right - r.left;
@@ -376,7 +371,7 @@ bool wxToolMenuBar::Realize()
 #endif // 0
 
     bool lastWasRadio = false;
-    wxToolBarToolsList::Node* node;
+    wxToolBarToolsList::compatibility_iterator node;
     for ( node = m_tools.GetFirst(); node; node = node->GetNext() )
     {
         wxToolMenuBarTool *tool = (wxToolMenuBarTool*) node->GetData();
@@ -407,7 +402,7 @@ bool wxToolMenuBar::Realize()
                     const wxString& label = tool->GetLabel();
                     if ( !label.empty() )
                     {
-                        button.iString = (int)label.c_str();
+                        button.iString = (int) wxMSW_CONV_LPCTSTR(label);
                     }
                 }
 
@@ -433,7 +428,7 @@ bool wxToolMenuBar::Realize()
                 }
 
                 int n = 0;
-                if ( bmpToUse.Ok() )
+                if ( bmpToUse.IsOk() )
                 {
                     n = ::CommandBar_AddBitmap( (HWND) GetHWND(), NULL, (int) (HBITMAP) bmpToUse.GetHBITMAP(),
                                                     1, 16, 16 );
@@ -470,7 +465,7 @@ bool wxToolMenuBar::Realize()
                         break;
 
                     default:
-                        wxFAIL_MSG( _T("unexpected toolbar button kind") );
+                        wxFAIL_MSG( wxT("unexpected toolbar button kind") );
                         // fall through
 
                     case wxITEM_NORMAL:
@@ -490,9 +485,11 @@ bool wxToolMenuBar::Realize()
     return true;
 }
 
-bool wxToolMenuBar::MSWCommand(WXUINT WXUNUSED(cmd), WXWORD id)
+bool wxToolMenuBar::MSWCommand(WXUINT WXUNUSED(cmd), WXWORD id_)
 {
-    wxToolBarToolBase *tool = FindById((int)id);
+    const int id = (signed short)id_;
+
+    wxToolBarToolBase *tool = FindById(id);
     if ( !tool )
     {
         bool checked = false;
@@ -506,7 +503,7 @@ bool wxToolMenuBar::MSWCommand(WXUINT WXUNUSED(cmd), WXWORD id)
             }
         }
 
-        wxCommandEvent event(wxEVT_COMMAND_MENU_SELECTED);
+        wxCommandEvent event(wxEVT_MENU);
         event.SetEventObject(this);
         event.SetId(id);
         event.SetInt(checked);
@@ -527,7 +524,7 @@ bool wxToolMenuBar::MSWCommand(WXUINT WXUNUSED(cmd), WXWORD id)
     if ( !tool->CanBeToggled() || tool->GetKind() != wxITEM_RADIO || toggled )
     {
         // OnLeftClick() can veto the button state change - for buttons which
-        // may be toggled only, of couse
+        // may be toggled only, of course.
         if ( !OnLeftClick((int)id, toggled) && tool->CanBeToggled() )
         {
             // revert back
@@ -646,7 +643,7 @@ void wxToolBar::DoToggleTool(wxToolBarToolBase *WXUNUSED(tool), bool WXUNUSED(to
 
 void wxToolBar::DoSetToggle(wxToolBarToolBase *WXUNUSED(tool), bool WXUNUSED(toggle))
 {
-    wxFAIL_MSG( _T("not implemented") );
+    wxFAIL_MSG( wxT("not implemented") );
 }
 
 #endif

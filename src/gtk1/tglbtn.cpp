@@ -5,9 +5,8 @@
 // Author:      John Norris, minor changes by Axel Schlueter
 // Modified by:
 // Created:     08.02.01
-// RCS-ID:      $Id: tglbtn.cpp 39185 2006-05-17 09:07:47Z ABX $
 // Copyright:   (c) 2000 Johnny C. Norris II
-// License:     wxWindows licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 // For compilers that support precompilation, includes "wx.h".
@@ -40,14 +39,14 @@ static void gtk_togglebutton_clicked_callback(GtkWidget *WXUNUSED(widget), wxTog
     if (cb->m_blockEvent) return;
 
     // Generate a wx event.
-    wxCommandEvent event(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, cb->GetId());
+    wxCommandEvent event(wxEVT_TOGGLEBUTTON, cb->GetId());
     event.SetInt(cb->GetValue());
     event.SetEventObject(cb);
-    cb->GetEventHandler()->ProcessEvent(event);
+    cb->HandleWindowEvent(event);
 }
 }
 
-DEFINE_EVENT_TYPE(wxEVT_COMMAND_TOGGLEBUTTON_CLICKED)
+wxDEFINE_EVENT( wxEVT_TOGGLEBUTTON, wxCommandEvent );
 
 // ------------------------------------------------------------------------
 // wxToggleBitmapButton
@@ -81,7 +80,7 @@ bool wxToggleBitmapButton::Create(wxWindow *parent, wxWindowID id,
     if (style & wxNO_BORDER)
        gtk_button_set_relief( GTK_BUTTON(m_widget), GTK_RELIEF_NONE );
 
-    if (m_bitmap.Ok())
+    if (m_bitmap.IsOk())
     {
         OnSetBitmap();
     }
@@ -134,9 +133,9 @@ void wxToggleBitmapButton::SetLabel(const wxBitmap& label)
 
 void wxToggleBitmapButton::OnSetBitmap()
 {
-    if (!m_bitmap.Ok()) return;
+    if (!m_bitmap.IsOk()) return;
 
-    GdkBitmap *mask = (GdkBitmap *) NULL;
+    GdkBitmap *mask = NULL;
     if (m_bitmap.GetMask()) mask = m_bitmap.GetMask()->GetBitmap();
 
     GtkWidget *child = BUTTON_CHILD(m_widget);
@@ -179,11 +178,11 @@ void wxToggleBitmapButton::OnInternalIdle()
 {
     wxCursor cursor = m_cursor;
 
-    if (g_globalCursor.Ok())
+    if (g_globalCursor.IsOk())
         cursor = g_globalCursor;
 
     GdkWindow *win = TOGGLE_BUTTON_EVENT_WIN(m_widget);
-    if ( win && cursor.Ok() )
+    if ( win && cursor.IsOk() )
     {
       /* I now set the cursor the anew in every OnInternalIdle call
          as setting the cursor in a parent window also effects the
@@ -203,7 +202,7 @@ wxSize wxToggleBitmapButton::DoGetBestSize() const
 {
     wxSize best;
 
-    if (m_bitmap.Ok())
+    if (m_bitmap.IsOk())
     {
         int border = HasFlag(wxNO_BORDER) ? 4 : 10;
         best.x = m_bitmap.GetWidth()+border;
@@ -320,11 +319,11 @@ void wxToggleButton::OnInternalIdle()
 {
     wxCursor cursor = m_cursor;
 
-    if (g_globalCursor.Ok())
+    if (g_globalCursor.IsOk())
         cursor = g_globalCursor;
 
     GdkWindow *win = TOGGLE_BUTTON_EVENT_WIN(m_widget);
-    if ( win && cursor.Ok() )
+    if ( win && cursor.IsOk() )
     {
       /* I now set the cursor the anew in every OnInternalIdle call
          as setting the cursor in a parent window also effects the

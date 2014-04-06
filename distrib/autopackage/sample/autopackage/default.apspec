@@ -1,6 +1,5 @@
 # -*-shell-script-*-
 
-# RCS-ID:  $Id: default.apspec 42250 2006-10-22 20:43:01Z VZ $
 # Author:  Francesco Montorsi <frm@users.sourceforge.net>
 # Purpose: A minimal Autopackage SPEC file which can be used as template
 #          for creating autopackages of wxWidgets-based applications.
@@ -21,7 +20,7 @@ Maintainer: The wxWidgets Developers <devel@nowhere.com>
 Packager: Anonymous <anonymous@nowhere.com>
 Summary: wxMinimal is an example minimal program based on wxGTK.
 URL: http://www.site.org/
-License: wxWindows license
+Licence: wxWindows licence
 SoftwareVersion: 1.0
 AutopackageTarget: 1.2
 Revision: 1

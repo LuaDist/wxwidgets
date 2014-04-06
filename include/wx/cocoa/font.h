@@ -1,10 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        font.h
+// Name:        wx/cocoa/font.h
 // Purpose:     wxFont class
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: font.h 49216 2007-10-18 08:23:05Z DE $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -30,7 +29,7 @@ class wxFontRefData;
 
     See the documentation in src/cocoa/font.mm for more implementatoin details.
  */
-class WXDLLEXPORT wxFont : public wxFontBase
+class WXDLLIMPEXP_CORE wxFont : public wxFontBase
 {
     friend class wxCocoaFontFactory;
 public:
@@ -38,8 +37,23 @@ public:
      */
     wxFont() { }
 
+    wxFont(const wxFontInfo& info)
+    {
+        Create(info.GetPointSize(),
+               info.GetFamily(),
+               info.GetStyle(),
+               info.GetWeight(),
+               info.IsUnderlined(),
+               info.GetFaceName(),
+               info.GetEncoding());
+
+        if ( info.IsUsingSizeInPixels() )
+            SetPixelSize(info.GetPixelSize());
+    }
+
     /*! @abstract   Platform-independent construction with individual properties
      */
+#if FUTURE_WXWIN_COMPATIBILITY_3_0
     wxFont(int size,
            int family,
            int style,
@@ -48,7 +62,30 @@ public:
            const wxString& face = wxEmptyString,
            wxFontEncoding encoding = wxFONTENCODING_DEFAULT)
     {
+        (void)Create(size, (wxFontFamily)family, (wxFontStyle)style, (wxFontWeight)weight, underlined, face, encoding);
+    }
+#endif
+    wxFont(int size,
+           wxFontFamily family,
+           wxFontStyle style,
+           wxFontWeight weight,
+           bool underlined = FALSE,
+           const wxString& face = wxEmptyString,
+           wxFontEncoding encoding = wxFONTENCODING_DEFAULT)
+    {
         (void)Create(size, family, style, weight, underlined, face, encoding);
+    }
+
+    wxFont(const wxSize& pixelSize,
+           wxFontFamily family,
+           wxFontStyle style,
+           wxFontWeight weight,
+           bool underlined = false,
+           const wxString& face = wxEmptyString,
+           wxFontEncoding encoding = wxFONTENCODING_DEFAULT)
+    {
+        Create(10, family, style, weight, underlined, face, encoding);
+        SetPixelSize(pixelSize);
     }
 
     /*! @abstract   Construction with opaque wxNativeFontInfo
@@ -66,9 +103,9 @@ public:
     // NOTE: Copy c-tor and assignment from wxObject is fine
 
     bool Create(int size,
-                int family,
-                int style,
-                int weight,
+                wxFontFamily family,
+                wxFontStyle style,
+                wxFontWeight weight,
                 bool underlined = FALSE,
                 const wxString& face = wxEmptyString,
                 wxFontEncoding encoding = wxFONTENCODING_DEFAULT);
@@ -79,21 +116,22 @@ public:
 
     // implement base class pure virtuals
     virtual int GetPointSize() const;
-    virtual int GetFamily() const;
-    virtual int GetStyle() const;
-    virtual int GetWeight() const;
+    virtual wxFontStyle GetStyle() const;
+    virtual wxFontWeight GetWeight() const;
     virtual bool GetUnderlined() const;
     virtual wxString GetFaceName() const;
     virtual wxFontEncoding GetEncoding() const;
     virtual const wxNativeFontInfo *GetNativeFontInfo() const;
 
     virtual void SetPointSize(int pointSize);
-    virtual void SetFamily(int family);
-    virtual void SetStyle(int style);
-    virtual void SetWeight(int weight);
+    virtual void SetFamily(wxFontFamily family);
+    virtual void SetStyle(wxFontStyle style);
+    virtual void SetWeight(wxFontWeight weight);
     virtual bool SetFaceName(const wxString& faceName);
     virtual void SetUnderlined(bool underlined);
     virtual void SetEncoding(wxFontEncoding encoding);
+
+    wxDECLARE_COMMON_FONT_METHODS();
 
     // implementation only from now on
     // -------------------------------
@@ -110,15 +148,6 @@ public:
     virtual bool RealizeResource();
 
 protected:
-    /*! @abstract   Helper method for COW.
-        @discussion
-        wxFont can be considered a mutable holder of an immutable opaque implementation object.
-        All methods that mutate the font should first call Unshare() to ensure that mutating
-        the implementation object does not cause another wxFont that happened to share the
-        same ref data to mutate.
-     */
-    void Unshare();
-
     /*! @abstract   Internal constructor with ref data
         @discussion
         Takes ownership of @a refData.  That is, it is assumed that refData has either just been
@@ -128,6 +157,12 @@ protected:
     explicit wxFont(wxFontRefData *refData)
     {   Create(refData); }
     bool Create(wxFontRefData *refData);
+
+    virtual wxGDIRefData *CreateGDIRefData() const;
+    virtual wxGDIRefData *CloneGDIRefData(const wxGDIRefData *data) const;
+
+    virtual wxFontFamily DoGetFamily() const;
+
 private:
     DECLARE_DYNAMIC_CLASS(wxFont)
 };

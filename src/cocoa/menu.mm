@@ -1,12 +1,11 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        src/cocoa/menu.cpp
+// Name:        src/cocoa/menu.mm
 // Purpose:     wxMenu and wxMenuBar implementation
 // Author:      David Elliott
 // Modified by:
 // Created:     2002/12/09
-// RCS-ID:      $Id: menu.mm 48107 2007-08-15 16:12:45Z DE $
 // Copyright:   (c) 2002 David Elliott
-// Licence:     wxWidgets licence
+// Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -40,8 +39,6 @@
 // ============================================================================
 // wxMenu implementation
 // ============================================================================
-
-IMPLEMENT_DYNAMIC_CLASS(wxMenu,wxEvtHandler)
 
 bool wxMenu::Create(const wxString& title, long style)
 {
@@ -115,7 +112,6 @@ void wxMenu::Cocoa_dealloc()
 // ============================================================================
 // wxMenuBar implementation
 // ============================================================================
-IMPLEMENT_DYNAMIC_CLASS(wxMenuBar,wxWindow)
 
 bool wxMenuBar::Create(long style)
 {
@@ -215,23 +211,16 @@ bool wxMenuBar::IsEnabledTop(size_t pos) const
     return false;
 }
 
-void wxMenuBar::SetLabelTop(size_t pos, const wxString& label)
+void wxMenuBar::SetMenuLabel(size_t pos, const wxString& label)
 {
 }
 
-wxString wxMenuBar::GetLabelTop(size_t pos) const
+wxString wxMenuBar::GetMenuLabel(size_t pos) const
 {
     wxMenu *menu = GetMenu(pos);
     int itemindex = [m_cocoaNSMenu indexOfItemWithSubmenu:menu->GetNSMenu()];
     wxASSERT(itemindex>=0);
     return wxStringWithNSString([[m_cocoaNSMenu itemAtIndex:itemindex] title]);
-}
-
-// Gets the original label at the top-level of the menubar
-wxString wxMenuBar::GetMenuLabel(size_t pos) const
-{
-    // TODO: restore the original mnemonics
-    return GetLabelTop(pos);
 }
 
 void wxMenuBar::Attach(wxFrame *frame)

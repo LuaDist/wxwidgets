@@ -1,10 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        sckstrm.h
+// Name:        wx/sckstrm.h
 // Purpose:     wxSocket*Stream
 // Author:      Guilhem Lavaux
 // Modified by:
 // Created:     17/07/97
-// RCS-ID:      $Id: sckstrm.h 41020 2006-09-05 20:47:48Z VZ $
 // Copyright:   (c)
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -19,50 +18,53 @@
 
 class WXDLLIMPEXP_NET wxSocketOutputStream : public wxOutputStream
 {
- public:
-  wxSocketOutputStream(wxSocketBase& s);
-  virtual ~wxSocketOutputStream();
+public:
+    wxSocketOutputStream(wxSocketBase& s);
+    virtual ~wxSocketOutputStream();
 
-  wxFileOffset SeekO( wxFileOffset WXUNUSED(pos), wxSeekMode WXUNUSED(mode) )
-    { return -1; }
-  wxFileOffset TellO() const
-    { return -1; }
+protected:
+    wxSocketBase *m_o_socket;
 
- protected:
-  wxSocketBase *m_o_socket;
+    size_t OnSysWrite(const void *buffer, size_t bufsize);
 
-  size_t OnSysWrite(const void *buffer, size_t bufsize);
+    // socket streams are both un-seekable and size-less streams:
+    wxFileOffset OnSysTell() const
+        { return wxInvalidOffset; }
+    wxFileOffset OnSysSeek(wxFileOffset WXUNUSED(pos), wxSeekMode WXUNUSED(mode))
+        { return wxInvalidOffset; }
 
-    DECLARE_NO_COPY_CLASS(wxSocketOutputStream)
+    wxDECLARE_NO_COPY_CLASS(wxSocketOutputStream);
 };
 
 class WXDLLIMPEXP_NET wxSocketInputStream : public wxInputStream
 {
- public:
-  wxSocketInputStream(wxSocketBase& s);
-  virtual ~wxSocketInputStream();
+public:
+    wxSocketInputStream(wxSocketBase& s);
+    virtual ~wxSocketInputStream();
 
-  wxFileOffset SeekI( wxFileOffset WXUNUSED(pos), wxSeekMode WXUNUSED(mode) )
-    { return -1; }
-  wxFileOffset TellI() const
-    { return -1; }
+protected:
+    wxSocketBase *m_i_socket;
 
- protected:
-  wxSocketBase *m_i_socket;
+    size_t OnSysRead(void *buffer, size_t bufsize);
 
-  size_t OnSysRead(void *buffer, size_t bufsize);
+    // socket streams are both un-seekable and size-less streams:
 
-    DECLARE_NO_COPY_CLASS(wxSocketInputStream)
+    wxFileOffset OnSysTell() const
+        { return wxInvalidOffset; }
+    wxFileOffset OnSysSeek(wxFileOffset WXUNUSED(pos), wxSeekMode WXUNUSED(mode))
+        { return wxInvalidOffset; }
+
+    wxDECLARE_NO_COPY_CLASS(wxSocketInputStream);
 };
 
 class WXDLLIMPEXP_NET wxSocketStream : public wxSocketInputStream,
                    public wxSocketOutputStream
 {
- public:
-  wxSocketStream(wxSocketBase& s);
-  virtual ~wxSocketStream();
+public:
+    wxSocketStream(wxSocketBase& s);
+    virtual ~wxSocketStream();
 
-  DECLARE_NO_COPY_CLASS(wxSocketStream)
+    wxDECLARE_NO_COPY_CLASS(wxSocketStream);
 };
 
 #endif

@@ -1,10 +1,9 @@
 /////////////////////////////////////////////////////////////////////////////
-// Name:        textctrl.h
+// Name:        wx/os2/textctrl.h
 // Purpose:     wxTextCtrl class
 // Author:      David Webster
 // Modified by:
 // Created:     10/17/99
-// RCS-ID:      $Id: textctrl.h 41754 2006-10-08 22:40:14Z VZ $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -14,7 +13,7 @@
 
 typedef int (wxCALLBACK *wxTreeCtrlCompare)(long lItem1, long lItem2, long lSortData);
 
-class WXDLLEXPORT wxTextCtrl : public wxTextCtrlBase
+class WXDLLIMPEXP_CORE wxTextCtrl : public wxTextCtrlBase
 {
 public:
     wxTextCtrl();
@@ -185,6 +184,10 @@ protected:
     bool m_bSkipUpdate;
 
 private:
+    // implement wxTextEntry pure virtual: it implements all the operations for
+    // the simple EDIT controls
+    virtual WXHWND GetEditHWND() const { return m_hWnd; }
+
     bool                            m_bIsMLE;
     DECLARE_EVENT_TABLE()
     DECLARE_DYNAMIC_CLASS(wxTextCtrl)

@@ -1,8 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////
 // Name:        src/gtk/font.cpp
-// Purpose:
+// Purpose:     wxFont for wxGTK
 // Author:      Robert Roebling
-// Id:          $Id: font.cpp 43545 2006-11-20 16:21:08Z VS $
 // Copyright:   (c) 1998 Robert Roebling and Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -24,7 +23,6 @@
     #include "wx/log.h"
     #include "wx/utils.h"
     #include "wx/settings.h"
-    #include "wx/cmndata.h"
     #include "wx/gdicmn.h"
 #endif
 
@@ -41,55 +39,39 @@
 static const int wxDEFAULT_FONT_SIZE = 12;
 
 // ----------------------------------------------------------------------------
-// wxScaledFontList: maps the font sizes to the GDK fonts for the given font
-// ----------------------------------------------------------------------------
-
-WX_DECLARE_HASH_MAP(int, GdkFont *, wxIntegerHash, wxIntegerEqual,
-                    wxScaledFontList);
-
-// ----------------------------------------------------------------------------
 // wxFontRefData
 // ----------------------------------------------------------------------------
 
-class wxFontRefData : public wxObjectRefData
+class wxFontRefData : public wxGDIRefData
 {
 public:
     // from broken down font parameters, also default ctor
     wxFontRefData(int size = -1,
-                  int family = wxFONTFAMILY_DEFAULT,
-                  int style = wxFONTSTYLE_NORMAL,
-                  int weight = wxFONTWEIGHT_NORMAL,
+                  wxFontFamily family = wxFONTFAMILY_DEFAULT,
+                  wxFontStyle style = wxFONTSTYLE_NORMAL,
+                  wxFontWeight weight = wxFONTWEIGHT_NORMAL,
                   bool underlined = false,
+                  bool strikethrough = false,
                   const wxString& faceName = wxEmptyString,
                   wxFontEncoding encoding = wxFONTENCODING_DEFAULT);
 
-    // from XFLD
-    wxFontRefData(const wxString& fontname);
+    wxFontRefData(const wxString& nativeFontInfoString);
 
     // copy ctor
     wxFontRefData( const wxFontRefData& data );
 
     virtual ~wxFontRefData();
 
-    // do we have the native font info?
-    bool HasNativeFont() const
-    {
-        // we always have a Pango font description
-        return true;
-    }
-
     // setters: all of them also take care to modify m_nativeFontInfo if we
     // have it so as to not lose the information not carried by our fields
     void SetPointSize(int pointSize);
-    void SetFamily(int family);
-    void SetStyle(int style);
-    void SetWeight(int weight);
+    void SetFamily(wxFontFamily family);
+    void SetStyle(wxFontStyle style);
+    void SetWeight(wxFontWeight weight);
     void SetUnderlined(bool underlined);
+    void SetStrikethrough(bool strikethrough);
     bool SetFaceName(const wxString& facename);
     void SetEncoding(wxFontEncoding encoding);
-
-    void SetNoAntiAliasing( bool no = true ) { m_noAA = no; }
-    bool GetNoAntiAliasing() const { return m_noAA; }
 
     // and this one also modifies all the other font data fields
     void SetNativeFontInfo(const wxNativeFontInfo& info);
@@ -97,10 +79,11 @@ public:
 protected:
     // common part of all ctors
     void Init(int pointSize,
-              int family,
-              int style,
-              int weight,
+              wxFontFamily family,
+              wxFontStyle style,
+              wxFontWeight weight,
               bool underlined,
+              bool strikethrough,
               const wxString& faceName,
               wxFontEncoding encoding);
 
@@ -108,20 +91,8 @@ protected:
     void InitFromNative();
 
 private:
-    // clear m_scaled_xfonts if any
-    void ClearGdkFonts();
-
-    int             m_pointSize;
-    int             m_family,
-                    m_style,
-                    m_weight;
-    bool            m_underlined;
-    wxString        m_faceName;
-    wxFontEncoding  m_encoding;
-    bool            m_noAA;      // No anti-aliasing
-
-    // The native font info, basicly an XFLD under GTK 1.2 and
-    // the pango font description under GTK 2.0.
+    // The native font info: basically a PangoFontDescription, plus
+    // 'underlined' and 'strikethrough' attributes not supported by Pango.
     wxNativeFontInfo m_nativeFontInfo;
 
     friend class wxFont;
@@ -134,151 +105,77 @@ private:
 // ----------------------------------------------------------------------------
 
 void wxFontRefData::Init(int pointSize,
-                         int family,
-                         int style,
-                         int weight,
+                         wxFontFamily family,
+                         wxFontStyle style,
+                         wxFontWeight weight,
                          bool underlined,
+                         bool strikethrough,
                          const wxString& faceName,
-                         wxFontEncoding encoding)
+                         wxFontEncoding WXUNUSED(encoding))
 {
-    m_family = family == wxFONTFAMILY_DEFAULT ? wxFONTFAMILY_SWISS : family;
-
-    m_faceName = faceName;
-
-    // we accept both wxDEFAULT and wxNORMAL here - should we?
-    m_style = style == wxDEFAULT ? wxFONTSTYLE_NORMAL : style;
-    m_weight = weight == wxDEFAULT ? wxFONTWEIGHT_NORMAL : weight;
-
-    // and here, do we really want to forbid creation of the font of the size
-    // 90 (the value of wxDEFAULT)??
-    m_pointSize = pointSize == wxDEFAULT || pointSize == -1
-                    ? wxDEFAULT_FONT_SIZE
-                    : pointSize;
-
-    m_underlined = underlined;
-    m_encoding = encoding;
-
-    m_noAA = false;
+    if (family == wxFONTFAMILY_DEFAULT)
+        family = wxFONTFAMILY_SWISS;
 
     // Create native font info
     m_nativeFontInfo.description = pango_font_description_new();
 
     // And set its values
-    if (!m_faceName.empty())
+    if (!faceName.empty())
     {
-       pango_font_description_set_family( m_nativeFontInfo.description,
-                                          wxGTK_CONV_SYS(m_faceName) );
+        pango_font_description_set_family( m_nativeFontInfo.description,
+                                           wxGTK_CONV_SYS(faceName) );
     }
     else
     {
-        switch (m_family)
-        {
-            case wxFONTFAMILY_MODERN:
-            case wxFONTFAMILY_TELETYPE:
-               pango_font_description_set_family( m_nativeFontInfo.description, "monospace" );
-               break;
-            case wxFONTFAMILY_ROMAN:
-               pango_font_description_set_family( m_nativeFontInfo.description, "serif" );
-               break;
-            case wxFONTFAMILY_SWISS:
-               // SWISS = sans serif
-            default:
-               pango_font_description_set_family( m_nativeFontInfo.description, "sans" );
-               break;
-        }
+        SetFamily(family);
     }
 
-    SetStyle( m_style );
-    SetPointSize( m_pointSize );
-    SetWeight( m_weight );
+    SetStyle( style == wxDEFAULT ? wxFONTSTYLE_NORMAL : style );
+    SetPointSize( (pointSize == wxDEFAULT || pointSize == -1)
+                    ? wxDEFAULT_FONT_SIZE
+                    : pointSize );
+    SetWeight( weight == wxDEFAULT ? wxFONTWEIGHT_NORMAL : weight );
+    SetUnderlined( underlined );
+    SetStrikethrough( strikethrough );
 }
 
 void wxFontRefData::InitFromNative()
 {
-    m_noAA = false;
-
     // Get native info
     PangoFontDescription *desc = m_nativeFontInfo.description;
-
-    // init fields
-    m_faceName = wxGTK_CONV_BACK( pango_font_description_get_family( desc ) );
 
     // Pango sometimes needs to have a size
     int pango_size = pango_font_description_get_size( desc );
     if (pango_size == 0)
-        m_nativeFontInfo.SetPointSize(12);
-
-    m_pointSize = m_nativeFontInfo.GetPointSize();
-    m_style = m_nativeFontInfo.GetStyle();
-    m_weight = m_nativeFontInfo.GetWeight();
-
-    if (m_faceName == wxT("monospace"))
-    {
-        m_family = wxFONTFAMILY_TELETYPE;
-    }
-    else if (m_faceName == wxT("sans"))
-    {
-        m_family = wxFONTFAMILY_SWISS;
-    }
-    else if (m_faceName == wxT("serif"))
-    {
-        m_family = wxFONTFAMILY_ROMAN;
-    }
-    else
-    {
-        m_family = wxFONTFAMILY_UNKNOWN;
-    }
-
-    // Pango description are never underlined (?)
-    m_underlined = false;
-
-    // always with GTK+ 2
-    m_encoding = wxFONTENCODING_UTF8;
+        m_nativeFontInfo.SetPointSize(wxDEFAULT_FONT_SIZE);
 }
 
 wxFontRefData::wxFontRefData( const wxFontRefData& data )
-             : wxObjectRefData()
+             : wxGDIRefData()
 {
-    m_pointSize = data.m_pointSize;
-    m_family = data.m_family;
-    m_style = data.m_style;
-    m_weight = data.m_weight;
-
-    m_underlined = data.m_underlined;
-
-    m_faceName = data.m_faceName;
-    m_encoding = data.m_encoding;
-
-    m_noAA = data.m_noAA;
-
     // Forces a copy of the internal data.  wxNativeFontInfo should probably
     // have a copy ctor and assignment operator to fix this properly but that
     // would break binary compatibility...
     m_nativeFontInfo.FromString(data.m_nativeFontInfo.ToString());
 }
 
-wxFontRefData::wxFontRefData(int size, int family, int style,
-                             int weight, bool underlined,
+wxFontRefData::wxFontRefData(int size, wxFontFamily family, wxFontStyle style,
+                             wxFontWeight weight, bool underlined, bool strikethrough,
                              const wxString& faceName,
                              wxFontEncoding encoding)
 {
-    Init(size, family, style, weight, underlined, faceName, encoding);
+    Init(size, family, style, weight, underlined, strikethrough, faceName, encoding);
 }
 
-wxFontRefData::wxFontRefData(const wxString& fontname)
+wxFontRefData::wxFontRefData(const wxString& nativeFontInfoString)
 {
-    m_nativeFontInfo.FromString( fontname );
+    m_nativeFontInfo.FromString( nativeFontInfoString );
 
     InitFromNative();
 }
 
-void wxFontRefData::ClearGdkFonts()
-{
-}
-
 wxFontRefData::~wxFontRefData()
 {
-    ClearGdkFonts();
 }
 
 // ----------------------------------------------------------------------------
@@ -287,56 +184,75 @@ wxFontRefData::~wxFontRefData()
 
 void wxFontRefData::SetPointSize(int pointSize)
 {
-    m_pointSize = pointSize;
-
     m_nativeFontInfo.SetPointSize(pointSize);
 }
 
-void wxFontRefData::SetFamily(int family)
-{
-    m_family = family;
+/*
+    NOTE: disabled because pango_font_description_set_absolute_size() and
+          wxDC::GetCharHeight() do not mix well: setting with the former a pixel
+          size of "30" makes the latter return 36...
+          Besides, we need to return GetPointSize() a point size value even if
+          SetPixelSize() was used and this would require further changes
+          (and use of pango_font_description_get_size_is_absolute in some places).
 
-    // TODO: what are we supposed to do with m_nativeFontInfo here?
+bool wxFontRefData::SetPixelSize(const wxSize& pixelSize)
+{
+    wxCHECK_MSG( pixelSize.GetWidth() >= 0 && pixelSize.GetHeight() > 0, false,
+                 "Negative values for the pixel size or zero pixel height are not allowed" );
+
+    if (wx_pango_version_check(1,8,0) != NULL ||
+        pixelSize.GetWidth() != 0)
+    {
+        // NOTE: pango_font_description_set_absolute_size() only sets the font height;
+        //       if the user set the pixel width of the font explicitly or the pango
+        //       library is too old, we cannot proceed
+        return false;
+    }
+
+    pango_font_description_set_absolute_size( m_nativeFontInfo.description,
+                                              pixelSize.GetHeight() * PANGO_SCALE );
+
+    return true;
+}
+*/
+
+void wxFontRefData::SetFamily(wxFontFamily family)
+{
+    m_nativeFontInfo.SetFamily(family);
 }
 
-void wxFontRefData::SetStyle(int style)
+void wxFontRefData::SetStyle(wxFontStyle style)
 {
-    m_style = style;
-
-    m_nativeFontInfo.SetStyle((wxFontStyle)style);
+    m_nativeFontInfo.SetStyle(style);
 }
 
-void wxFontRefData::SetWeight(int weight)
+void wxFontRefData::SetWeight(wxFontWeight weight)
 {
-    m_weight = weight;
-
-    m_nativeFontInfo.SetWeight((wxFontWeight)weight);
+    m_nativeFontInfo.SetWeight(weight);
 }
 
 void wxFontRefData::SetUnderlined(bool underlined)
 {
-    m_underlined = underlined;
+    m_nativeFontInfo.SetUnderlined(underlined);
+}
 
-    // the XLFD doesn't have "underlined" field anyhow
+void wxFontRefData::SetStrikethrough(bool strikethrough)
+{
+    m_nativeFontInfo.SetStrikethrough(strikethrough);
 }
 
 bool wxFontRefData::SetFaceName(const wxString& facename)
 {
-    m_faceName = facename;
-
     return m_nativeFontInfo.SetFaceName(facename);
 }
 
-void wxFontRefData::SetEncoding(wxFontEncoding encoding)
+void wxFontRefData::SetEncoding(wxFontEncoding WXUNUSED(encoding))
 {
-    m_encoding = encoding;
+    // with GTK+ 2 Pango always uses UTF8 internally, we cannot change it
 }
 
 void wxFontRefData::SetNativeFontInfo(const wxNativeFontInfo& info)
 {
-    // previously cached fonts shouldn't be used
-    ClearGdkFonts();
-
     m_nativeFontInfo = info;
 
     // set all the other font parameters from the native font info
@@ -347,8 +263,6 @@ void wxFontRefData::SetNativeFontInfo(const wxNativeFontInfo& info)
 // wxFont creation
 // ----------------------------------------------------------------------------
 
-IMPLEMENT_DYNAMIC_CLASS(wxFont, wxGDIObject)
-
 wxFont::wxFont(const wxNativeFontInfo& info)
 {
     Create( info.GetPointSize(),
@@ -358,20 +272,39 @@ wxFont::wxFont(const wxNativeFontInfo& info)
             info.GetUnderlined(),
             info.GetFaceName(),
             info.GetEncoding() );
+
+    if ( info.GetStrikethrough() )
+        SetStrikethrough(true);
+}
+
+wxFont::wxFont(const wxFontInfo& info)
+{
+    m_refData = new wxFontRefData(info.GetPointSize(),
+                                  info.GetFamily(),
+                                  info.GetStyle(),
+                                  info.GetWeight(),
+                                  info.IsUnderlined(),
+                                  info.IsStrikethrough(),
+                                  info.GetFaceName(),
+                                  info.GetEncoding());
+
+    wxSize pixelSize = info.GetPixelSize();
+    if ( pixelSize != wxDefaultSize )
+        SetPixelSize(pixelSize);
 }
 
 bool wxFont::Create( int pointSize,
-                     int family,
-                     int style,
-                     int weight,
+                     wxFontFamily family,
+                     wxFontStyle style,
+                     wxFontWeight weight,
                      bool underlined,
                      const wxString& face,
-                     wxFontEncoding encoding)
+                     wxFontEncoding encoding )
 {
     UnRef();
 
     m_refData = new wxFontRefData(pointSize, family, style, weight,
-                                  underlined, face, encoding);
+                                  underlined, false, face, encoding);
 
     return true;
 }
@@ -401,82 +334,69 @@ wxFont::~wxFont()
 
 int wxFont::GetPointSize() const
 {
-    wxCHECK_MSG( Ok(), 0, wxT("invalid font") );
+    wxCHECK_MSG( IsOk(), 0, wxT("invalid font") );
 
-    return M_FONTDATA->HasNativeFont() ? M_FONTDATA->m_nativeFontInfo.GetPointSize()
-                                       : M_FONTDATA->m_pointSize;
+    return M_FONTDATA->m_nativeFontInfo.GetPointSize();
 }
 
 wxString wxFont::GetFaceName() const
 {
-    wxCHECK_MSG( Ok(), wxEmptyString, wxT("invalid font") );
+    wxCHECK_MSG( IsOk(), wxEmptyString, wxT("invalid font") );
 
-    return M_FONTDATA->HasNativeFont() ? M_FONTDATA->m_nativeFontInfo.GetFaceName()
-                                       : M_FONTDATA->m_faceName;
+    return M_FONTDATA->m_nativeFontInfo.GetFaceName();
 }
 
-int wxFont::GetFamily() const
+wxFontFamily wxFont::DoGetFamily() const
 {
-    wxCHECK_MSG( Ok(), 0, wxT("invalid font") );
-
-    int ret = M_FONTDATA->m_family;
-    if (M_FONTDATA->HasNativeFont())
-        // wxNativeFontInfo::GetFamily is expensive, must not call more than once
-        ret = M_FONTDATA->m_nativeFontInfo.GetFamily();
-
-    if (ret == wxFONTFAMILY_DEFAULT)
-        ret = M_FONTDATA->m_family;
-
-    return ret;
+    return M_FONTDATA->m_nativeFontInfo.GetFamily();
 }
 
-int wxFont::GetStyle() const
+wxFontStyle wxFont::GetStyle() const
 {
-    wxCHECK_MSG( Ok(), 0, wxT("invalid font") );
+    wxCHECK_MSG( IsOk(), wxFONTSTYLE_MAX, wxT("invalid font") );
 
-    return M_FONTDATA->HasNativeFont() ? M_FONTDATA->m_nativeFontInfo.GetStyle()
-                                       : M_FONTDATA->m_style;
+    return M_FONTDATA->m_nativeFontInfo.GetStyle();
 }
 
-int wxFont::GetWeight() const
+wxFontWeight wxFont::GetWeight() const
 {
-    wxCHECK_MSG( Ok(), 0, wxT("invalid font") );
+    wxCHECK_MSG( IsOk(), wxFONTWEIGHT_MAX, wxT("invalid font") );
 
-    return M_FONTDATA->HasNativeFont() ? M_FONTDATA->m_nativeFontInfo.GetWeight()
-                                       : M_FONTDATA->m_weight;
+    return M_FONTDATA->m_nativeFontInfo.GetWeight();
 }
 
 bool wxFont::GetUnderlined() const
 {
-    wxCHECK_MSG( Ok(), false, wxT("invalid font") );
+    wxCHECK_MSG( IsOk(), false, wxT("invalid font") );
 
-    return M_FONTDATA->m_underlined;
+    return M_FONTDATA->m_nativeFontInfo.GetUnderlined();
+}
+
+bool wxFont::GetStrikethrough() const
+{
+    wxCHECK_MSG( IsOk(), false, wxT("invalid font") );
+
+    return M_FONTDATA->m_nativeFontInfo.GetStrikethrough();
 }
 
 wxFontEncoding wxFont::GetEncoding() const
 {
-    wxCHECK_MSG( Ok(), wxFONTENCODING_SYSTEM, wxT("invalid font") );
+    wxCHECK_MSG( IsOk(), wxFONTENCODING_SYSTEM, wxT("invalid font") );
 
-    return M_FONTDATA->m_encoding;
-}
-
-bool wxFont::GetNoAntiAliasing() const
-{
-    wxCHECK_MSG( Ok(), false, wxT("invalid font") );
-
-    return M_FONTDATA->m_noAA;
+    return wxFONTENCODING_UTF8;
+        // Pango always uses UTF8... see also SetEncoding()
 }
 
 const wxNativeFontInfo *wxFont::GetNativeFontInfo() const
 {
-    wxCHECK_MSG( Ok(), (wxNativeFontInfo *)NULL, wxT("invalid font") );
+    wxCHECK_MSG( IsOk(), NULL, wxT("invalid font") );
 
     return &(M_FONTDATA->m_nativeFontInfo);
 }
 
 bool wxFont::IsFixedWidth() const
 {
-    wxCHECK_MSG( Ok(), false, wxT("invalid font") );
+    wxCHECK_MSG( IsOk(), false, wxT("invalid font") );
 
     return wxFontBase::IsFixedWidth();
 }
@@ -492,21 +412,21 @@ void wxFont::SetPointSize(int pointSize)
     M_FONTDATA->SetPointSize(pointSize);
 }
 
-void wxFont::SetFamily(int family)
+void wxFont::SetFamily(wxFontFamily family)
 {
     AllocExclusive();
 
     M_FONTDATA->SetFamily(family);
 }
 
-void wxFont::SetStyle(int style)
+void wxFont::SetStyle(wxFontStyle style)
 {
     AllocExclusive();
 
     M_FONTDATA->SetStyle(style);
 }
 
-void wxFont::SetWeight(int weight)
+void wxFont::SetWeight(wxFontWeight weight)
 {
     AllocExclusive();
 
@@ -528,6 +448,13 @@ void wxFont::SetUnderlined(bool underlined)
     M_FONTDATA->SetUnderlined(underlined);
 }
 
+void wxFont::SetStrikethrough(bool strikethrough)
+{
+    AllocExclusive();
+
+    M_FONTDATA->SetStrikethrough(strikethrough);
+}
+
 void wxFont::SetEncoding(wxFontEncoding encoding)
 {
     AllocExclusive();
@@ -542,19 +469,78 @@ void wxFont::DoSetNativeFontInfo( const wxNativeFontInfo& info )
     M_FONTDATA->SetNativeFontInfo( info );
 }
 
-void wxFont::SetNoAntiAliasing( bool no )
-{
-    AllocExclusive();
-
-    M_FONTDATA->SetNoAntiAliasing( no );
-}
-
-wxObjectRefData* wxFont::CreateRefData() const
+wxGDIRefData* wxFont::CreateGDIRefData() const
 {
     return new wxFontRefData;
 }
 
-wxObjectRefData* wxFont::CloneRefData(const wxObjectRefData* data) const
+wxGDIRefData* wxFont::CloneGDIRefData(const wxGDIRefData* data) const
 {
-    return new wxFontRefData(*wx_static_cast(const wxFontRefData*, data));
+    return new wxFontRefData(*static_cast<const wxFontRefData*>(data));
+}
+
+bool wxFont::GTKSetPangoAttrs(PangoLayout* layout) const
+{
+    if (!IsOk() || !(GetUnderlined() || GetStrikethrough()))
+        return false;
+
+    PangoAttrList* attrs = pango_attr_list_new();
+    PangoAttribute* a;
+
+#ifndef __WXGTK3__
+    if (wx_pango_version_check(1,16,0))
+    {
+        // a PangoLayout which has leading/trailing spaces with underlined font
+        // is not correctly drawn by this pango version: Pango won't underline the spaces.
+        // This can be a problem; e.g. wxHTML rendering of underlined text relies on
+        // this behaviour. To workaround this problem, we use a special hack here
+        // suggested by pango maintainer Behdad Esfahbod: we prepend and append two
+        // empty space characters and give them a dummy colour attribute.
+        // This will force Pango to underline the leading/trailing spaces, too.
+
+        const char* text = pango_layout_get_text(layout);
+        const size_t n = strlen(text);
+        if ((n > 0 && text[0] == ' ') || (n > 1 && text[n - 1] == ' '))
+        {
+            wxCharBuffer buf(n + 6);
+            // copy the leading U+200C ZERO WIDTH NON-JOINER encoded in UTF8 format
+            memcpy(buf.data(), "\342\200\214", 3);
+            // copy the user string
+            memcpy(buf.data() + 3, text, n);
+            // copy the trailing U+200C ZERO WIDTH NON-JOINER encoded in UTF8 format
+            memcpy(buf.data() + 3 + n, "\342\200\214", 3);
+
+            pango_layout_set_text(layout, buf, n + 6);
+
+            // Add dummy attributes (use colour as it's invisible anyhow for 0
+            // width spaces) to ensure that the spaces in the beginning/end of the
+            // string are underlined too.
+            a = pango_attr_foreground_new(0x0057, 0x52A9, 0xD614);
+            a->start_index = 0;
+            a->end_index = 3;
+            pango_attr_list_insert(attrs, a);
+
+            a = pango_attr_foreground_new(0x0057, 0x52A9, 0xD614);
+            a->start_index = n + 3;
+            a->end_index = n + 6;
+            pango_attr_list_insert(attrs, a);
+        }
+    }
+#endif // !__WXGTK3__
+
+    if (GetUnderlined())
+    {
+        a = pango_attr_underline_new(PANGO_UNDERLINE_SINGLE);
+        pango_attr_list_insert(attrs, a);
+    }
+    if (GetStrikethrough())
+    {
+        a = pango_attr_strikethrough_new(true);
+        pango_attr_list_insert(attrs, a);
+    }
+
+    pango_layout_set_attributes(layout, attrs);
+    pango_attr_list_unref(attrs);
+
+    return true;
 }

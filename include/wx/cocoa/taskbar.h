@@ -4,7 +4,6 @@
 // Author:      David Elliott
 // Modified by:
 // Created:     2004/01/24
-// RCS-ID:      $Id: taskbar.h 35650 2005-09-23 12:56:45Z MR $
 // Copyright:   (c) 2004 David Elliott
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////
@@ -14,12 +13,12 @@
 
 #include "wx/icon.h"
 
-class WXDLLEXPORT wxIcon;
-class WXDLLEXPORT wxMenu;
+class WXDLLIMPEXP_FWD_CORE wxIcon;
+class WXDLLIMPEXP_FWD_CORE wxMenu;
 
 class wxTaskBarIconCocoaImpl;
 
-class WXDLLEXPORT wxTaskBarIcon : public wxTaskBarIconBase
+class WXDLLIMPEXP_ADV wxTaskBarIcon : public wxTaskBarIconBase
 {
     friend class wxTaskBarIconCocoaImpl;
     DECLARE_DYNAMIC_CLASS_NO_COPY(wxTaskBarIcon)

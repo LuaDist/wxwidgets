@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     01/02/97
-// RCS-ID:      $Id: filedlgwce.cpp 39651 2006-06-09 17:50:46Z ABX $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -47,6 +46,7 @@
 #include <string.h>
 
 #include "wx/filename.h"
+#include "wx/modalhook.h"
 
 // ============================================================================
 // implementation
@@ -89,8 +89,8 @@ void wxFileDialog::GetPaths(wxArrayString& paths) const
     paths.Empty();
 
     wxString dir(m_dir);
-    if ( m_dir.Last() != _T('\\') )
-        dir += _T('\\');
+    if ( m_dir.Last() != wxT('\\') )
+        dir += wxT('\\');
 
     size_t count = m_fileNames.GetCount();
     for ( size_t n = 0; n < count; n++ )
@@ -105,13 +105,15 @@ void wxFileDialog::GetPaths(wxArrayString& paths) const
 void wxFileDialog::SetPath(const wxString& path)
 {
     wxString ext;
-    wxSplitPath(path, &m_dir, &m_fileName, &ext);
+    wxFileName::SplitPath(path, &m_dir, &m_fileName, &ext);
     if ( !ext.empty() )
-        m_fileName << _T('.') << ext;
+        m_fileName << wxT('.') << ext;
 }
 
 int wxFileDialog::ShowModal()
 {
+    WX_HOOK_MODAL_DIALOG();
+
     wxWindow* parentWindow = GetParent();
     if (!parentWindow)
         parentWindow = wxTheApp->GetTopWindow();

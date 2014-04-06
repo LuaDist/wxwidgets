@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: accel.cpp 41751 2006-10-08 21:56:55Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -25,7 +24,7 @@ IMPLEMENT_DYNAMIC_CLASS(wxAcceleratorTable, wxObject)
 
 class WXDLLEXPORT wxAcceleratorRefData: public wxObjectRefData
 {
-    friend class WXDLLEXPORT wxAcceleratorTable;
+    friend class wxAcceleratorTable;
 public:
     wxAcceleratorRefData();
     virtual ~wxAcceleratorRefData();
@@ -40,19 +39,18 @@ public:
 wxAcceleratorRefData::wxAcceleratorRefData()
 {
     m_count = 0;
-    m_entries = (wxAcceleratorEntry*) NULL;
+    m_entries = NULL;
 }
 
 wxAcceleratorRefData::~wxAcceleratorRefData()
 {
-    delete[] m_entries;
-    m_entries = (wxAcceleratorEntry*) NULL;
+    wxDELETEA(m_entries);
     m_count = 0;
 }
 
 wxAcceleratorTable::wxAcceleratorTable()
 {
-    m_refData = (wxAcceleratorRefData*) NULL;
+    m_refData = NULL;
 }
 
 wxAcceleratorTable::~wxAcceleratorTable()
@@ -82,7 +80,7 @@ wxAcceleratorTable::wxAcceleratorTable(int n, const wxAcceleratorEntry entries[]
 
 bool wxAcceleratorTable::IsOk() const
 {
-    return (m_refData != (wxAcceleratorRefData*) NULL);
+    return (m_refData != NULL);
 }
 
 int wxAcceleratorTable::GetCount() const
@@ -108,8 +106,8 @@ bool wxAcceleratorEntry::MatchesEvent(const wxKeyEvent& event) const
     bool accShiftDown = ((GetFlags() & wxACCEL_SHIFT) == wxACCEL_SHIFT);
     int  accKeyCode = GetKeyCode();
     int  accKeyCode2 = GetKeyCode();
-    if (isascii(accKeyCode2))
-        accKeyCode2 = tolower(accKeyCode2);
+    if (wxIsascii(accKeyCode2))
+        accKeyCode2 = wxTolower(accKeyCode2);
 
     return ((eventAltDown == accAltDown) && (eventCtrlDown == accCtrlDown) &&
         (eventShiftDown == accShiftDown) &&

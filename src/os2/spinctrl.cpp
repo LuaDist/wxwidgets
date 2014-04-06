@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/15/99
-// RCS-ID:      $Id: spinctrl.cpp 61904 2009-09-13 15:47:25Z SN $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -39,8 +38,6 @@ extern void  wxAssociateWinWithHandle( HWND         hWnd
                                      );
 static WXFARPROC fnWndProcSpinCtrl = (WXFARPROC)NULL;
 wxArraySpins                        wxSpinCtrl::m_svAllSpins;
-
-IMPLEMENT_DYNAMIC_CLASS(wxSpinCtrl, wxControl)
 
 BEGIN_EVENT_TABLE(wxSpinCtrl, wxSpinButton)
     EVT_CHAR(wxSpinCtrl::OnChar)
@@ -299,7 +296,7 @@ wxSpinCtrl* wxSpinCtrl::GetSpinForTextCtrl(
 
     // sanity check
     wxASSERT_MSG( pSpin->m_hWndBuddy == hWndBuddy,
-                  _T("wxSpinCtrl has incorrect buddy HWND!") );
+                  wxT("wxSpinCtrl has incorrect buddy HWND!") );
 
     return pSpin;
 } // end of wxSpinCtrl::GetSpinForTextCtrl
@@ -328,7 +325,7 @@ void wxSpinCtrl::OnChar (
     {
         case WXK_RETURN:
             {
-                wxCommandEvent              vEvent( wxEVT_COMMAND_TEXT_ENTER
+                wxCommandEvent              vEvent( wxEVT_TEXT_ENTER
                                                    ,m_windowId
                                                   );
                 wxString                    sVal = wxGetWindowText(m_hWndBuddy);
@@ -336,7 +333,7 @@ void wxSpinCtrl::OnChar (
                 InitCommandEvent(vEvent);
                 vEvent.SetString(sVal);
                 vEvent.SetInt(GetValue());
-                if (GetEventHandler()->ProcessEvent(vEvent))
+                if (HandleWindowEvent(vEvent))
                     return;
                 break;
             }
@@ -354,7 +351,7 @@ void wxSpinCtrl::OnChar (
                 vEventNav.SetDirection(!rEvent.ShiftDown());
                 vEventNav.SetWindowChange(rEvent.ControlDown());
                 vEventNav.SetEventObject(this);
-                if (GetParent()->GetEventHandler()->ProcessEvent(vEventNav))
+                if (GetParent()->HandleWindowEvent(vEventNav))
                     return;
             }
             break;
@@ -370,13 +367,13 @@ void wxSpinCtrl::OnSpinChange(
   wxSpinEvent&                      rEventSpin
 )
 {
-    wxCommandEvent                  vEvent( wxEVT_COMMAND_SPINCTRL_UPDATED
+    wxCommandEvent                  vEvent( wxEVT_SPINCTRL
                                            ,GetId()
                                           );
 
     vEvent.SetEventObject(this);
     vEvent.SetInt(rEventSpin.GetPosition());
-    (void)GetEventHandler()->ProcessEvent(vEvent);
+    (void)HandleWindowEvent(vEvent);
     if (rEventSpin.GetSkipped())
     {
         vEvent.Skip();
@@ -402,14 +399,14 @@ bool wxSpinCtrl::ProcessTextCommand( WXWORD wCmd,
     {
         case SPBN_CHANGE:
         {
-            wxCommandEvent vEvent( wxEVT_COMMAND_TEXT_UPDATED, GetId() );
+            wxCommandEvent vEvent( wxEVT_TEXT, GetId() );
             vEvent.SetEventObject(this);
 
             wxString sVal = wxGetWindowText(m_hWndBuddy);
 
             vEvent.SetString(sVal);
             vEvent.SetInt(GetValue());
-            return (GetEventHandler()->ProcessEvent(vEvent));
+            return (HandleWindowEvent(vEvent));
         }
 
         case SPBN_SETFOCUS:
@@ -420,7 +417,7 @@ bool wxSpinCtrl::ProcessTextCommand( WXWORD wCmd,
                                );
 
             vEvent.SetEventObject(this);
-            return(GetEventHandler()->ProcessEvent(vEvent));
+            return(HandleWindowEvent(vEvent));
         }
         default:
             break;
@@ -459,7 +456,7 @@ void wxSpinCtrl::SetValue(
 {
     long                            lVal;
 
-    lVal = atol((char*)rsText.c_str());
+    lVal = atol(rsText.c_str());
     wxSpinButton::SetValue(lVal);
 } // end of wxSpinCtrl::SetValue
 

@@ -2,7 +2,6 @@
 // Name:        src/gtk1/menu.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: menu.cpp 48056 2007-08-13 17:33:35Z JS $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -25,6 +24,7 @@
 #endif // wxUSE_ACCEL
 
 #include "wx/gtk1/private.h"
+#include "wx/gtk1/private/mnemonics.h"
 
 #include <gdk/gdkkeysyms.h>
 
@@ -125,6 +125,7 @@ static wxString wxConvertFromGTKToWXLabel(const wxString& gtkLabel)
     return label;
 }
 
+
 //-----------------------------------------------------------------------------
 // activate message from GTK
 //-----------------------------------------------------------------------------
@@ -140,21 +141,21 @@ static void DoCommonMenuCallbackCode(wxMenu *menu, wxMenuEvent& event)
     if (handler && handler->ProcessEvent(event))
         return;
 
-    wxWindow *win = menu->GetInvokingWindow();
+    wxWindow *win = menu->GetWindow();
     if (win)
-        win->GetEventHandler()->ProcessEvent( event );
+        win->HandleWindowEvent( event );
 }
 
 extern "C" {
 
-static void gtk_menu_open_callback( GtkWidget *widget, wxMenu *menu )
+static void gtk_menu_open_callback( GtkWidget *WXUNUSED(widget), wxMenu *menu )
 {
     wxMenuEvent event(wxEVT_MENU_OPEN, -1, menu);
 
     DoCommonMenuCallbackCode(menu, event);
 }
 
-static void gtk_menu_close_callback( GtkWidget *widget, wxMenuBar *menubar )
+static void gtk_menu_close_callback( GtkWidget *WXUNUSED(widget), wxMenuBar *menubar )
 {
     if ( !menubar->GetMenuCount() )
     {
@@ -173,17 +174,14 @@ static void gtk_menu_close_callback( GtkWidget *widget, wxMenuBar *menubar )
 // wxMenuBar
 //-----------------------------------------------------------------------------
 
-IMPLEMENT_DYNAMIC_CLASS(wxMenuBar,wxWindow)
-
 void wxMenuBar::Init(size_t n, wxMenu *menus[], const wxString titles[], long style)
 {
     // the parent window is known after wxFrame::SetMenu()
     m_needParent = false;
     m_style = style;
-    m_invokingWindow = (wxWindow*) NULL;
 
-    if (!PreCreation( (wxWindow*) NULL, wxDefaultPosition, wxDefaultSize ) ||
-        !CreateBase( (wxWindow*) NULL, -1, wxDefaultPosition, wxDefaultSize, style, wxDefaultValidator, wxT("menubar") ))
+    if (!PreCreation( NULL, wxDefaultPosition, wxDefaultSize ) ||
+        !CreateBase( NULL, -1, wxDefaultPosition, wxDefaultSize, style, wxDefaultValidator, wxT("menubar") ))
     {
         wxFAIL_MSG( wxT("wxMenuBar creation failed") );
         return;
@@ -240,10 +238,8 @@ wxMenuBar::~wxMenuBar()
 {
 }
 
-static void wxMenubarUnsetInvokingWindow( wxMenu *menu, wxWindow *win )
+static void DetachFromFrame( wxMenu *menu, wxWindow *win )
 {
-    menu->SetInvokingWindow( (wxWindow*) NULL );
-
     wxWindow *top_frame = win;
     while (top_frame->GetParent() && !(top_frame->IsTopLevel()))
         top_frame = top_frame->GetParent();
@@ -256,15 +252,13 @@ static void wxMenubarUnsetInvokingWindow( wxMenu *menu, wxWindow *win )
     {
         wxMenuItem *menuitem = node->GetData();
         if (menuitem->IsSubMenu())
-            wxMenubarUnsetInvokingWindow( menuitem->GetSubMenu(), win );
+            DetachFromFrame( menuitem->GetSubMenu(), win );
         node = node->GetNext();
     }
 }
 
-static void wxMenubarSetInvokingWindow( wxMenu *menu, wxWindow *win )
+static void AttachToFrame( wxMenu *menu, wxWindow *win )
 {
-    menu->SetInvokingWindow( win );
-
     wxWindow *top_frame = win;
     while (top_frame->GetParent() && !(top_frame->IsTopLevel()))
         top_frame = top_frame->GetParent();
@@ -279,14 +273,15 @@ static void wxMenubarSetInvokingWindow( wxMenu *menu, wxWindow *win )
     {
         wxMenuItem *menuitem = node->GetData();
         if (menuitem->IsSubMenu())
-            wxMenubarSetInvokingWindow( menuitem->GetSubMenu(), win );
+            AttachToFrame( menuitem->GetSubMenu(), win );
         node = node->GetNext();
     }
 }
 
-void wxMenuBar::SetInvokingWindow( wxWindow *win )
+void wxMenuBar::Attach( wxFrame *win )
 {
-    m_invokingWindow = win;
+    wxMenuBarBase::Attach(win);
+
     wxWindow *top_frame = win;
     while (top_frame->GetParent() && !(top_frame->IsTopLevel()))
         top_frame = top_frame->GetParent();
@@ -300,15 +295,14 @@ void wxMenuBar::SetInvokingWindow( wxWindow *win )
     while (node)
     {
         wxMenu *menu = node->GetData();
-        wxMenubarSetInvokingWindow( menu, win );
+        AttachToFrame( menu, win );
         node = node->GetNext();
     }
 }
 
-void wxMenuBar::UnsetInvokingWindow( wxWindow *win )
+void wxMenuBar::Detach()
 {
-    m_invokingWindow = (wxWindow*) NULL;
-    wxWindow *top_frame = win;
+    wxWindow *top_frame = m_menuBarFrame;
     while (top_frame->GetParent() && !(top_frame->IsTopLevel()))
         top_frame = top_frame->GetParent();
 
@@ -319,9 +313,11 @@ void wxMenuBar::UnsetInvokingWindow( wxWindow *win )
     while (node)
     {
         wxMenu *menu = node->GetData();
-        wxMenubarUnsetInvokingWindow( menu, win );
+        DetachFromFrame( menu, top_frame );
         node = node->GetNext();
     }
+
+    wxMenuBarBase::Detach();
 }
 
 bool wxMenuBar::Append( wxMenu *menu, const wxString &title )
@@ -369,11 +365,9 @@ bool wxMenuBar::GtkAppend(wxMenu *menu, const wxString& title, int pos)
                         GTK_SIGNAL_FUNC(gtk_menu_open_callback),
                         (gpointer)menu );
 
-    // m_invokingWindow is set after wxFrame::SetMenuBar(). This call enables
-    // addings menu later on.
-    if (m_invokingWindow)
+    if (m_menuBarFrame)
     {
-        wxMenubarSetInvokingWindow( menu, m_invokingWindow );
+        AttachToFrame( menu, m_menuBarFrame );
 
             // OPTIMISE ME:  we should probably cache this, or pass it
             //               directly, but for now this is a minimal
@@ -381,10 +375,7 @@ bool wxMenuBar::GtkAppend(wxMenu *menu, const wxString& title, int pos)
             //               see (and refactor :) similar code in Remove
             //               below.
 
-        wxFrame *frame = wxDynamicCast( m_invokingWindow, wxFrame );
-
-        if( frame )
-            frame->UpdateMenuBarSize();
+            m_menuBarFrame->UpdateMenuBarSize();
     }
 
     return true;
@@ -409,7 +400,7 @@ wxMenu *wxMenuBar::Replace(size_t pos, wxMenu *menu, const wxString& title)
     wxMenu *menuOld = Remove(pos);
     if ( menuOld && !Insert(pos, menu, title) )
     {
-        return (wxMenu*) NULL;
+        return NULL;
     }
 
     // either Insert() succeeded or Remove() failed and menuOld is NULL
@@ -420,7 +411,7 @@ wxMenu *wxMenuBar::Remove(size_t pos)
 {
     wxMenu *menu = wxMenuBarBase::Remove(pos);
     if ( !menu )
-        return (wxMenu*) NULL;
+        return NULL;
 
     gtk_menu_item_remove_submenu( GTK_MENU_ITEM(menu->m_owner) );
     gtk_container_remove(GTK_CONTAINER(m_menubar), menu->m_owner);
@@ -428,13 +419,10 @@ wxMenu *wxMenuBar::Remove(size_t pos)
     gtk_widget_destroy( menu->m_owner );
     menu->m_owner = NULL;
 
-    if (m_invokingWindow)
+    if (m_menuBarFrame)
     {
         // OPTIMISE ME:  see comment in GtkAppend
-        wxFrame *frame = wxDynamicCast( m_invokingWindow, wxFrame );
-
-        if( frame )
-            frame->UpdateMenuBarSize();
+        m_menuBarFrame->UpdateMenuBarSize();
     }
 
     return menu;
@@ -442,7 +430,7 @@ wxMenu *wxMenuBar::Remove(size_t pos)
 
 static int FindMenuItemRecursive( const wxMenu *menu, const wxString &menuString, const wxString &itemString )
 {
-    if (wxMenuItem::GetLabelFromText(wxConvertFromGTKToWXLabel(menu->GetTitle())) == wxMenuItem::GetLabelFromText(menuString))
+    if (wxMenuItem::GetLabelText(menu->GetTitle()) == wxMenuItem::GetLabelText(menuString))
     {
         int res = menu->FindItem( itemString );
         if (res != wxNOT_FOUND)
@@ -509,7 +497,7 @@ wxMenuItem* wxMenuBar::FindItem( int id, wxMenu **menuForItem ) const
 
     if ( menuForItem )
     {
-        *menuForItem = result ? result->GetMenu() : (wxMenu *)NULL;
+        *menuForItem = result ? result->GetMenu() : NULL;
     }
 
     return result;
@@ -527,7 +515,7 @@ void wxMenuBar::EnableTop( size_t pos, bool flag )
         gtk_widget_set_sensitive( menu->m_owner, flag );
 }
 
-wxString wxMenuBar::GetLabelTop( size_t pos ) const
+wxString wxMenuBar::GetMenuLabel( size_t pos ) const
 {
     wxMenuList::compatibility_iterator node = m_menus.Item( pos );
 
@@ -535,22 +523,10 @@ wxString wxMenuBar::GetLabelTop( size_t pos ) const
 
     wxMenu* menu = node->GetData();
 
-    return wxStripMenuCodes(wxConvertFromGTKToWXLabel(menu->GetTitle()));
+    return menu->GetTitle();
 }
 
-// Gets the original label at the top-level of the menubar
-wxString wxMenuBar::GetMenuLabel(size_t pos) const
-{
-    wxMenuList::compatibility_iterator node = m_menus.Item( pos );
-
-    wxCHECK_MSG( node, wxT("invalid"), wxT("menu not found") );
-
-    wxMenu* menu = node->GetData();
-
-    return wxConvertFromGTKToWXLabel(menu->GetTitle());
-}
-
-void wxMenuBar::SetLabelTop( size_t pos, const wxString& label )
+void wxMenuBar::SetMenuLabel( size_t pos, const wxString& label )
 {
     wxMenuList::compatibility_iterator node = m_menus.Item( pos );
 
@@ -589,8 +565,8 @@ static void gtk_menu_clicked_callback( GtkWidget *widget, wxMenu *menu )
     int id = menu->FindMenuIdByMenuItem(widget);
 
     /* should find it for normal (not popup) menu */
-    wxASSERT_MSG( (id != -1) || (menu->GetInvokingWindow() != NULL),
-                  _T("menu item not found in gtk_menu_clicked_callback") );
+    wxASSERT_MSG( (id != -1) || (menu->GetWindow() != NULL),
+                  wxT("menu item not found in gtk_menu_clicked_callback") );
 
     if (!menu->IsEnabled(id))
         return;
@@ -630,20 +606,20 @@ static void gtk_menu_clicked_callback( GtkWidget *widget, wxMenu *menu )
 
     // FIXME: why do we have to call wxFrame::GetEventHandler() directly here?
     //        normally wxMenu::SendEvent() should be enough, if it doesn't work
-    //        in wxGTK then we have a bug in wxMenu::GetInvokingWindow() which
+    //        in wxGTK then we have a bug in wxMenu::GetWindow() which
     //        should be fixed instead of working around it here...
     if (frame)
     {
         // If it is attached then let the frame send the event.
         // Don't call frame->ProcessCommand(id) because it toggles
         // checkable items and we've already done that above.
-        wxCommandEvent commandEvent(wxEVT_COMMAND_MENU_SELECTED, id);
+        wxCommandEvent commandEvent(wxEVT_MENU, id);
         commandEvent.SetEventObject(frame);
         if (item->IsCheckable())
             commandEvent.SetInt(item->IsChecked());
         commandEvent.SetEventObject(menu);
 
-        frame->GetEventHandler()->ProcessEvent(commandEvent);
+        frame->HandleWindowEvent(commandEvent);
     }
     else
     {
@@ -676,8 +652,8 @@ static void gtk_menu_hilight_callback( GtkWidget *widget, wxMenu *menu )
     if (handler && handler->ProcessEvent(event))
         return;
 
-    wxWindow *win = menu->GetInvokingWindow();
-    if (win) win->GetEventHandler()->ProcessEvent( event );
+    wxWindow *win = menu->GetWindow();
+    if (win) win->HandleWindowEvent( event );
 }
 }
 
@@ -704,17 +680,15 @@ static void gtk_menu_nolight_callback( GtkWidget *widget, wxMenu *menu )
     if (handler && handler->ProcessEvent(event))
         return;
 
-    wxWindow *win = menu->GetInvokingWindow();
+    wxWindow *win = menu->GetWindow();
     if (win)
-        win->GetEventHandler()->ProcessEvent( event );
+        win->HandleWindowEvent( event );
 }
 }
 
 //-----------------------------------------------------------------------------
 // wxMenuItem
 //-----------------------------------------------------------------------------
-
-IMPLEMENT_DYNAMIC_CLASS(wxMenuItem, wxObject)
 
 wxMenuItem *wxMenuItemBase::New(wxMenu *parentMenu,
                                 int id,
@@ -734,7 +708,7 @@ wxMenuItem::wxMenuItem(wxMenu *parentMenu,
                        wxMenu *subMenu)
           : wxMenuItemBase(parentMenu, id, text, help, kind, subMenu)
 {
-    Init(text);
+    Init();
 }
 
 wxMenuItem::wxMenuItem(wxMenu *parentMenu,
@@ -746,15 +720,15 @@ wxMenuItem::wxMenuItem(wxMenu *parentMenu,
           : wxMenuItemBase(parentMenu, id, text, help,
                            isCheckable ? wxITEM_CHECK : wxITEM_NORMAL, subMenu)
 {
-    Init(text);
+    Init();
 }
 
-void wxMenuItem::Init(const wxString& text)
+void wxMenuItem::Init()
 {
-    m_labelWidget = (GtkWidget *) NULL;
-    m_menuItem = (GtkWidget *) NULL;
+    m_labelWidget = NULL;
+    m_menuItem = NULL;
 
-    DoSetText(text);
+    DoSetText(m_text);
 }
 
 wxMenuItem::~wxMenuItem()
@@ -762,48 +736,15 @@ wxMenuItem::~wxMenuItem()
    // don't delete menu items, the menus take care of that
 }
 
-// return the menu item text without any menu accels
-/* static */
-wxString wxMenuItemBase::GetLabelFromText(const wxString& text)
+wxString wxMenuItem::GetItemLabel() const
 {
-    // The argument to this function will now always be in wxWidgets standard label
-    // format, not GTK+ format, so we do what the other ports do.
-
-    return wxStripMenuCodes(text);
-
-#if 0
-    wxString label;
-
-    for ( const wxChar *pc = text.c_str(); *pc; pc++ )
-    {
-        if ( *pc == wxT('\t'))
-            break;
-
-        if ( *pc == wxT('_') )
-        {
-            // GTK 1.2 escapes "xxx_xxx" to "xxx__xxx"
-            pc++;
-            label += *pc;
-            continue;
-        }
-
-        if ( (*pc == wxT('&')) && (*(pc+1) != wxT('&')) )
-        {
-            // wxMSW escapes "&"
-            // "&" is doubled to indicate "&" instead of accelerator
-            continue;
-        }
-
-        label += *pc;
-    }
-
-    // wxPrintf( wxT("GetLabelFromText(): text %s label %s\n"), text.c_str(), label.c_str() );
-
+    wxString label = wxConvertFromGTKToWXLabel(m_text);
+    if (!m_hotKey.IsEmpty())
+        label = label + wxT("\t") + m_hotKey;
     return label;
-#endif
 }
 
-void wxMenuItem::SetText( const wxString& string )
+void wxMenuItem::SetItemLabel( const wxString& string )
 {
     wxString str = string;
     if ( str.empty() && !IsSeparator() )
@@ -871,7 +812,9 @@ void wxMenuItem::SetText( const wxString& string )
 void wxMenuItem::DoSetText( const wxString& str )
 {
     // '\t' is the deliminator indicating a hot key
-    m_text.Empty();
+    wxString text;
+    text.reserve(str.length());
+
     const wxChar *pc = str;
     while ( (*pc != wxT('\0')) && (*pc != wxT('\t')) )
     {
@@ -879,30 +822,32 @@ void wxMenuItem::DoSetText( const wxString& str )
         {
             // "&" is doubled to indicate "&" instead of accelerator
             ++pc;
-            m_text << wxT('&');
+            text << wxT('&');
         }
         else if (*pc == wxT('&'))
         {
-            m_text << wxT('_');
+            text << wxT('_');
         }
         else if ( *pc == wxT('_') )    // escape underscores
         {
-            m_text << wxT("__");
+            text << wxT("__");
         }
         else
         {
-            m_text << *pc;
+            text << *pc;
         }
         ++pc;
     }
 
     m_hotKey = wxEmptyString;
 
-    if(*pc == wxT('\t'))
+    if ( *pc == wxT('\t') )
     {
        pc++;
        m_hotKey = pc;
     }
+
+    m_text = text;
 }
 
 #if wxUSE_ACCEL
@@ -912,7 +857,7 @@ wxAcceleratorEntry *wxMenuItem::GetAccel() const
     if ( !GetHotKey() )
     {
         // nothing
-        return (wxAcceleratorEntry *)NULL;
+        return NULL;
     }
 
     // accelerator parsing code looks for them after a TAB, so insert a dummy
@@ -942,7 +887,7 @@ void wxMenuItem::Check( bool check )
             break;
 
         default:
-            wxFAIL_MSG( _T("can't check this item") );
+            wxFAIL_MSG( wxT("can't check this item") );
     }
 }
 
@@ -964,19 +909,9 @@ bool wxMenuItem::IsChecked() const
     return ((GtkCheckMenuItem*)m_menuItem)->active != 0;
 }
 
-wxString wxMenuItem::GetItemLabel() const
-{
-    wxString label = wxConvertFromGTKToWXLabel(m_text);
-    if (!m_hotKey.IsEmpty())
-        label = label + wxT("\t") + m_hotKey;
-    return label;
-}
-
 //-----------------------------------------------------------------------------
 // wxMenu
 //-----------------------------------------------------------------------------
-
-IMPLEMENT_DYNAMIC_CLASS(wxMenu,wxEvtHandler)
 
 void wxMenu::Init()
 {
@@ -986,7 +921,7 @@ void wxMenu::Init()
     //     our back by GTK+ e.g. when it is removed from menubar:
     gtk_widget_ref(m_menu);
 
-    m_owner = (GtkWidget*) NULL;
+    m_owner = NULL;
 
     // Tearoffs are entries, just like separators. So if we want this
     // menu to be a tear-off one, we just append a tearoff entry
@@ -1023,6 +958,11 @@ wxMenu::~wxMenu()
    }
 }
 
+wxString wxMenu::GetTitle() const
+{
+    return wxConvertMnemonicsFromGTK(wxMenuBase::GetTitle());
+}
+
 bool wxMenu::GtkAppend(wxMenuItem *mitem, int pos)
 {
     GtkWidget *menuItem;
@@ -1035,9 +975,9 @@ bool wxMenu::GtkAppend(wxMenuItem *mitem, int pos)
         // TODO
         menuItem = gtk_menu_item_new();
     }
-    else if (mitem->GetBitmap().Ok())
+    else if (mitem->GetBitmap().IsOk())
     {
-        text = mitem->GetText();
+        text = mitem->wxMenuItemBase::GetItemLabel();
         const wxBitmap *bitmap = &mitem->GetBitmap();
 
         // TODO
@@ -1049,8 +989,8 @@ bool wxMenu::GtkAppend(wxMenuItem *mitem, int pos)
     }
     else // a normal item
     {
-        // text has "_" instead of "&" after mitem->SetText() so don't use it
-        text =  mitem->GetText() ;
+        // text has "_" instead of "&" after mitem->SetItemLabel() so don't use it
+        text =  mitem->wxMenuItemBase::GetItemLabel() ;
 
         switch ( mitem->GetKind() )
         {
@@ -1085,7 +1025,7 @@ bool wxMenu::GtkAppend(wxMenuItem *mitem, int pos)
             }
 
             default:
-                wxFAIL_MSG( _T("unexpected menu item kind") );
+                wxFAIL_MSG( wxT("unexpected menu item kind") );
                 // fall through
 
             case wxITEM_NORMAL:
@@ -1103,7 +1043,7 @@ bool wxMenu::GtkAppend(wxMenuItem *mitem, int pos)
     GdkModifierType accel_mods;
     wxCharBuffer buf = wxGTK_CONV( GetGtkHotKey(*mitem) );
 
-    // wxPrintf( wxT("item: %s hotkey %s\n"), mitem->GetText().c_str(), GetGtkHotKey(*mitem).c_str() );
+    // wxPrintf( wxT("item: %s hotkey %s\n"), mitem->GetItemLabel().c_str(), GetGtkHotKey(*mitem).c_str() );
     gtk_accelerator_parse( (const char*) buf, &accel_key, &accel_mods);
     if (accel_key != 0)
     {
@@ -1139,12 +1079,6 @@ bool wxMenu::GtkAppend(wxMenuItem *mitem, int pos)
             gtk_menu_item_set_submenu( GTK_MENU_ITEM(menuItem), mitem->GetSubMenu()->m_menu );
 
             gtk_widget_show( mitem->GetSubMenu()->m_menu );
-
-            // if adding a submenu to a menu already existing in the menu bar, we
-            // must set invoking window to allow processing events from this
-            // submenu
-            if ( m_invokingWindow )
-                wxMenubarSetInvokingWindow(mitem->GetSubMenu(), m_invokingWindow);
         }
         else
         {
@@ -1199,7 +1133,7 @@ wxMenuItem* wxMenu::DoInsert(size_t pos, wxMenuItem *item)
 wxMenuItem *wxMenu::DoRemove(wxMenuItem *item)
 {
     if ( !wxMenuBase::DoRemove(item) )
-        return (wxMenuItem *)NULL;
+        return NULL;
 
     // TODO: this code doesn't delete the item factory item and this seems
     //       impossible as of GTK 1.2.6.
@@ -1475,7 +1409,7 @@ static wxString GetGtkHotKey( const wxMenuItem& item )
                 if ( code < 127 )
                 {
                     wxString name = wxGTK_CONV_BACK( gdk_keyval_name((guint)code) );
-                    if ( name )
+                    if ( !name.empty() )
                     {
                         hotkey << name;
                         break;
@@ -1503,23 +1437,6 @@ extern "C" WXDLLIMPEXP_CORE
 void gtk_pop_hide_callback( GtkWidget *WXUNUSED(widget), bool* is_waiting  )
 {
     *is_waiting = false;
-}
-
-WXDLLIMPEXP_CORE void SetInvokingWindow( wxMenu *menu, wxWindow* win )
-{
-    menu->SetInvokingWindow( win );
-
-    wxMenuItemList::compatibility_iterator node = menu->GetMenuItems().GetFirst();
-    while (node)
-    {
-        wxMenuItem *menuitem = node->GetData();
-        if (menuitem->IsSubMenu())
-        {
-            SetInvokingWindow( menuitem->GetSubMenu(), win );
-        }
-
-        node = node->GetNext();
-    }
 }
 
 extern "C" WXDLLIMPEXP_CORE
@@ -1551,8 +1468,6 @@ bool wxWindowGTK::DoPopupMenu( wxMenu *menu, int x, int y )
     //       the same code in taskbar.cpp as well. This
     //       is ugly code duplication, I know.
 
-    SetInvokingWindow( menu, this );
-
     menu->UpdateUI();
 
     bool is_waiting = true;
@@ -1583,8 +1498,8 @@ bool wxWindowGTK::DoPopupMenu( wxMenu *menu, int x, int y )
 
     gtk_menu_popup(
                   GTK_MENU(menu->m_menu),
-                  (GtkWidget *) NULL,           // parent menu shell
-                  (GtkWidget *) NULL,           // parent menu item
+                  NULL,           // parent menu shell
+                  NULL,           // parent menu item
                   posfunc,                      // function to position it
                   userdata,                     // client data
                   0,                            // button used to activate it

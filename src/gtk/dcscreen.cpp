@@ -2,7 +2,6 @@
 // Name:        src/gtk/dcscreen.cpp
 // Purpose:
 // Author:      Robert Roebling
-// Id:          $Id: dcscreen.cpp 39021 2006-05-04 07:57:04Z ABX $
 // Copyright:   (c) 1998 Robert Roebling
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -10,35 +9,27 @@
 // For compilers that support precompilation, includes "wx.h".
 #include "wx/wxprec.h"
 
-#include "wx/dcscreen.h"
+#include "wx/gtk/dcscreen.h"
 
-#ifndef WX_PRECOMP
-    #include "wx/window.h"
-#endif
-
-#include <gdk/gdk.h>
-#include <gdk/gdkx.h>
 #include <gtk/gtk.h>
 
 //-----------------------------------------------------------------------------
-// global data initialization
+// wxScreenDCImpl
 //-----------------------------------------------------------------------------
 
-GdkWindow *wxScreenDC::sm_overlayWindow  = (GdkWindow*) NULL;
-int wxScreenDC::sm_overlayWindowX = 0;
-int wxScreenDC::sm_overlayWindowY = 0;
+IMPLEMENT_ABSTRACT_CLASS(wxScreenDCImpl, wxWindowDCImpl)
 
-//-----------------------------------------------------------------------------
-// wxScreenDC
-//-----------------------------------------------------------------------------
+wxScreenDCImpl::wxScreenDCImpl( wxScreenDC *owner )
+  : wxWindowDCImpl( owner )
+{
+    Init();
+}
 
-IMPLEMENT_DYNAMIC_CLASS(wxScreenDC,wxPaintDC)
-
-wxScreenDC::wxScreenDC()
+void wxScreenDCImpl::Init()
 {
     m_ok = false;
     m_cmap = gdk_colormap_get_system();
-    m_window = gdk_get_default_root_window();
+    m_gdkwindow = gdk_get_default_root_window();
 
     m_context = gdk_pango_context_get();
     // Note: The Sun customised version of Pango shipping with Solaris 10
@@ -57,32 +48,17 @@ wxScreenDC::wxScreenDC()
     gdk_gc_set_subwindow( m_bgGC, GDK_INCLUDE_INFERIORS );
 }
 
-wxScreenDC::~wxScreenDC()
+wxScreenDCImpl::~wxScreenDCImpl()
 {
+    g_object_unref(m_context);
+
     gdk_gc_set_subwindow( m_penGC, GDK_CLIP_BY_CHILDREN );
     gdk_gc_set_subwindow( m_brushGC, GDK_CLIP_BY_CHILDREN );
     gdk_gc_set_subwindow( m_textGC, GDK_CLIP_BY_CHILDREN );
     gdk_gc_set_subwindow( m_bgGC, GDK_CLIP_BY_CHILDREN );
-
-    EndDrawingOnTop();
 }
 
-bool wxScreenDC::StartDrawingOnTop( wxWindow * )
-{
-    return true;
-}
-
-bool wxScreenDC::StartDrawingOnTop( wxRect * )
-{
-    return true;
-}
-
-bool wxScreenDC::EndDrawingOnTop()
-{
-    return true;
-}
-
-void wxScreenDC::DoGetSize(int *width, int *height) const
+void wxScreenDCImpl::DoGetSize(int *width, int *height) const
 {
     wxDisplaySize(width, height);
 }

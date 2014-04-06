@@ -4,7 +4,6 @@
 // Author:      Guilhem Lavaux
 // Modified by:
 // Created:     04/22/98
-// RCS-ID:      $Id: threadno.cpp 40943 2006-08-31 19:31:43Z ABX $
 // Copyright:   (c) Wolfram Gloger (1996, 1997); Guilhem Lavaux (1998)
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -28,7 +27,9 @@ wxMutex::wxMutex()
 wxMutex::~wxMutex()
 {
     if (m_locked)
+    {
         wxLogDebug( "wxMutex warning: destroying a locked mutex (%d locks)", m_locked );
+    }
 }
 
 wxMutexError wxMutex::Lock()

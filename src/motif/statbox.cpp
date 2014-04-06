@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: statbox.cpp 50982 2008-01-01 20:38:33Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -28,8 +27,6 @@
 #endif
 
 #include "wx/motif/private.h"
-
-IMPLEMENT_DYNAMIC_CLASS(wxStaticBox, wxControl)
 
 BEGIN_EVENT_TABLE(wxStaticBox, wxControl)
 //EVT_ERASE_BACKGROUND(wxStaticBox::OnEraseBackground)
@@ -89,8 +86,9 @@ bool wxStaticBox::Create(wxWindow *parent, wxWindowID id,
     if( !CreateControl( parent, id, pos, size, style,
                         wxDefaultValidator, name ) )
         return false;
-
     m_labelWidget = (WXWidget) 0;
+    PreCreation();
+
     Widget parentWidget = (Widget) parent->GetClientWidget();
 
     m_mainWidget = XtVaCreateManagedWidget ("staticboxframe",
@@ -117,8 +115,8 @@ bool wxStaticBox::Create(wxWindow *parent, wxWindowID id,
                 NULL);
     }
 
+    PostCreation();
     AttachWidget (parent, m_mainWidget, NULL, pos.x, pos.y, size.x, size.y);
-    ChangeBackgroundColour();
 
     return true;
 }

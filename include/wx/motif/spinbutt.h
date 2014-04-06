@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: spinbutt.h 41020 2006-09-05 20:47:48Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -12,9 +11,9 @@
 #ifndef _WX_SPINBUTT_H_
 #define _WX_SPINBUTT_H_
 
-class WXDLLEXPORT wxArrowButton; // internal
+class WXDLLIMPEXP_FWD_CORE wxArrowButton; // internal
 
-class WXDLLEXPORT wxSpinButton : public wxSpinButtonBase
+class WXDLLIMPEXP_CORE wxSpinButton : public wxSpinButtonBase
 {
     DECLARE_DYNAMIC_CLASS(wxSpinButton)
 
@@ -53,7 +52,7 @@ public:
 
     // Implementation
     virtual void Command(wxCommandEvent& event)
-        { (void)ProcessCommand(event); };
+        { (void)ProcessCommand(event); }
     virtual void ChangeFont(bool keepOriginalSize = true);
     virtual void ChangeBackgroundColour();
     virtual void ChangeForegroundColour();

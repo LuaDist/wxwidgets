@@ -15,6 +15,9 @@ COMMDIR  = $(WXDIR)/src/common
 HTMLDIR  = $(WXDIR)/src/html
 RICHTEXTDIR = $(WXDIR)/src/richtext
 AUIDIR =   $(WXDIR)/src/aui
+RIBBONDIR = $(WXDIR)/src/ribbon
+PROPGRIDDIR = $(WXDIR)/src/propgrid
+STCDIR =   $(WXDIR)/src/stc
 UNIXDIR  = $(WXDIR)/src/unix
 PNGDIR   = $(WXDIR)/src/png
 JPEGDIR  = $(WXDIR)/src/jpeg
@@ -26,16 +29,15 @@ GTKDIR   = $(WXDIR)/src/gtk
 GTK1DIR  = $(WXDIR)/src/gtk1
 X11DIR   = $(WXDIR)/src/x11
 X11INC   = $(WXDIR)/include/wx/x11
-MGLDIR   = $(WXDIR)/src/mgl
 MOTIFDIR = $(WXDIR)/src/motif
 MSDOSDIR = $(WXDIR)/src/msdos
 MSWDIR   = $(WXDIR)/src/msw
 PMDIR    = $(WXDIR)/src/os2
-MACDIR   = $(WXDIR)/src/mac
+MACDIR   = $(WXDIR)/src/osx
 COCOADIR = $(WXDIR)/src/cocoa
-ODBCDIR  = $(WXDIR)/src/iodbc
 FTDIR    = $(WXDIR)/src/freetype
 INCDIR   = $(WXDIR)/include
+IFACEDIR = $(WXDIR)/interface
 SAMPDIR  = $(WXDIR)/samples
 DEMODIR  = $(WXDIR)/demos
 UTILSDIR = $(WXDIR)/utils
@@ -93,7 +95,6 @@ ALL_DIST: distrib_clean
 	$(CP_P) $(WXDIR)/setup.h_vms $(DISTDIR)
 	$(CP_P) $(WXDIR)/descrip.mms $(DISTDIR)
 	$(CP_P) $(WXDIR)/Makefile.in $(DISTDIR)
-	$(CP_P) $(WXDIR)/wxBase.spec $(DISTDIR)
 	$(CP_P) $(DOCDIR)/lgpl.txt $(DISTDIR)/COPYING.LIB
 	$(CP_P) $(DOCDIR)/licence.txt $(DISTDIR)/LICENCE.txt
 	$(CP_P) $(DOCDIR)/changes.txt $(DISTDIR)/CHANGES.txt
@@ -120,14 +121,6 @@ ALL_DIST: distrib_clean
 	$(CP_P) $(REGEXDIR)/README $(DISTDIR)/src/regex
 	$(CP_PR) $(EXPATDIR) $(DISTDIR)/src/expat
 	#(cd $(DISTDIR)/src/expat ; rm -rf `find -name CVS`)
-	mkdir $(DISTDIR)/src/iodbc
-	$(CP_P) $(ODBCDIR)/*.h $(DISTDIR)/src/iodbc
-	$(CP_P) $(ODBCDIR)/*.c $(DISTDIR)/src/iodbc
-	$(CP_P) $(ODBCDIR)/*.ci $(DISTDIR)/src/iodbc
-	$(CP_P) $(ODBCDIR)/*.exp $(DISTDIR)/src/iodbc
-	$(CP_P) $(ODBCDIR)/README $(DISTDIR)/src/iodbc
-	$(CP_P) $(ODBCDIR)/NEWS $(DISTDIR)/src/iodbc
-	$(CP_P) $(ODBCDIR)/Changes.log $(DISTDIR)/src/iodbc
 	# copy some files from include/ that are not installed:
 	mkdir $(DISTDIR)/include
 	mkdir $(DISTDIR)/include/wx
@@ -137,13 +130,18 @@ ALL_DIST: distrib_clean
 	# copy wxpresets
 	mkdir $(DISTDIR)/build
 	mkdir $(DISTDIR)/build/bakefiles
+	$(CP_P) $(WXDIR)/build/bakefiles/README $(DISTDIR)/build/bakefiles
+	$(CP_P) $(WXDIR)/build/bakefiles/*.* $(DISTDIR)/build/bakefiles
 	mkdir $(DISTDIR)/build/bakefiles/wxpresets
 	mkdir $(DISTDIR)/build/bakefiles/wxpresets/presets
-	mkdir $(DISTDIR)/build/bakefiles/wxpresets/sample
+	$(CP_P) $(WXDIR)/build/bakefiles/wxpresets/*.txt $(DISTDIR)/build/bakefiles/wxpresets
 	$(CP_P) $(WXDIR)/build/bakefiles/wxpresets/presets/*.bkl $(DISTDIR)/build/bakefiles/wxpresets/presets
+	$(CP_P) $(WXDIR)/build/bakefiles/wxpresets/presets/wx_presets.py $(DISTDIR)/build/bakefiles/wxpresets/presets
+	mkdir $(DISTDIR)/build/bakefiles/wxpresets/sample
 	$(CP_P) $(WXDIR)/build/bakefiles/wxpresets/sample/minimal* $(DISTDIR)/build/bakefiles/wxpresets/sample
 	$(CP_P) $(WXDIR)/build/bakefiles/wxpresets/sample/config* $(DISTDIR)/build/bakefiles/wxpresets/sample
-	$(CP_P) $(WXDIR)/build/bakefiles/wxpresets/*.txt $(DISTDIR)/build/bakefiles/wxpresets
+	mkdir $(DISTDIR)/build/bakefiles/wxpresets/libsample
+	$(CP_P) $(WXDIR)/build/bakefiles/wxpresets/libsample/*.* $(DISTDIR)/build/bakefiles/wxpresets/libsample
 	mkdir $(DISTDIR)/build/aclocal
 	$(CP_P) $(WXDIR)/build/aclocal/*.m4 $(DISTDIR)/build/aclocal
 
@@ -162,61 +160,121 @@ ALL_GUI_DIST: ALL_DIST
 	    mkdir $(DISTDIR)/include/wx/$(TOOLKITDIR)/private && \
 	    $(CP_P) $(INCDIR)/wx/$(TOOLKITDIR)/private/*.h $(DISTDIR)/include/wx/$(TOOLKITDIR)/private; \
 	fi
+	mkdir $(DISTDIR)/include/wx/meta
 	mkdir $(DISTDIR)/include/wx/generic
+	mkdir $(DISTDIR)/include/wx/generic/private
 	mkdir $(DISTDIR)/include/wx/html
 	mkdir $(DISTDIR)/include/wx/richtext
 	mkdir $(DISTDIR)/include/wx/aui
+	mkdir $(DISTDIR)/include/wx/ribbon
+	mkdir $(DISTDIR)/include/wx/persist
+	mkdir $(DISTDIR)/include/wx/propgrid
+	mkdir $(DISTDIR)/include/wx/stc
 	mkdir $(DISTDIR)/include/wx/protocol
 	mkdir $(DISTDIR)/include/wx/unix
+	mkdir $(DISTDIR)/include/wx/unix/private
 	mkdir $(DISTDIR)/include/wx/xml
 	mkdir $(DISTDIR)/include/wx/xrc
-	-$(CP_P) $(INCDIR)/wx/*.h $(DISTDIR)/include/wx
+	$(CP_P) $(INCDIR)/wx/*.h $(DISTDIR)/include/wx
 	$(CP_P) $(INCDIR)/wx/*.cpp $(DISTDIR)/include/wx
+	$(CP_P) $(INCDIR)/wx/meta/*.h $(DISTDIR)/include/wx/meta
 	$(CP_P) $(INCDIR)/wx/generic/*.h $(DISTDIR)/include/wx/generic
+	$(CP_P) $(INCDIR)/wx/generic/private/*.h $(DISTDIR)/include/wx/generic/private
 	$(CP_P) $(INCDIR)/wx/html/*.h $(DISTDIR)/include/wx/html
 	$(CP_P) $(INCDIR)/wx/richtext/*.h $(DISTDIR)/include/wx/richtext
 	$(CP_P) $(INCDIR)/wx/aui/*.h $(DISTDIR)/include/wx/aui
+	$(CP_P) $(INCDIR)/wx/ribbon/*.h $(DISTDIR)/include/wx/ribbon
+	$(CP_P) $(INCDIR)/wx/persist/*.h $(DISTDIR)/include/wx/persist
+	$(CP_P) $(INCDIR)/wx/propgrid/*.h $(DISTDIR)/include/wx/propgrid
+	$(CP_P) $(INCDIR)/wx/stc/*.h $(DISTDIR)/include/wx/stc
+	$(CP_P) $(INCDIR)/wx/protocol/*.h $(DISTDIR)/include/wx/protocol
 	$(CP_P) $(INCDIR)/wx/unix/*.h $(DISTDIR)/include/wx/unix
+	$(CP_P) $(INCDIR)/wx/unix/private/*.h $(DISTDIR)/include/wx/unix/private
 	$(CP_P) $(INCDIR)/wx/xml/*.h $(DISTDIR)/include/wx/xml
 	$(CP_P) $(INCDIR)/wx/xrc/*.h $(DISTDIR)/include/wx/xrc
-	$(CP_P) $(INCDIR)/wx/protocol/*.h $(DISTDIR)/include/wx/protocol
+
 	mkdir $(DISTDIR)/art
 	mkdir $(DISTDIR)/art/gtk
 	mkdir $(DISTDIR)/art/motif
 	$(CP_P) $(WXDIR)/art/*.xpm $(DISTDIR)/art
 	$(CP_P) $(WXDIR)/art/gtk/*.xpm $(DISTDIR)/art/gtk
 	$(CP_P) $(WXDIR)/art/motif/*.xpm $(DISTDIR)/art/motif
-	mkdir $(DISTDIR)/src/generic
-	mkdir $(DISTDIR)/src/html
-	mkdir $(DISTDIR)/src/richtext
-	mkdir $(DISTDIR)/src/aui
+
 	mkdir $(DISTDIR)/src/$(TOOLKITDIR)
-	mkdir $(DISTDIR)/src/png
-	mkdir $(DISTDIR)/src/jpeg
-	mkdir $(DISTDIR)/src/tiff
-	mkdir $(DISTDIR)/src/unix
-	mkdir $(DISTDIR)/src/xrc
-	$(CP_P) $(SRCDIR)/xrc/*.cpp $(DISTDIR)/src/xrc
-	-$(CP_P) $(COMMDIR)/*.cpp $(DISTDIR)/src/common
+	$(CP_P) $(COMMDIR)/*.cpp $(DISTDIR)/src/common
 	$(CP_P) $(COMMDIR)/*.c $(DISTDIR)/src/common
 	$(CP_P) $(COMMDIR)/*.inc $(DISTDIR)/src/common
 	$(CP_P) $(COMMDIR)/*.mms $(DISTDIR)/src/common
+
+	mkdir $(DISTDIR)/src/xrc
+	$(CP_P) $(SRCDIR)/xrc/*.cpp $(DISTDIR)/src/xrc
+
+	mkdir $(DISTDIR)/src/unix
 	$(CP_P) $(UNIXDIR)/*.cpp $(DISTDIR)/src/unix
 	$(CP_P) $(UNIXDIR)/*.mms $(DISTDIR)/src/unix
+
+	mkdir $(DISTDIR)/src/generic
 	$(CP_P) $(GENDIR)/*.cpp $(DISTDIR)/src/generic
 	$(CP_P) $(GENDIR)/*.mms $(DISTDIR)/src/generic
+
+	mkdir $(DISTDIR)/src/html
 	$(CP_P) $(HTMLDIR)/*.cpp $(DISTDIR)/src/html
+
+	mkdir $(DISTDIR)/src/richtext
 	$(CP_P) $(RICHTEXTDIR)/*.cpp $(DISTDIR)/src/richtext
+
+	mkdir $(DISTDIR)/src/aui
 	$(CP_P) $(AUIDIR)/*.cpp $(DISTDIR)/src/aui
-	$(CP_P) $(PNGDIR)/*.h $(DISTDIR)/src/png
-	$(CP_P) $(PNGDIR)/*.c $(DISTDIR)/src/png
-	$(CP_P) $(PNGDIR)/README $(DISTDIR)/src/png
+
+	mkdir $(DISTDIR)/src/ribbon
+	$(CP_P) $(RIBBONDIR)/*.cpp $(DISTDIR)/src/ribbon
+
+	mkdir $(DISTDIR)/src/propgrid
+	$(CP_P) $(PROPGRIDDIR)/*.cpp $(DISTDIR)/src/propgrid
+
+	mkdir $(DISTDIR)/src/stc
+	mkdir $(DISTDIR)/src/stc/scintilla
+	mkdir $(DISTDIR)/src/stc/scintilla/src
+	mkdir $(DISTDIR)/src/stc/scintilla/include
+	$(CP_P) $(STCDIR)/*.* $(DISTDIR)/src/stc
+	$(CP_P) $(STCDIR)/scintilla/src/* $(DISTDIR)/src/stc/scintilla/src
+	$(CP_P) $(STCDIR)/scintilla/include/* $(DISTDIR)/src/stc/scintilla/include
+
+	mkdir $(DISTDIR)/src/png
+	$(CP_PR) $(PNGDIR)/* $(DISTDIR)/src/png
+
+	mkdir $(DISTDIR)/src/jpeg
 	$(CP_P) $(JPEGDIR)/*.h $(DISTDIR)/src/jpeg
 	$(CP_P) $(JPEGDIR)/*.c $(DISTDIR)/src/jpeg
+	$(CP_P) $(JPEGDIR)/*.vc $(DISTDIR)/src/jpeg
+	$(CP_P) $(JPEGDIR)/makefile.* $(DISTDIR)/src/jpeg
 	$(CP_P) $(JPEGDIR)/README $(DISTDIR)/src/jpeg
-	$(CP_P) $(TIFFDIR)/*.h $(DISTDIR)/src/tiff
-	$(CP_P) $(TIFFDIR)/*.c $(DISTDIR)/src/tiff
+
+	mkdir $(DISTDIR)/src/tiff
+	mkdir $(DISTDIR)/src/tiff/config
+	mkdir $(DISTDIR)/src/tiff/contrib
+	mkdir $(DISTDIR)/src/tiff/port
+	mkdir $(DISTDIR)/src/tiff/html
+	mkdir $(DISTDIR)/src/tiff/man
+	mkdir $(DISTDIR)/src/tiff/libtiff
+	mkdir $(DISTDIR)/src/tiff/tools
+	mkdir $(DISTDIR)/src/tiff/test
+	mkdir $(DISTDIR)/src/tiff/m4
+	$(CP_P) $(TIFFDIR)/config/* $(DISTDIR)/src/tiff/config
+	$(CP_PR) $(TIFFDIR)/contrib/* $(DISTDIR)/src/tiff/contrib
+	$(CP_P) $(TIFFDIR)/port/* $(DISTDIR)/src/tiff/port
+	$(CP_PR) $(TIFFDIR)/html/* $(DISTDIR)/src/tiff/html
+	$(CP_P) $(TIFFDIR)/man/* $(DISTDIR)/src/tiff/man
+	$(CP_P) $(TIFFDIR)/tools/* $(DISTDIR)/src/tiff/tools
+	$(CP_P) $(TIFFDIR)/test/* $(DISTDIR)/src/tiff/test
+	$(CP_P) $(TIFFDIR)/libtiff/* $(DISTDIR)/src/tiff/libtiff
+	$(CP_P) $(TIFFDIR)/m4/* $(DISTDIR)/src/tiff/m4
 	$(CP_P) $(TIFFDIR)/README $(DISTDIR)/src/tiff
+	$(CP_P) $(TIFFDIR)/VERSION $(DISTDIR)/src/tiff
+	$(CP_P) $(TIFFDIR)/configure* $(DISTDIR)/src/tiff
+	$(CP_P) $(TIFFDIR)/aclocal.m4 $(DISTDIR)/src/tiff
+	$(CP_P) $(TIFFDIR)/autogen.sh $(DISTDIR)/src/tiff
+	$(CP_P) $(TIFFDIR)/Makefile* $(DISTDIR)/src/tiff
 
 BASE_DIST: ALL_DIST INTL_DIST
 	# make --disable-gui the default
@@ -235,23 +293,23 @@ BASE_DIST: ALL_DIST INTL_DIST
 	mkdir $(DISTDIR)/include/wx/html
 	mkdir $(DISTDIR)/include/wx/richtext
 	mkdir $(DISTDIR)/include/wx/aui
-	mkdir $(DISTDIR)/include/wx/mac
-	mkdir $(DISTDIR)/include/wx/mac/carbon
-	mkdir $(DISTDIR)/include/wx/mac/corefoundation
+	mkdir $(DISTDIR)/include/wx/ribbon
+	mkdir $(DISTDIR)/include/wx/persist
+	mkdir $(DISTDIR)/include/wx/propgrid
+	mkdir $(DISTDIR)/include/wx/stc
+	mkdir $(DISTDIR)/include/wx/osx
+	mkdir $(DISTDIR)/include/wx/osx/carbon
+	mkdir $(DISTDIR)/include/wx/osx/core
 	mkdir $(DISTDIR)/include/wx/os2
-	mkdir $(DISTDIR)/include/wx/palmos
 	mkdir $(DISTDIR)/src/unix
-	mkdir $(DISTDIR)/src/mac
-	mkdir $(DISTDIR)/src/mac/corefoundation
-	mkdir $(DISTDIR)/src/mac/carbon
-	mkdir $(DISTDIR)/src/mac/carbon/morefilex
+	mkdir $(DISTDIR)/src/osx
+	mkdir $(DISTDIR)/src/osx/core
+	mkdir $(DISTDIR)/src/osx/carbon
 	mkdir $(DISTDIR)/src/msdos
 	mkdir $(DISTDIR)/src/msw
 	mkdir $(DISTDIR)/src/os2
-	mkdir $(DISTDIR)/src/palmos
 	$(CP_P) $(DOCDIR)/base/readme.txt $(DISTDIR)/README.txt
 	$(CP_P) $(WXDIR)/src/common/*.inc $(DISTDIR)/src/common
-	$(CP_P) $(WXDIR)/src/common/base.rc $(DISTDIR)/src/common
 	list='$(ALL_PORTS_BASE_HEADERS)'; for p in $$list; do \
 	  $(CP_P) $(WXDIR)/include/$$p $(DISTDIR)/include/$$p; \
 	done
@@ -261,6 +319,10 @@ BASE_DIST: ALL_DIST INTL_DIST
 
 	mkdir $(DISTDIR)/samples
 	$(CP_P) $(SAMPDIR)/Makefile.in $(DISTDIR)/samples
+	$(CP_P) $(SAMPDIR)/makefile.* $(DISTDIR)/samples
+	$(CP_P) $(SAMPDIR)/Info.plist $(DISTDIR)/samples
+	$(CP_P) $(SAMPDIR)/sample.* $(DISTDIR)/samples
+	$(CP_P) $(SAMPDIR)/samples.* $(DISTDIR)/samples
 
 	mkdir $(DISTDIR)/samples/console
 	$(CP_P) $(SAMPDIR)/console/Makefile.in $(DISTDIR)/samples/console
@@ -269,29 +331,9 @@ BASE_DIST: ALL_DIST INTL_DIST
 	$(CP_P) $(SAMPDIR)/console/console.dsp $(DISTDIR)/samples/console
 	$(CP_P) $(SAMPDIR)/console/testdata.fc $(DISTDIR)/samples/console
 
-	mkdir $(DISTDIR)/utils
-	mkdir $(DISTDIR)/utils/HelpGen
-	mkdir $(DISTDIR)/utils/HelpGen/src
-	$(CP_P) $(UTILSDIR)/HelpGen/Makefile.in $(DISTDIR)/utils/HelpGen
-	$(CP_P) $(UTILSDIR)/HelpGen/src/Makefile.in $(DISTDIR)/utils/HelpGen/src
-	$(CP_P) $(UTILSDIR)/HelpGen/src/*.h $(DISTDIR)/utils/HelpGen/src
-	$(CP_P) $(UTILSDIR)/HelpGen/src/*.cpp $(DISTDIR)/utils/HelpGen/src
-
-	mkdir $(DISTDIR)/utils/tex2rtf
-	mkdir $(DISTDIR)/utils/tex2rtf/src
-	$(CP_P) $(UTILSDIR)/tex2rtf/*.in $(DISTDIR)/utils/tex2rtf
-	$(CP_P) $(UTILSDIR)/tex2rtf/src/*.h $(DISTDIR)/utils/tex2rtf/src
-	$(CP_P) $(UTILSDIR)/tex2rtf/src/*.in $(DISTDIR)/utils/tex2rtf/src
-	$(CP_P) $(UTILSDIR)/tex2rtf/src/*.cpp $(DISTDIR)/utils/tex2rtf/src
-	$(CP_P) $(UTILSDIR)/tex2rtf/src/tex2rtf.ico $(DISTDIR)/utils/tex2rtf/src
-	$(CP_P) $(UTILSDIR)/tex2rtf/src/tex2rtf.ini $(DISTDIR)/utils/tex2rtf/src
-	$(CP_P) $(UTILSDIR)/tex2rtf/src/tex2rtf.rc $(DISTDIR)/utils/tex2rtf/src
-	$(CP_P) $(UTILSDIR)/tex2rtf/src/tex2rtf.xpm $(DISTDIR)/utils/tex2rtf/src
-
 	mv $(DISTDIR) $(BASEDISTDIR)
 
 GTK_DIST: UNIV_DIST
-	$(CP_P) $(WXDIR)/wxGTK.spec $(DISTDIR)
 	$(CP_P) $(INCDIR)/wx/gtk/*.h $(DISTDIR)/include/wx/gtk
 	$(CP_P) $(GTKDIR)/*.h $(DISTDIR)/src/gtk
 	$(CP_P) $(GTKDIR)/*.cpp $(DISTDIR)/src/gtk
@@ -306,39 +348,43 @@ GTK_DIST: UNIV_DIST
 	$(CP_P) $(GTK1DIR)/*.c $(DISTDIR)/src/gtk1
 	$(CP_P) $(GTK1DIR)/*.xbm $(DISTDIR)/src/gtk1
 	$(CP_P) $(GTK1DIR)/*.mms $(DISTDIR)/src/gtk1
+	mkdir $(DISTDIR)/include/wx/x11/private
+	$(CP_P) $(INCDIR)/wx/x11/private/*.h $(DISTDIR)/include/wx/x11/private
 
 	mkdir $(DISTDIR)/include/wx/gtk/gnome
 	mkdir $(DISTDIR)/src/gtk/gnome
 	$(CP_P) $(INCDIR)/wx/gtk/gnome/*.h $(DISTDIR)/include/wx/gtk/gnome
 	$(CP_P) $(GTKDIR)/gnome/*.cpp $(DISTDIR)/src/gtk/gnome
 
-	mkdir $(DISTDIR)/src/mac
-	mkdir $(DISTDIR)/src/mac/corefoundation
-	$(CP_P) $(WXDIR)/src/mac/corefoundation/*.cpp $(DISTDIR)/src/mac/corefoundation
-	mkdir $(DISTDIR)/include/wx/mac
-	mkdir $(DISTDIR)/include/wx/mac/corefoundation
-	$(CP_P) $(WXDIR)/include/wx/mac/corefoundation/*.h $(DISTDIR)/include/wx/mac/corefoundation
+	mkdir $(DISTDIR)/include/wx/gtk/hildon
+	mkdir $(DISTDIR)/src/gtk/hildon
+	$(CP_P) $(INCDIR)/wx/gtk/hildon/*.h $(DISTDIR)/include/wx/gtk/hildon
+	$(CP_P) $(GTKDIR)/hildon/*.cpp $(DISTDIR)/src/gtk/hildon
 
-	$(CP_PR) $(WXDIR)/contrib $(DISTDIR)/contrib
+	mkdir $(DISTDIR)/src/osx
+	mkdir $(DISTDIR)/src/osx/core
+	$(CP_P) $(WXDIR)/src/osx/core/*.cpp $(DISTDIR)/src/osx/core
+	mkdir $(DISTDIR)/include/wx/osx
+	mkdir $(DISTDIR)/include/wx/osx/core
+	$(CP_P) $(WXDIR)/include/wx/osx/core/*.h $(DISTDIR)/include/wx/osx/core
 
 X11_DIST: UNIV_DIST
-	$(CP_P) $(WXDIR)/wxX11.spec $(DISTDIR)
 	$(CP_P) $(INCDIR)/wx/x11/*.h $(DISTDIR)/include/wx/x11
+	mkdir $(DISTDIR)/include/wx/x11/private
+	$(CP_P) $(INCDIR)/wx/x11/private/*.h $(DISTDIR)/include/wx/x11/private
 	mkdir $(DISTDIR)/include/wx/gtk/private
 	$(CP_P) $(INCDIR)/wx/gtk/private/string.h $(DISTDIR)/include/wx/gtk/private
 	$(CP_P) $(X11DIR)/*.cpp $(DISTDIR)/src/x11
 	$(CP_P) $(X11DIR)/*.c $(DISTDIR)/src/x11
 	$(CP_P) $(X11DIR)/*.xbm $(DISTDIR)/src/x11
-	mkdir $(DISTDIR)/src/mac
-	mkdir $(DISTDIR)/src/mac/corefoundation
-	$(CP_P) $(WXDIR)/src/mac/corefoundation/*.cpp $(DISTDIR)/src/mac/corefoundation
-	mkdir $(DISTDIR)/include/wx/mac
-	mkdir $(DISTDIR)/include/wx/mac/corefoundation
-	$(CP_P) $(WXDIR)/include/wx/mac/corefoundation/*.h $(DISTDIR)/include/wx/mac/corefoundation
-	$(CP_PR) $(WXDIR)/contrib $(DISTDIR)/contrib
+	mkdir $(DISTDIR)/src/osx
+	mkdir $(DISTDIR)/src/osx/core
+	$(CP_P) $(WXDIR)/src/osx/core/*.cpp $(DISTDIR)/src/osx/core
+	mkdir $(DISTDIR)/include/wx/osx
+	mkdir $(DISTDIR)/include/wx/osx/core
+	$(CP_P) $(WXDIR)/include/wx/osx/core/*.h $(DISTDIR)/include/wx/osx/core
 
 MOTIF_DIST: ALL_GUI_DIST
-	$(CP_P) $(WXDIR)/wxMotif.spec $(DISTDIR)
 	$(CP_P) $(INCDIR)/wx/motif/*.h $(DISTDIR)/include/wx/motif
 	$(CP_P) $(MOTIFDIR)/*.cpp $(DISTDIR)/src/motif
 	$(CP_P) $(MOTIFDIR)/*.xbm $(DISTDIR)/src/motif
@@ -354,53 +400,56 @@ MOTIF_DIST: ALL_GUI_DIST
 	$(CP_P) $(X11INC)/pen.h $(X11INC)/brush.h $(X11INC)/privx.h \
 		$(X11INC)/bitmap.h $(X11INC)/glcanvas.h $(X11INC)/private.h $(X11INC)/region.h \
 		$(DISTDIR)/include/wx/x11
-	$(CP_PR) $(WXDIR)/contrib $(DISTDIR)/contrib
+	mkdir $(DISTDIR)/include/wx/x11/private
+	$(CP_P) $(INCDIR)/wx/x11/private/*.h $(DISTDIR)/include/wx/x11/private
 
-MACX_DIST: ALL_GUI_DIST
+OSX_CARBON_DIST: ALL_GUI_DIST
 	$(CP_P) $(INCDIR)/*.* $(DISTDIR)/include
-	mkdir $(DISTDIR)/include/wx/mac/carbon
-	mkdir $(DISTDIR)/include/wx/mac/private
-	mkdir $(DISTDIR)/include/wx/mac/carbon/private
-	$(CP_P) $(INCDIR)/wx/mac/*.h $(DISTDIR)/include/wx/mac
-	$(CP_P) $(INCDIR)/wx/mac/carbon/*.h $(DISTDIR)/include/wx/mac/carbon
-	$(CP_P) $(INCDIR)/wx/mac/carbon/private/*.h $(DISTDIR)/include/wx/mac/carbon/private
-	$(CP_P) $(INCDIR)/wx/mac/private/*.h $(DISTDIR)/include/wx/mac/private
-	mkdir $(DISTDIR)/include/wx/mac/corefoundation
-	$(CP_P) $(INCDIR)/wx/mac/corefoundation/*.h $(DISTDIR)/include/wx/mac/corefoundation
-	mkdir $(DISTDIR)/src/mac/corefoundation
-	$(CP_P) $(MACDIR)/corefoundation/*.cpp $(DISTDIR)/src/mac/corefoundation
+	mkdir $(DISTDIR)/include/wx/osx/carbon
+	mkdir $(DISTDIR)/include/wx/osx/carbon/private
+	mkdir $(DISTDIR)/include/wx/osx/cocoa
+	mkdir $(DISTDIR)/include/wx/osx/iphone
+	$(CP_P) $(INCDIR)/wx/osx/*.h $(DISTDIR)/include/wx/osx
+	$(CP_P) $(INCDIR)/wx/osx/carbon/*.h $(DISTDIR)/include/wx/osx/carbon
+	$(CP_P) $(INCDIR)/wx/osx/carbon/private/*.h $(DISTDIR)/include/wx/osx/carbon/private
+	$(CP_P) $(INCDIR)/wx/osx/private/*.h $(DISTDIR)/include/wx/osx/private
+	$(CP_P) $(INCDIR)/wx/osx/cocoa/*.h $(DISTDIR)/include/wx/osx/cocoa
+	$(CP_P) $(INCDIR)/wx/osx/iphone/*.h $(DISTDIR)/include/wx/osx/iphone
+	mkdir $(DISTDIR)/include/wx/osx/core
+	mkdir $(DISTDIR)/include/wx/osx/core/private
+	$(CP_P) $(INCDIR)/wx/osx/core/*.h $(DISTDIR)/include/wx/osx/core
+	$(CP_P) $(INCDIR)/wx/osx/core/private/*.h $(DISTDIR)/include/wx/osx/core/private
+	mkdir $(DISTDIR)/src/osx/core
+	$(CP_P) $(MACDIR)/core/*.cpp $(DISTDIR)/src/osx/core
+	mkdir $(DISTDIR)/src/osx/cocoa
+	$(CP_P) $(MACDIR)/cocoa/*.mm $(DISTDIR)/src/osx/cocoa
+	mkdir $(DISTDIR)/src/osx/iphone
+	$(CP_P) $(MACDIR)/iphone/*.mm $(DISTDIR)/src/osx/iphone
 	mkdir $(DISTDIR)/src/html/htmlctrl
 	mkdir $(DISTDIR)/src/html/htmlctrl/webkit
 	$(CP_P) $(WXDIR)/src/html/htmlctrl/webkit/*.mm $(DISTDIR)/src/html/htmlctrl/webkit
-	mkdir $(DISTDIR)/src/mac/carbon
-	$(CP_P) $(MACDIR)/carbon/*.cpp $(DISTDIR)/src/mac/carbon
-	$(CP_P) $(MACDIR)/carbon/*.mm $(DISTDIR)/src/mac/carbon
-	$(CP_P) $(MACDIR)/carbon/*.icns $(DISTDIR)/src/mac/carbon
-	$(CP_P) $(MACDIR)/carbon/Info.plist.in $(DISTDIR)/src/mac/carbon
-	$(CP_P) $(MACDIR)/carbon/*.h $(DISTDIR)/src/mac/carbon
-	$(CP_P) $(MACDIR)/carbon/*.r $(DISTDIR)/src/mac/carbon
-	mkdir $(DISTDIR)/src/mac/carbon/morefile
-	$(CP_P) $(MACDIR)/carbon/morefile/*.h $(DISTDIR)/src/mac/carbon/morefile
-	$(CP_P) $(MACDIR)/carbon/morefile/*.c $(DISTDIR)/src/mac/carbon/morefile
-	mkdir $(DISTDIR)/src/mac/carbon/morefilex
-	$(CP_P) $(MACDIR)/carbon/morefilex/*.h $(DISTDIR)/src/mac/carbon/morefilex
-	$(CP_P) $(MACDIR)/carbon/morefilex/*.c $(DISTDIR)/src/mac/carbon/morefilex
-	$(CP_P) $(MACDIR)/carbon/morefilex/*.cpp $(DISTDIR)/src/mac/carbon/morefilex
-	$(CP_PR) $(WXDIR)/contrib $(DISTDIR)/contrib
+	mkdir $(DISTDIR)/src/osx/carbon
+	$(CP_P) $(MACDIR)/carbon/*.cpp $(DISTDIR)/src/osx/carbon
+	$(CP_P) $(MACDIR)/carbon/*.mm $(DISTDIR)/src/osx/carbon
+	$(CP_P) $(MACDIR)/carbon/*.icns $(DISTDIR)/src/osx/carbon
+	$(CP_P) $(MACDIR)/carbon/Info.plist.in $(DISTDIR)/src/osx/carbon
+	$(CP_P) $(MACDIR)/carbon/*.h $(DISTDIR)/src/osx/carbon
+	$(CP_P) $(MACDIR)/carbon/*.r $(DISTDIR)/src/osx/carbon
+	mkdir $(DISTDIR)/src/wxWindows.xcodeproj
+	$(CP_P) $(WXDIR)/src/wxWindows.xcodeproj/* $(DISTDIR)/src/wxWindows.xcodeproj
 
 COCOA_DIST: ALL_GUI_DIST
 	$(CP_P) $(INCDIR)/wx/cocoa/*.h $(DISTDIR)/include/wx/cocoa
 	$(CP_P) $(COCOADIR)/*.mm $(DISTDIR)/src/cocoa
 	$(CP_P) $(COCOADIR)/*.cpp $(DISTDIR)/src/cocoa
 	$(CP_P) $(COCOADIR)/*.r $(DISTDIR)/src/cocoa
-	mkdir $(DISTDIR)/include/wx/mac/corefoundation
-	$(CP_P) $(INCDIR)/wx/mac/corefoundation/*.h $(DISTDIR)/include/wx/mac/corefoundation
-	mkdir $(DISTDIR)/src/mac/corefoundation
-	$(CP_P) $(MACDIR)/corefoundation/*.cpp $(DISTDIR)/src/mac/corefoundation
-	mkdir $(DISTDIR)/src/mac/carbon
-	$(CP_P) $(MACDIR)/carbon/Info.plist.in $(DISTDIR)/src/mac/carbon
-	$(CP_P) $(MACDIR)/carbon/wxmac.icns $(DISTDIR)/src/mac/carbon
-	$(CP_PR) $(WXDIR)/contrib $(DISTDIR)/contrib
+	mkdir $(DISTDIR)/include/wx/osx/core
+	$(CP_P) $(INCDIR)/wx/osx/core/*.h $(DISTDIR)/include/wx/osx/core
+	mkdir $(DISTDIR)/src/osx/core
+	$(CP_P) $(MACDIR)/core/*.cpp $(DISTDIR)/src/osx/core
+	mkdir $(DISTDIR)/src/osx/carbon
+	$(CP_P) $(MACDIR)/carbon/Info.plist.in $(DISTDIR)/src/osx/carbon
+	$(CP_P) $(MACDIR)/carbon/wxmac.icns $(DISTDIR)/src/osx/carbon
 
 MSW_DIST: UNIV_DIST
 	mkdir $(DISTDIR)/include/wx/msw/ole
@@ -419,10 +468,11 @@ MSW_DIST: UNIV_DIST
 	$(CP_P) $(MSWDIR)/*.c $(DISTDIR)/src/msw
 	$(CP_P) $(MSWDIR)/*.rc $(DISTDIR)/src/msw
 	$(CP_P) $(MSWDIR)/ole/*.cpp $(DISTDIR)/src/msw/ole
-	$(CP_PR) $(WXDIR)/contrib $(DISTDIR)/contrib
 
 MSW_ZIP_TEXT_DIST: ALL_GUI_DIST
-	mkdir $(DISTDIR)/include/wx/msw
+	mkdir $(DISTDIR)/build/msw
+	$(CP_P) $(WXDIR)/build/msw/* $(DISTDIR)/build/msw
+	$(CP_P) $(INCDIR)/wx/msw/*.h $(DISTDIR)/include/wx/msw
 	mkdir $(DISTDIR)/include/wx/msw/ole
 	mkdir $(DISTDIR)/include/wx/msw/wince
 	$(CP_P) $(INCDIR)/wx/msw/*.h $(DISTDIR)/include/wx/msw
@@ -430,16 +480,14 @@ MSW_ZIP_TEXT_DIST: ALL_GUI_DIST
 	$(CP_P) $(INCDIR)/wx/msw/*.manifest $(DISTDIR)/include/wx/msw
 	$(CP_P) $(INCDIR)/wx/msw/ole/*.h $(DISTDIR)/include/wx/msw/ole
 	$(CP_P) $(INCDIR)/wx/msw/wince/*.h $(DISTDIR)/include/wx/msw/wince
-	mkdir $(DISTDIR)/src/msw
 	mkdir $(DISTDIR)/src/msw/ole
 	mkdir $(DISTDIR)/src/msw/wince
 	$(CP_P) $(MSWDIR)/*.cpp $(DISTDIR)/src/msw
+	$(CP_P) $(MSWDIR)/*.rc $(DISTDIR)/src/msw
 	$(CP_P) $(MSWDIR)/*.c $(DISTDIR)/src/msw
 	$(CP_P) $(MSWDIR)/ole/*.cpp $(DISTDIR)/src/msw/ole
 	$(CP_P) $(MSWDIR)/wince/*.* $(DISTDIR)/src/msw/wince
 	$(CP_P) $(SRCDIR)/*.??? $(DISTDIR)/src
-	$(CP_P) $(SRCDIR)/*.?? $(DISTDIR)/src
-	$(CP_PR) $(WXDIR)/contrib $(DISTDIR)/contrib
 
 UNIV_DIST: ALL_GUI_DIST
 	mkdir $(DISTDIR)/include/wx/univ
@@ -449,17 +497,6 @@ UNIV_DIST: ALL_GUI_DIST
 	$(CP_P) $(INCDIR)/wx/univ/setup0.h $(DISTDIR)/include/wx/univ/setup.h
 	$(CP_P) $(SRCDIR)/univ/*.cpp $(DISTDIR)/src/univ
 	$(CP_P) $(SRCDIR)/univ/themes/*.cpp $(DISTDIR)/src/univ/themes
-
-MGL_DIST: UNIV_DIST
-	$(CP_P) $(WXDIR)/wxMGL.spec $(DISTDIR)
-	$(CP_P) $(INCDIR)/wx/mgl/*.h $(DISTDIR)/include/wx/mgl
-	mkdir $(DISTDIR)/include/wx/msdos
-	$(CP_P) $(INCDIR)/wx/msdos/*.h $(DISTDIR)/include/wx/msdos
-	$(CP_P) $(SRCDIR)/mgl/make* $(DISTDIR)/src/mgl
-	$(CP_P) $(SRCDIR)/mgl/*.cpp $(DISTDIR)/src/mgl
-	mkdir $(DISTDIR)/src/msdos
-	$(CP_P) $(SRCDIR)/msdos/*.cpp $(DISTDIR)/src/msdos
-	$(CP_PR) $(WXDIR)/contrib $(DISTDIR)/contrib
 
 DEMOS_DIST: ALL_GUI_DIST
 	mkdir $(DISTDIR)/demos
@@ -474,8 +511,6 @@ DEMOS_DIST: ALL_GUI_DIST
 	$(CP_P) $(DEMODIR)/bombs/*.ico $(DISTDIR)/demos/bombs
 	$(CP_P) $(DEMODIR)/bombs/*.rc $(DISTDIR)/demos/bombs
 	$(CP_P) $(DEMODIR)/bombs/readme.txt $(DISTDIR)/demos/bombs
-
-	$(CP_PR) $(DEMODIR)/dbbrowse $(DISTDIR)/demos/dbbrowse
 
 	mkdir $(DISTDIR)/demos/forty
 	$(CP_P) $(DEMODIR)/forty/Makefile.in $(DISTDIR)/demos/forty
@@ -523,11 +558,17 @@ DEMOS_DIST: ALL_GUI_DIST
 SAMPLES_DIST: ALL_GUI_DIST
 	mkdir $(DISTDIR)/samples
 	$(CP_P) $(SAMPDIR)/Makefile.in $(DISTDIR)/samples
+	$(CP_P) $(SAMPDIR)/makefile.* $(DISTDIR)/samples
+	$(CP_P) $(SAMPDIR)/Info.plist $(DISTDIR)/samples
 	$(CP_P) $(SAMPDIR)/sample.* $(DISTDIR)/samples
+	$(CP_P) $(SAMPDIR)/samples.* $(DISTDIR)/samples
 
-	# copy files common to all samples in a general way
-	for s in `find $(SAMPDIR) $(SAMPDIR)/html $(SAMPDIR)/mobile $(SAMPDIR)/opengl \
-		    -mindepth 1 -maxdepth 1 -type d -not -name CVS`; do \
+	# copy files common to all samples in a general way (samples without
+	# Makefile.in in them are Windows-specific and shouldn't be included in
+	# Unix distribution)
+	for s in `find $(SAMPDIR) $(SAMPDIR)/html $(SAMPDIR)/opengl \
+		    -mindepth 1 -maxdepth 1 -type d -not -name .svn`; do \
+	    if [ ! -f $$s/Makefile.in ]; then continue; fi; \
 	    t="$(DISTDIR)/samples/`echo $$s | sed 's@$(SAMPDIR)/@@'`"; \
 	    mkdir -p $$t; \
 	    $(CP_P) $$s/Makefile.in \
@@ -545,10 +586,8 @@ SAMPLES_DIST: ALL_GUI_DIST
 	done
 
 	# copy the rest, not covered by the above loop
-	$(CP_P) $(SAMPDIR)/animate/hourglass.ani $(DISTDIR)/samples/hourglass.ani
+	$(CP_P) $(SAMPDIR)/animate/hourglass.ani $(DISTDIR)/samples/animate
 	$(CP_P) $(SAMPDIR)/animate/throbber.gif $(DISTDIR)/samples/animate
-
-	$(CP_P) $(SAMPDIR)/console/testdata.fc $(DISTDIR)/samples/console
 
 	$(CP_P) $(SAMPDIR)/dialogs/tips.txt $(DISTDIR)/samples/dialogs
 
@@ -590,8 +629,6 @@ SAMPLES_DIST: ALL_GUI_DIST
 
 	$(CP_P) $(SAMPDIR)/joytest/*.wav $(DISTDIR)/samples/joytest
 
-	$(CP_P) $(SAMPDIR)/mobile/styles/*.jpg $(DISTDIR)/samples/mobile/styles
-
 	$(CP_P) $(SAMPDIR)/opengl/penguin/trackball.c $(DISTDIR)/samples/opengl/penguin
 	$(CP_P) $(SAMPDIR)/opengl/penguin/*.dxf.gz $(DISTDIR)/samples/opengl/penguin
 	$(CP_P) $(SAMPDIR)/opengl/isosurf/*.gz $(DISTDIR)/samples/opengl/isosurf
@@ -607,19 +644,26 @@ SAMPLES_DIST: ALL_GUI_DIST
 	$(CP_P) $(SAMPDIR)/xrc/rc/*.xpm $(DISTDIR)/samples/xrc/rc
 	$(CP_P) $(SAMPDIR)/xrc/rc/*.xrc $(DISTDIR)/samples/xrc/rc
 	$(CP_P) $(SAMPDIR)/xrc/rc/*.gif $(DISTDIR)/samples/xrc/rc
-	$(CP_P) $(SAMPDIR)/xrc/rc/*.ico $(DISTDIR)/samples/xrc/rc
 
 UTILS_DIST: ALL_GUI_DIST
 	mkdir $(DISTDIR)/utils
 	$(CP_P) $(UTILSDIR)/Makefile.in $(DISTDIR)/utils
 
-	mkdir $(DISTDIR)/utils/tex2rtf
-	mkdir $(DISTDIR)/utils/tex2rtf/src
-	$(CP_P) $(UTILSDIR)/tex2rtf/*.in $(DISTDIR)/utils/tex2rtf
-	$(CP_P) $(UTILSDIR)/tex2rtf/src/*.h $(DISTDIR)/utils/tex2rtf/src
-	$(CP_P) $(UTILSDIR)/tex2rtf/src/*.in $(DISTDIR)/utils/tex2rtf/src
-	$(CP_P) $(UTILSDIR)/tex2rtf/src/*.cpp $(DISTDIR)/utils/tex2rtf/src
-	-$(CP_P) $(UTILSDIR)/tex2rtf/src/tex2rtf.* $(DISTDIR)/utils/tex2rtf/src
+	mkdir $(DISTDIR)/utils/screenshotgen
+	mkdir $(DISTDIR)/utils/screenshotgen/src
+	mkdir $(DISTDIR)/utils/screenshotgen/src/bitmaps
+	$(CP_P) $(UTILSDIR)/screenshotgen/README.txt $(DISTDIR)/utils/screenshotgen
+	$(CP_P) $(UTILSDIR)/screenshotgen/*.in $(DISTDIR)/utils/screenshotgen
+	$(CP_P) $(UTILSDIR)/screenshotgen/src/*.* $(DISTDIR)/utils/screenshotgen/src
+	$(CP_P) $(UTILSDIR)/screenshotgen/src/bitmaps/*.* $(DISTDIR)/utils/screenshotgen/src/bitmaps
+
+	mkdir $(DISTDIR)/utils/ifacecheck
+	mkdir $(DISTDIR)/utils/ifacecheck/src
+	$(CP_P) $(UTILSDIR)/ifacecheck/README.txt $(DISTDIR)/utils/ifacecheck
+	$(CP_P) $(UTILSDIR)/ifacecheck/*.dtd $(DISTDIR)/utils/ifacecheck
+	$(CP_P) $(UTILSDIR)/ifacecheck/*.xsl $(DISTDIR)/utils/ifacecheck
+	$(CP_P) $(UTILSDIR)/ifacecheck/*.in $(DISTDIR)/utils/ifacecheck
+	$(CP_P) $(UTILSDIR)/ifacecheck/src/* $(DISTDIR)/utils/ifacecheck/src
 
 	mkdir $(DISTDIR)/utils/emulator
 	mkdir $(DISTDIR)/utils/emulator/src
@@ -638,13 +682,6 @@ UTILS_DIST: ALL_GUI_DIST
 	$(CP_P) $(UTILSDIR)/hhp2cached/Makefile.in $(DISTDIR)/utils/hhp2cached
 	$(CP_P) $(UTILSDIR)/hhp2cached/*.cpp $(DISTDIR)/utils/hhp2cached
 	$(CP_P) $(UTILSDIR)/hhp2cached/*.rc $(DISTDIR)/utils/hhp2cached
-
-	mkdir $(DISTDIR)/utils/HelpGen
-	mkdir $(DISTDIR)/utils/HelpGen/src
-	$(CP_P) $(UTILSDIR)/HelpGen/Makefile.in $(DISTDIR)/utils/HelpGen
-	$(CP_P) $(UTILSDIR)/HelpGen/src/Makefile.in $(DISTDIR)/utils/HelpGen/src
-	$(CP_P) $(UTILSDIR)/HelpGen/src/*.h $(DISTDIR)/utils/HelpGen/src
-	$(CP_P) $(UTILSDIR)/HelpGen/src/*.cpp $(DISTDIR)/utils/HelpGen/src
 
 	mkdir $(DISTDIR)/utils/helpview
 	mkdir $(DISTDIR)/utils/helpview/src
@@ -670,7 +707,6 @@ INTL_DIST:
 	mkdir $(DISTDIR)/locale
 	$(CP_P) $(INTLDIR)/Makefile $(DISTDIR)/locale
 	$(CP_P) $(INTLDIR)/*.po $(DISTDIR)/locale
-	-$(CP_P) $(INTLDIR)/*.mo $(DISTDIR)/locale
 	subdirs=`cd $(INTLDIR) && ls */*.po | sed 's|/.*||' | uniq`; \
 	for dir in "$$subdirs"; do                                   \
 	    mkdir $(DISTDIR)/locale/$$dir;                           \
@@ -679,14 +715,53 @@ INTL_DIST:
 
 MANUAL_DIST:
 	mkdir $(DISTDIR)/docs
-	mkdir $(DISTDIR)/docs/latex
-	mkdir $(DISTDIR)/docs/latex/wx
-	$(CP_P) $(DOCDIR)/latex/wx/*.tex $(DISTDIR)/docs/latex/wx
-	$(CP_P) $(DOCDIR)/latex/wx/*.inc $(DISTDIR)/docs/latex/wx
-	$(CP_P) $(DOCDIR)/latex/wx/*.gif $(DISTDIR)/docs/latex/wx
-	$(CP_P) $(DOCDIR)/latex/wx/*.ini $(DISTDIR)/docs/latex/wx
-	$(CP_P) $(DOCDIR)/latex/wx/*.bib $(DISTDIR)/docs/latex/wx
-	$(CP_P) $(DOCDIR)/latex/wx/*.sty $(DISTDIR)/docs/latex/wx
+	mkdir $(DISTDIR)/docs/doxygen
+	mkdir $(DISTDIR)/docs/doxygen/groups
+	mkdir $(DISTDIR)/docs/doxygen/images
+	mkdir $(DISTDIR)/docs/doxygen/images/stock
+	mkdir $(DISTDIR)/docs/doxygen/images/wxgtk
+	mkdir $(DISTDIR)/docs/doxygen/images/wxmac
+	mkdir $(DISTDIR)/docs/doxygen/images/wxmsw
+	mkdir $(DISTDIR)/docs/doxygen/mainpages
+	mkdir $(DISTDIR)/docs/doxygen/overviews
+	$(CP_P) $(DOCDIR)/doxygen/* $(DISTDIR)/docs/doxygen
+	$(CP_P) $(DOCDIR)/doxygen/groups/*.h $(DISTDIR)/docs/doxygen/groups
+	$(CP_P) $(DOCDIR)/doxygen/mainpages/*.h $(DISTDIR)/docs/doxygen/mainpages
+	$(CP_P) $(DOCDIR)/doxygen/overviews/*.h $(DISTDIR)/docs/doxygen/overviews
+	$(CP_P) $(DOCDIR)/doxygen/images/*.??? $(DISTDIR)/docs/doxygen/images
+	$(CP_P) $(DOCDIR)/doxygen/images/wxgtk/*.??? $(DISTDIR)/docs/doxygen/images/stock
+	$(CP_P) $(DOCDIR)/doxygen/images/wxgtk/*.??? $(DISTDIR)/docs/doxygen/images/wxgtk
+	$(CP_P) $(DOCDIR)/doxygen/images/wxmac/*.??? $(DISTDIR)/docs/doxygen/images/wxmac
+	$(CP_P) $(DOCDIR)/doxygen/images/wxmsw/*.??? $(DISTDIR)/docs/doxygen/images/wxmsw
+	mkdir $(DISTDIR)/interface
+	mkdir $(DISTDIR)/interface/wx
+	mkdir $(DISTDIR)/interface/wx/aui
+	mkdir $(DISTDIR)/interface/wx/ribbon
+	mkdir $(DISTDIR)/interface/wx/generic
+	mkdir $(DISTDIR)/interface/wx/html
+	mkdir $(DISTDIR)/interface/wx/msw
+	mkdir $(DISTDIR)/interface/wx/msw/ole
+	mkdir $(DISTDIR)/interface/wx/persist
+	mkdir $(DISTDIR)/interface/wx/protocol
+	mkdir $(DISTDIR)/interface/wx/propgrid
+	mkdir $(DISTDIR)/interface/wx/richtext
+	mkdir $(DISTDIR)/interface/wx/stc
+	mkdir $(DISTDIR)/interface/wx/xml
+	mkdir $(DISTDIR)/interface/wx/xrc
+	$(CP_P) $(IFACEDIR)/wx/*.h $(DISTDIR)/interface/wx
+	$(CP_P) $(IFACEDIR)/wx/aui/*.h $(DISTDIR)/interface/wx/aui
+	$(CP_P) $(IFACEDIR)/wx/ribbon/*.h $(DISTDIR)/interface/wx/ribbon
+	$(CP_P) $(IFACEDIR)/wx/generic/*.h $(DISTDIR)/interface/wx/generic
+	$(CP_P) $(IFACEDIR)/wx/html/*.h $(DISTDIR)/interface/wx/html
+	$(CP_P) $(IFACEDIR)/wx/msw/*.h $(DISTDIR)/interface/wx/msw
+	$(CP_P) $(IFACEDIR)/wx/msw/ole/*.h $(DISTDIR)/interface/wx/msw/ole
+	$(CP_P) $(IFACEDIR)/wx/persist/*.h $(DISTDIR)/interface/wx/persist
+	$(CP_P) $(IFACEDIR)/wx/protocol/*.h $(DISTDIR)/interface/wx/protocol
+	$(CP_P) $(IFACEDIR)/wx/propgrid/*.h $(DISTDIR)/interface/wx/propgrid
+	$(CP_P) $(IFACEDIR)/wx/richtext/*.h $(DISTDIR)/interface/wx/richtext
+	$(CP_P) $(IFACEDIR)/wx/stc/*.h $(DISTDIR)/interface/wx/stc
+	$(CP_P) $(IFACEDIR)/wx/xml/*.h $(DISTDIR)/interface/wx/xml
+	$(CP_P) $(IFACEDIR)/wx/xrc/*.h $(DISTDIR)/interface/wx/xrc
 
 
 # Copy all the files from wxPython needed for the Debian source package,
@@ -734,8 +809,8 @@ distdir: @GUIDIST@
 	@# now prune away a lot of the crap included by using cp -R
 	@# in other dist targets.
 	find $(DISTDIR) \( -name "CVS" -o -name ".cvsignore" -o -name "*.dsp" -o -name "*.dsw" -o -name "*.hh*" -o \
-			\( -name "makefile.*" -a ! -name "makefile.unx" \) \) \
-			-print | egrep -v '/(samples|dbbrowse)/.*\.hh.$$' | xargs rm -rf
+			\( -name "makefile.*" -a ! -name "makefile.gcc" -a ! -name "makefile.unx" \) \) \
+			-print | egrep -v '/samples/.*\.hh.$$' | xargs rm -rf
 
 dist: distdir
 	@cd _dist_dir && tar ch $(DISTDIRNAME) | gzip -f9 > ../$(WXARCHIVE);
@@ -779,8 +854,14 @@ bzip-dist: @GUIDIST@
 	mv wxDemos demos; \
 	fi
 
-# RR: Copy text and binary data separatly
-win-dist: MSW_ZIP_TEXT_DIST
+win-dist: MSW_ZIP_TEXT_DIST SAMPLES_DIST DEMOS_DIST UTILS_DIST MISC_DIST INTL_DIST
+	for s in `find $(SAMPDIR) $(SAMPDIR)/html $(SAMPDIR)/opengl \
+		    -mindepth 1 -maxdepth 1 -type d -not -name CVS`; do \
+	    t="$(DISTDIR)/samples/`echo $$s | sed 's@$(SAMPDIR)/@@'`"; \
+	    $(CP_P) \
+		    `find $$s -maxdepth 1 -name '*.dsp' -o -name '*.vcproj'` $$t; \
+	done
+# RR: Copy text and binary data separately
 	@echo "*** Creating wxWidgets ZIP distribution in $(DISTDIR)..."
 	@cd _dist_dir && mv $(DISTDIRNAME) wxMSW
 	@cd _dist_dir && zip -r -l  ../$(WXARCHIVE_ZIP) *
@@ -790,57 +871,3 @@ win-dist: MSW_ZIP_TEXT_DIST
 	@cd _dist_dir && zip -r ../$(WXARCHIVE_ZIP) wxMSW/include/wx/msw/*.cur
 	@cd _dist_dir && zip -r ../$(WXARCHIVE_ZIP) wxMSW/include/wx/msw/*.ico
 	@cd _dist_dir && zip -r ../$(WXARCHIVE_ZIP) wxMSW/include/wx/msw/*.bmp
-
-debian-dist: DEBIAN_SOURCE_DIR = $(WXDIR)/../wxwidgets@WX_RELEASE@@WX_FLAVOUR@-@WX_SUBVERSION@
-debian-dist: debian-native-dist debian-msw-dirs MSW_DIST
-	mkdir $(DISTDIR)/debian
-	-$(CP_P) $(WXDIR)/debian/* $(DISTDIR)/debian
-	$(CP_P) $(DOCDIR)/licence.txt $(DISTDIR)/docs
-	$(CP_P) $(DOCDIR)/licendoc.txt $(DISTDIR)/docs
-	$(CP_P) $(DOCDIR)/preamble.txt $(DISTDIR)/docs
-	rm -f $(DISTDIR)/*.spec
-
-	@# now prune away a lot of the crap included by using cp -R
-	@# in other dist targets.  Ugly and hardly portable but it
-	@# will run on any Debian box and that's enough for now.
-
-	rm -rf $(DISTDIR)/contrib/build
-	find $(DISTDIR) \( -name "CVS" -o -name ".cvsignore" -o -name "*.dsp"    \
-			   -o -name "*.dsw" -o -name "*.hh*" -o -name "*.mms"    \
-			   -o -name "*.mcp" -o -name "*M*.xml" -o -name "*.r"    \
-			   -o -name "*.pro"  \
-			   -o -name "*.vpj"  \
-			   -o \( -name "makefile.*" -a ! -name "makefile.unx" \) \
-			\) -print0 | xargs -0 rm -rf
-
-	rm -rf $(DISTDIR)/wxPython/SWIG
-	rm -rf $(DISTDIR)/wxPython/distrib
-	rm -rf $(DISTDIR)/wxPython/distutils
-	rm -rf $(DISTDIR)/wxPython/samples
-	rm -rf $(DISTDIR)/wxPython/contrib/iewin
-	find $(DISTDIR)/wxPython \( -name "mac" -o -name "msw" \) -print0 | xargs -0 rm -rf
-
-	rm -rf $(DEBIAN_SOURCE_DIR)
-	mv $(DISTDIR) $(DEBIAN_SOURCE_DIR)
-
-
-debian-native-dist: @GUIDIST@ UNIV_DIST MANUAL_DIST PYTHON_DIST
-
-debian-msw-dirs:
-	mkdir $(DISTDIR)/include/wx/msw
-	mkdir $(DISTDIR)/src/msw
-
-
-RPMTOP=_dist_dir/_rpm_top
-
-rpm: bzip-dist
-	@echo "*** Building RPMs ***"
-	-mkdir $(RPMTOP)
-	-mkdir $(RPMTOP)/SOURCES
-	-mkdir $(RPMTOP)/SPECS
-	-mkdir $(RPMTOP)/BUILD
-	-mkdir $(RPMTOP)/RPMS
-	-mkdir $(RPMTOP)/SRPMS
-	cp -f $(WXARCHIVE_BZIP) $(RPMTOP)/SOURCES
-	rpm -ba --define "_topdir `pwd`/$(RPMTOP)" $(WXDIR)/wx$(TOOLKIT).spec
-	mv -f `find $(RPMTOP) -name "wx$(TOOLKIT)*.rpm"` .

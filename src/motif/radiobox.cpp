@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: radiobox.cpp 50982 2008-01-01 20:38:33Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -47,6 +46,7 @@ void wxRadioBox::Init()
     m_selectedButton = -1;
     m_noItems = 0;
     m_noRowsOrCols = 0;
+    m_labelWidget = (WXWidget) 0;
 }
 
 bool wxRadioBox::Create(wxWindow *parent, wxWindowID id, const wxString& title,
@@ -57,6 +57,7 @@ bool wxRadioBox::Create(wxWindow *parent, wxWindowID id, const wxString& title,
 {
     if( !CreateControl( parent, id, pos, size, style, val, name ) )
         return false;
+    PreCreation();
 
     m_noItems = (unsigned int)n;
     m_noRowsOrCols = majorDim;
@@ -78,7 +79,7 @@ bool wxRadioBox::Create(wxWindow *parent, wxWindowID id, const wxString& title,
     {
         wxXmString text(label1);
         m_labelWidget = (WXWidget)
-            XtVaCreateManagedWidget( label1.c_str(),
+            XtVaCreateManagedWidget( label1.mb_str(),
 #if wxUSE_GADGETS
                 style & wxCOLOURED ? xmLabelWidgetClass
                                    : xmLabelGadgetClass,
@@ -119,7 +120,7 @@ bool wxRadioBox::Create(wxWindow *parent, wxWindowID id, const wxString& title,
         wxString str(GetLabelText(choices[i]));
         m_radioButtonLabels.push_back(str);
         Widget radioItem =  XtVaCreateManagedWidget (
-                                wxConstCast(str.c_str(), char),
+                                str.mb_str(),
 #if wxUSE_GADGETS
                                 xmToggleButtonGadgetClass, radioBoxWidget,
 #else
@@ -133,17 +134,14 @@ bool wxRadioBox::Create(wxWindow *parent, wxWindowID id, const wxString& title,
                        (XtPointer) this);
     }
 
-    ChangeFont(false);
-
     SetSelection (0);
 
     XtRealizeWidget((Widget)m_mainWidget);
     XtManageChild (radioBoxWidget);
     XtManageChild ((Widget)m_mainWidget);
 
+    PostCreation();
     AttachWidget (parent, m_mainWidget, NULL, pos.x, pos.y, size.x, size.y);
-
-    ChangeBackgroundColour();
 
     return true;
 }
@@ -391,7 +389,7 @@ void wxRadioBoxCallback (Widget w, XtPointer clientData,
   if (item->InSetValue())
     return;
 
-  wxCommandEvent event (wxEVT_COMMAND_RADIOBOX_SELECTED, item->GetId());
+  wxCommandEvent event (wxEVT_RADIOBOX, item->GetId());
   event.SetInt(sel);
   event.SetString(item->GetStringSelection());
   event.SetEventObject(item);

@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     2005-03-12
-// RCS-ID:      $Id: propdlg.cpp 41838 2006-10-09 21:08:45Z VZ $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -62,6 +61,8 @@ bool wxPropertySheetDialog::Create(wxWindow* parent, wxWindowID id, const wxStri
                                        const wxPoint& pos, const wxSize& sz, long style,
                                        const wxString& name)
 {
+    parent = GetParentForModalDialog(parent, style);
+
     if (!wxDialog::Create(parent, id, title, pos, sz, style|wxCLIP_CHILDREN, name))
         return false;
 
@@ -118,7 +119,7 @@ void wxPropertySheetDialog::CreateButtons(int flags)
     wxSystemOptions::SetOption(optionName,0);
 #endif
 
-    wxSizer *buttonSizer = CreateButtonSizer( flags & ButtonSizerFlags );
+    wxSizer *buttonSizer = CreateButtonSizer(flags);
     if( buttonSizer )
     {
         m_innerSizer->Add( buttonSizer, 0, wxGROW|wxALIGN_CENTER_VERTICAL|wxTOP|wxBOTTOM|wxLEFT|wxRIGHT, 2);
@@ -149,7 +150,7 @@ wxBookCtrlBase* wxPropertySheetDialog::CreateBookCtrl()
 #if wxUSE_TOOLBOOK
 #if defined(__WXMAC__) && wxUSE_TOOLBAR && wxUSE_BMPBUTTON
     if (GetSheetStyle() & wxPROPSHEET_BUTTONTOOLBOOK)
-        bookCtrl = new wxToolbook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, style|wxBK_BUTTONBAR );
+        bookCtrl = new wxToolbook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, style|wxTBK_BUTTONBAR );
     else
 #endif
     if ((GetSheetStyle() & wxPROPSHEET_TOOLBOOK) || (GetSheetStyle() & wxPROPSHEET_BUTTONTOOLBOOK))
@@ -221,6 +222,12 @@ void wxPropertySheetDialog::OnIdle(wxIdleEvent& event)
             LayoutDialog(0);
         }
     }
+}
+
+// Override function in base
+wxWindow* wxPropertySheetDialog::GetContentWindow() const
+{
+    return GetBookCtrl();
 }
 
 #endif // wxUSE_BOOKCTRL

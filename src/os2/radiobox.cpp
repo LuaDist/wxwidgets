@@ -4,7 +4,6 @@
 // Author:      David Webster
 // Modified by:
 // Created:     10/12/99
-// RCS-ID:      $Id: radiobox.cpp 39615 2006-06-07 13:26:00Z ABX $
 // Copyright:   (c) David Webster
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -18,7 +17,7 @@
 
 #ifndef WX_PRECOMP
     #include <stdio.h>
-    #include "wx/wxchar.h"
+    #include "wx/crt.h"
     #include "wx/string.h"
     #include "wx/bitmap.h"
     #include "wx/brush.h"
@@ -76,7 +75,7 @@ wxRadioBox::wxRadioBox()
 
 wxRadioBox::~wxRadioBox()
 {
-    m_isBeingDeleted = true;
+    SendDestroyEvent();
 
     if (m_hWnd)
         wxRemoveHandleAssociation(this);
@@ -719,7 +718,7 @@ bool wxRadioBox::OS2Command( WXUINT uCmd,
 void wxRadioBox::SendNotificationEvent()
 {
     wxCommandEvent vEvent(
-                       wxEVT_COMMAND_RADIOBOX_SELECTED,
+                       wxEVT_RADIOBOX,
                        m_windowId
                    );
 
@@ -781,7 +780,7 @@ void wxRadioBox::SetString(unsigned int nItem, const wxString& rsLabel)
     wxCHECK_RET( IsValid(nItem), wxT("invalid radiobox index") );
 
     m_pnRadioWidth[nItem] = m_pnRadioHeight[nItem] = -1;
-    ::WinSetWindowText((HWND)m_ahRadioButtons[nItem], (PSZ)rsLabel.c_str());
+    ::WinSetWindowText((HWND)m_ahRadioButtons[nItem], rsLabel.c_str());
 } // end of wxRadioBox::SetString
 
 bool wxRadioBox::SetStringSelection(const wxString& rsStr)

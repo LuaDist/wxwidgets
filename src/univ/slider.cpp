@@ -4,7 +4,6 @@
 // Author:      Vadim Zeitlin
 // Modified by:
 // Created:     09.02.01
-// RCS-ID:      $Id: slider.cpp 42816 2006-10-31 08:50:17Z RD $
 // Copyright:   (c) 2001 SciTech Software, Inc. (www.scitechsoft.com)
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
@@ -95,8 +94,6 @@ static const wxCoord SLIDER_LABEL_MARGIN = 2;
 // ============================================================================
 // implementation of wxSlider
 // ============================================================================
-
-IMPLEMENT_DYNAMIC_CLASS(wxSlider, wxControl)
 
 BEGIN_EVENT_TABLE(wxSlider, wxControl)
     EVT_SIZE(wxSlider::OnSize)
@@ -210,7 +207,7 @@ bool wxSlider::ChangeValueTo(int value)
 
     // this method is protected and we should only call it with normalized
     // value!
-    wxCHECK_MSG( IsInRange(value), false, _T("invalid slider value") );
+    wxCHECK_MSG( IsInRange(value), false, wxT("invalid slider value") );
 
     m_value = value;
 
@@ -222,7 +219,7 @@ bool wxSlider::ChangeValueTo(int value)
     eventScroll.SetEventObject( this );
     (void)GetEventHandler()->ProcessEvent(eventScroll);
 
-    wxCommandEvent event(wxEVT_COMMAND_SLIDER_UPDATED, GetId());
+    wxCommandEvent event(wxEVT_SLIDER, GetId());
     event.SetInt(m_value);
     event.SetEventObject(this);
     (void)GetEventHandler()->ProcessEvent(event);
@@ -287,14 +284,14 @@ int wxSlider::GetMax() const
 
 void wxSlider::SetLineSize(int lineSize)
 {
-    wxCHECK_RET( lineSize >= 0, _T("invalid slider line size") );
+    wxCHECK_RET( lineSize >= 0, wxT("invalid slider line size") );
 
     m_lineSize = lineSize;
 }
 
 void wxSlider::SetPageSize(int pageSize)
 {
-    wxCHECK_RET( pageSize >= 0, _T("invalid slider page size") );
+    wxCHECK_RET( pageSize >= 0, wxT("invalid slider page size") );
 
     m_pageSize = pageSize;
 }
@@ -323,7 +320,7 @@ int wxSlider::GetPageSize() const
 
 void wxSlider::SetThumbLength(int lenPixels)
 {
-    wxCHECK_RET( lenPixels >= 0, _T("invalid slider thumb size") );
+    wxCHECK_RET( lenPixels >= 0, wxT("invalid slider thumb size") );
 
     // use m_thumbSize here directly and not GetThumbLength() to avoid setting
     // it to the default value as we don't need it
@@ -354,9 +351,9 @@ int wxSlider::GetThumbLength() const
 // wxSlider ticks
 // ----------------------------------------------------------------------------
 
-void wxSlider::SetTickFreq(int n, int WXUNUSED(dummy))
+void wxSlider::DoSetTickFreq(int n)
 {
-    wxCHECK_RET (n > 0, _T("invalid slider tick frequency"));
+    wxCHECK_RET (n > 0, wxT("invalid slider tick frequency"));
 
     if ( n != m_tickFreq )
     {
@@ -376,7 +373,7 @@ wxSize wxSlider::CalcLabelSize() const
 
     // there is no sense in trying to calc the labels size if we haven't got
     // any, the caller must check for it
-    wxCHECK_MSG( HasLabels(), size, _T("shouldn't be called") );
+    wxCHECK_MSG( HasLabels(), size, wxT("shouldn't be called") );
 
     wxCoord w1, h1, w2, h2;
     GetTextExtent(FormatValue(m_min), &w1, &h1);
@@ -690,7 +687,7 @@ void wxSlider::CalcThumbRect(const wxRect *rectShaftIn,
 
 wxString wxSlider::FormatValue(int value) const
 {
-    return wxString::Format(_T("%d"), value);
+    return wxString::Format(wxT("%d"), value);
 }
 
 void wxSlider::DoDraw(wxControlRenderer *renderer)

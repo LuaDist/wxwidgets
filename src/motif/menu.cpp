@@ -4,7 +4,6 @@
 // Author:      Julian Smart
 // Modified by:
 // Created:     17/09/98
-// RCS-ID:      $Id: menu.cpp 62204 2009-09-30 06:53:43Z JS $
 // Copyright:   (c) Julian Smart
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -52,9 +51,6 @@
 // other standard headers
 #include <string.h>
 
-IMPLEMENT_DYNAMIC_CLASS(wxMenu, wxEvtHandler)
-IMPLEMENT_DYNAMIC_CLASS(wxMenuBar, wxEvtHandler)
-
 // ============================================================================
 // implementation
 // ============================================================================
@@ -72,7 +68,7 @@ void wxMenu::Init()
     m_popupShell = (WXWidget) NULL;
     m_buttonWidget = (WXWidget) NULL;
     m_menuId = 0;
-    m_topLevelMenu  = (wxMenu*) NULL;
+    m_topLevelMenu  = NULL;
     m_ownedByMenuBar = false;
 
     if ( !m_title.empty() )
@@ -80,10 +76,6 @@ void wxMenu::Init()
         Append(-3, m_title) ;
         AppendSeparator() ;
     }
-
-    m_backgroundColour = wxSystemSettings::GetColour(wxSYS_COLOUR_MENU);
-    m_foregroundColour = wxSystemSettings::GetColour(wxSYS_COLOUR_MENUTEXT);
-    m_font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
 }
 
 // The wxWindow destructor will take care of deleting the submenus.
@@ -164,17 +156,14 @@ void wxMenu::SetTitle(const wxString& label)
 
 bool wxMenu::ProcessCommand(wxCommandEvent & event)
 {
-    bool processed = false;
+    // Try the menu's event handler first
+    wxEvtHandler * const handler = GetEventHandler();
+    bool processed = handler ? handler->SafelyProcessEvent(event) : false;
 
-    // Try the menu's event handler
-    if ( !processed && GetEventHandler())
-    {
-        processed = GetEventHandler()->ProcessEvent(event);
-    }
     // Try the window the menu was popped up from (and up
     // through the hierarchy)
     if ( !processed && GetInvokingWindow())
-        processed = GetInvokingWindow()->ProcessEvent(event);
+        processed = GetInvokingWindow()->HandleWindowEvent(event);
 
     return processed;
 }
@@ -188,9 +177,6 @@ void wxMenuBar::Init()
     m_eventHandler = this;
     m_menuBarFrame = NULL;
     m_mainWidget = (WXWidget) NULL;
-    m_backgroundColour = wxSystemSettings::GetColour(wxSYS_COLOUR_MENU);
-    m_foregroundColour = wxSystemSettings::GetColour(wxSYS_COLOUR_MENUTEXT);
-    m_font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
 }
 
 wxMenuBar::wxMenuBar(size_t n, wxMenu *menus[], const wxArrayString& titles, long WXUNUSED(style))
@@ -226,13 +212,11 @@ void wxMenuBar::EnableTop(size_t WXUNUSED(pos), bool WXUNUSED(flag))
 //  wxLogWarning("wxMenuBar::EnableTop not yet implemented.");
 }
 
-void wxMenuBar::SetLabelTop(size_t pos, const wxString& label)
+void wxMenuBar::SetMenuLabel(size_t pos, const wxString& label)
 {
     wxMenu *menu = GetMenu(pos);
     if ( !menu )
         return;
-
-    m_titles[pos] = label;
 
     Widget w = (Widget)menu->GetButtonWidget();
     if (w)
@@ -243,40 +227,15 @@ void wxMenuBar::SetLabelTop(size_t pos, const wxString& label)
                       XmNlabelString, label_str(),
                       NULL);
     }
+    m_titles[pos] = label;
 }
 
-wxString wxMenuBar::GetLabelTop(size_t pos) const
-{
-    return wxStripMenuCodes(m_titles[pos]);
-#if 0
-    wxMenu *menu = GetMenu(pos);
-    if ( menu )
-    {
-        Widget w = (Widget)menu->GetButtonWidget();
-        if (w)
-        {
-            XmString text;
-            XtVaGetValues(w,
-                          XmNlabelString, &text,
-                          NULL);
-
-            return wxXmStringToString( text );
-        }
-    }
-
-    return wxEmptyString;
-#endif
-}
-
-// Gets the original label at the top-level of the menubar
 wxString wxMenuBar::GetMenuLabel(size_t pos) const
 {
     wxCHECK_MSG( pos < GetMenuCount(), wxEmptyString,
                  wxT("invalid menu index in wxMenuBar::GetMenuLabel") );
-
     return m_titles[pos];
 }
-
 
 bool wxMenuBar::Append(wxMenu * menu, const wxString& title)
 {
@@ -362,6 +321,10 @@ wxMenuItem *wxMenuBar::FindItem(int id, wxMenu ** itemMenu) const
 // Create menubar
 bool wxMenuBar::CreateMenuBar(wxFrame* parent)
 {
+    m_parent = parent; // bleach... override it!
+    PreCreation();
+    m_parent = NULL;
+
     if (m_mainWidget)
     {
         XtVaSetValues((Widget) parent->GetMainWidget(), XmNmenuBar, (Widget) m_mainWidget, NULL);
@@ -401,9 +364,7 @@ bool wxMenuBar::CreateMenuBar(wxFrame* parent)
 #endif
     }
 
-    SetBackgroundColour(m_backgroundColour);
-    SetForegroundColour(m_foregroundColour);
-    SetFont(m_font);
+    PostCreation();
 
     XtVaSetValues((Widget) parent->GetMainWidget(), XmNmenuBar, (Widget) m_mainWidget, NULL);
     XtRealizeWidget ((Widget) menuBarW);
@@ -418,7 +379,7 @@ bool wxMenuBar::DestroyMenuBar()
 {
     if (!m_mainWidget)
     {
-        SetMenuBarFrame((wxFrame*) NULL);
+        SetMenuBarFrame(NULL);
         return false;
     }
 
@@ -435,7 +396,7 @@ bool wxMenuBar::DestroyMenuBar()
     XtDestroyWidget((Widget) m_mainWidget);
     m_mainWidget = (WXWidget) 0;
 
-    SetMenuBarFrame((wxFrame*) NULL);
+    SetMenuBarFrame(NULL);
 
     return true;
 }
@@ -481,19 +442,30 @@ void wxMenu::DestroyWidgetAndDetach()
 WXWidget wxMenu::CreateMenu (wxMenuBar * menuBar,
                              WXWidget parent,
                              wxMenu * topMenu,
-                             size_t WXUNUSED(index),
+                             size_t menuIndex,
                              const wxString& title,
                              bool pullDown)
 {
     Widget menu = (Widget) 0;
     Widget buttonWidget = (Widget) 0;
+    Display* dpy = XtDisplay((Widget)parent);
     Arg args[5];
     XtSetArg (args[0], XmNnumColumns, m_numColumns);
     XtSetArg (args[1], XmNpacking, (m_numColumns > 1) ? XmPACK_COLUMN : XmPACK_TIGHT);
 
+    if ( !m_font.IsOk() )
+    {
+        if ( menuBar )
+            m_font = menuBar->GetFont();
+        else if ( GetInvokingWindow() )
+            m_font = GetInvokingWindow()->GetFont();
+    }
+
+    XtSetArg (args[2], (String)wxFont::GetFontTag(), m_font.GetFontTypeC(dpy) );
+
     if (!pullDown)
     {
-        menu = XmCreatePopupMenu ((Widget) parent, wxMOTIF_STR("popup"), args, 2);
+        menu = XmCreatePopupMenu ((Widget) parent, wxMOTIF_STR("popup"), args, 3);
 #if 0
         XtAddCallback(menu,
             XmNunmapCallback,
@@ -504,7 +476,7 @@ WXWidget wxMenu::CreateMenu (wxMenuBar * menuBar,
     else
     {
         char mnem = wxFindMnemonic (title);
-        menu = XmCreatePulldownMenu ((Widget) parent, wxMOTIF_STR("pulldown"), args, 2);
+        menu = XmCreatePulldownMenu ((Widget) parent, wxMOTIF_STR("pulldown"), args, 3);
 
         wxString title2(wxStripMenuCodes(title));
         wxXmString label_str(title2);
@@ -516,6 +488,8 @@ WXWidget wxMenu::CreateMenu (wxMenuBar * menuBar,
 #endif
             XmNlabelString, label_str(),
             XmNsubMenuId, menu,
+            (String)wxFont::GetFontTag(), m_font.GetFontTypeC(dpy),
+            XmNpositionIndex, menuIndex,
             NULL);
 
         if (mnem != 0)
@@ -536,9 +510,7 @@ WXWidget wxMenu::CreateMenu (wxMenuBar * menuBar,
         item->CreateItem(menu, menuBar, topMenu, i);
     }
 
-    SetBackgroundColour(m_backgroundColour);
-    SetForegroundColour(m_foregroundColour);
-    SetFont(m_font);
+    ChangeFont();
 
     return buttonWidget;
 }
@@ -553,7 +525,7 @@ void wxMenu::DestroyMenu (bool full)
           node = node->GetNext() )
     {
         wxMenuItem *item = node->GetData();
-        item->SetMenuBar((wxMenuBar*) NULL);
+        item->SetMenuBar(NULL);
 
         item->DestroyItem(full);
     }
@@ -579,7 +551,7 @@ WXWidget wxMenu::FindMenuItem (int id, wxMenuItem ** it) const
     if (id == m_menuId)
     {
         if (it)
-            *it = (wxMenuItem*) NULL;
+            *it = NULL;
         return m_buttonWidget;
     }
 
@@ -606,13 +578,15 @@ WXWidget wxMenu::FindMenuItem (int id, wxMenuItem ** it) const
     }
 
     if (it)
-        *it = (wxMenuItem*) NULL;
+        *it = NULL;
     return (WXWidget) NULL;
 }
 
 void wxMenu::SetBackgroundColour(const wxColour& col)
 {
     m_backgroundColour = col;
+    if (!col.IsOk())
+        return;
     if (m_menuWidget)
         wxDoChangeBackgroundColour(m_menuWidget, (wxColour&) col);
     if (m_buttonWidget)
@@ -636,6 +610,8 @@ void wxMenu::SetBackgroundColour(const wxColour& col)
 void wxMenu::SetForegroundColour(const wxColour& col)
 {
     m_foregroundColour = col;
+    if (!col.IsOk())
+        return;
     if (m_menuWidget)
         wxDoChangeForegroundColour(m_menuWidget, (wxColour&) col);
     if (m_buttonWidget)
@@ -660,7 +636,7 @@ void wxMenu::ChangeFont(bool keepOriginalSize)
 {
     // Lesstif 0.87 hangs here, but 0.93 does not; MBN: sometimes it does
 #if !wxCHECK_LESSTIF() // || wxCHECK_LESSTIF_VERSION( 0, 93 )
-    if (!m_font.Ok() || !m_menuWidget)
+    if (!m_font.IsOk() || !m_menuWidget)
         return;
 
     Display* dpy = XtDisplay((Widget) m_menuWidget);
@@ -680,7 +656,7 @@ void wxMenu::ChangeFont(bool keepOriginalSize)
           node = node->GetNext() )
     {
         wxMenuItem* item = node->GetData();
-        if (m_menuWidget && item->GetButtonWidget() && m_font.Ok())
+        if (m_menuWidget && item->GetButtonWidget() && m_font.IsOk())
         {
             XtVaSetValues ((Widget) item->GetButtonWidget(),
                            wxFont::GetFontTag(), m_font.GetFontTypeC(dpy),
@@ -702,7 +678,10 @@ void wxMenu::SetFont(const wxFont& font)
 
 bool wxMenuBar::SetBackgroundColour(const wxColour& col)
 {
-    m_backgroundColour = col;
+    if (!wxWindowBase::SetBackgroundColour(col))
+        return false;
+    if (!col.IsOk())
+        return false;
     if (m_mainWidget)
         wxDoChangeBackgroundColour(m_mainWidget, (wxColour&) col);
 
@@ -715,7 +694,10 @@ bool wxMenuBar::SetBackgroundColour(const wxColour& col)
 
 bool wxMenuBar::SetForegroundColour(const wxColour& col)
 {
-    m_foregroundColour = col;
+    if (!wxWindowBase::SetForegroundColour(col))
+        return false;
+    if (!col.IsOk())
+        return false;
     if (m_mainWidget)
         wxDoChangeForegroundColour(m_mainWidget, (wxColour&) col);
 

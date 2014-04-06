@@ -4,7 +4,6 @@
 // Author:      Francesco Montorsi
 // Modified By:
 // Created:     15/04/2006
-// Id:          $Id: clrpicker.cpp 42816 2006-10-31 08:50:17Z RD $
 // Copyright:   (c) Francesco Montorsi
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -17,7 +16,7 @@
 // For compilers that support precompilation, includes "wx.h".
 #include "wx/wxprec.h"
 
-#if wxUSE_COLOURPICKERCTRL && defined(__WXGTK24__)
+#if wxUSE_COLOURPICKERCTRL
 
 #include "wx/clrpicker.h"
 
@@ -37,13 +36,18 @@ static void gtk_clrbutton_setcolor_callback(GtkColorButton *widget,
 {
     // update the m_colour member of the wxColourButton
     wxASSERT(p);
+#ifdef __WXGTK3__
+    GdkRGBA gdkColor;
+    gtk_color_button_get_rgba(widget, &gdkColor);
+#else
     GdkColor gdkColor;
     gtk_color_button_get_color(widget, &gdkColor);
-    p->SetGdkColor(gdkColor);
+#endif
+    p->GTKSetColour(gdkColor);
 
     // fire the colour-changed event
     wxColourPickerEvent event(p, p->GetId(), p->GetColour());
-    p->GetEventHandler()->ProcessEvent(event);
+    p->HandleWindowEvent(event);
 }
 }
 
@@ -51,7 +55,7 @@ static void gtk_clrbutton_setcolor_callback(GtkColorButton *widget,
 // wxColourButton
 //-----------------------------------------------------------------------------
 
-IMPLEMENT_DYNAMIC_CLASS(wxColourButton, wxGenericColourButton)
+IMPLEMENT_DYNAMIC_CLASS(wxColourButton, wxButton)
 
 bool wxColourButton::Create( wxWindow *parent, wxWindowID id,
                         const wxColour &col,
@@ -59,35 +63,31 @@ bool wxColourButton::Create( wxWindow *parent, wxWindowID id,
                         long style, const wxValidator& validator,
                         const wxString &name )
 {
-    if (!gtk_check_version(2,4,0))
+    if (!PreCreation( parent, pos, size ) ||
+        !wxControl::CreateBase(parent, id, pos, size, style, validator, name))
     {
-        m_needParent = true;
-        m_acceptsFocus = true;
-
-        if (!PreCreation( parent, pos, size ) ||
-            !wxControl::CreateBase(parent, id, pos, size, style, validator, name))
-        {
-            wxFAIL_MSG( wxT("wxColourButton creation failed") );
-            return false;
-        }
-
-        m_colour = col;
-        m_widget = gtk_color_button_new_with_color( m_colour.GetColor() );
-        gtk_widget_show( GTK_WIDGET(m_widget) );
-
-        // GtkColourButton signals
-        g_signal_connect(m_widget, "color-set",
-                        G_CALLBACK(gtk_clrbutton_setcolor_callback), this);
-
-
-        m_parent->DoAddChild( this );
-
-        PostCreation(size);
-        SetInitialSize(size);
+        wxFAIL_MSG( wxT("wxColourButton creation failed") );
+        return false;
     }
-    else
-        return wxGenericColourButton::Create(parent, id, col, pos, size,
-                                             style, validator, name);
+
+    m_colour = col;
+#ifdef __WXGTK3__
+    m_widget = gtk_color_button_new_with_rgba(m_colour);
+#else
+    m_widget = gtk_color_button_new_with_color( m_colour.GetColor() );
+#endif
+    g_object_ref(m_widget);
+
+    // GtkColourButton signals
+    g_signal_connect(m_widget, "color-set",
+                    G_CALLBACK(gtk_clrbutton_setcolor_callback), this);
+
+
+    m_parent->DoAddChild( this );
+
+    PostCreation(size);
+    SetInitialSize(size);
+
     return true;
 }
 
@@ -97,10 +97,11 @@ wxColourButton::~wxColourButton()
 
 void wxColourButton::UpdateColour()
 {
-    if (!gtk_check_version(2,4,0))
-        gtk_color_button_set_color(GTK_COLOR_BUTTON(m_widget), m_colour.GetColor());
-    else
-        wxGenericColourButton::UpdateColour();
+#ifdef __WXGTK3__
+    gtk_color_button_set_rgba(GTK_COLOR_BUTTON(m_widget), m_colour);
+#else
+    gtk_color_button_set_color(GTK_COLOR_BUTTON(m_widget), m_colour.GetColor());
+#endif
 }
 
-#endif      // wxUSE_COLOURPICKERCTRL && defined(__WXGTK24__)
+#endif // wxUSE_COLOURPICKERCTRL

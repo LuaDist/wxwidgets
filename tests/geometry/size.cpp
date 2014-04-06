@@ -3,7 +3,6 @@
 // Purpose:     wxSize unit test
 // Author:      Wlodzimierz ABX Skiba
 // Created:     2004-12-14
-// RCS-ID:      $Id: size.cpp 31008 2004-12-14 20:29:21Z ABX $
 // Copyright:   (c) 2004 wxWindows
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -43,7 +42,7 @@ private:
 // register in the unnamed registry so that these tests are run by default
 CPPUNIT_TEST_SUITE_REGISTRATION( SizeTestCase );
 
-// also include in it's own registry so that these tests can be run alone
+// also include in its own registry so that these tests can be run alone
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( SizeTestCase, "SizeTestCase" );
 
 void SizeTestCase::Operators()
@@ -57,6 +56,8 @@ void SizeTestCase::Operators()
     s3 = s2 - s1;
     CPPUNIT_ASSERT( s3.GetWidth()==2 && s3.GetHeight()==2 );
     s3 = s1 * 2;
+    CPPUNIT_ASSERT( s3.GetWidth()==2 && s3.GetHeight()==4 );
+    s3 = 2 * s1;
     CPPUNIT_ASSERT( s3.GetWidth()==2 && s3.GetHeight()==4 );
     s3 = s3 / 2;
     CPPUNIT_ASSERT( s3.GetWidth()==1 && s3.GetHeight()==2 );

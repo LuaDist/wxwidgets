@@ -4,7 +4,6 @@
 // Author:      Mattia Barbon
 // Modified by:
 // Created:     02/04/2001
-// RCS-ID:      $Id: helpbest.h 39440 2006-05-29 14:51:42Z VZ $
 // Copyright:   (c) Mattia Barbon
 // Licence:     wxWindows licence
 /////////////////////////////////////////////////////////////////////////////
@@ -120,7 +119,7 @@ protected:
     int m_style;
 
     DECLARE_DYNAMIC_CLASS(wxBestHelpController)
-    DECLARE_NO_COPY_CLASS(wxBestHelpController)
+    wxDECLARE_NO_COPY_CLASS(wxBestHelpController);
 };
 
 #endif // wxUSE_HELP && wxUSE_MS_HTML_HELP && wxUSE_WXHTML_HELP

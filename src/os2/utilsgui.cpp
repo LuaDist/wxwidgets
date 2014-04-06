@@ -4,9 +4,8 @@
 // Author:      David Webster
 // Modified by:
 // Created:     20.08.2003 (extracted from os2/utils.cpp)
-// RCS-ID:      $Id: utilsgui.cpp 41127 2006-09-10 12:25:54Z VZ $
 // Copyright:   (c) David Webster
-// License:     wxWindows licence
+// Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
 // ============================================================================
@@ -33,12 +32,20 @@
 #endif //WX_PRECOMP
 
 #include "wx/apptrait.h"
+#include "wx/os2/private/timer.h"
+#include "wx/evtloop.h"
 
 #include "wx/os2/private.h"     // includes <windows.h>
 
 // ============================================================================
 // implementation
 // ============================================================================
+
+// Emit a beeeeeep
+void wxBell()
+{
+    DosBeep(1000,1000); // 1kHz during 1 sec.
+}
 
 // ----------------------------------------------------------------------------
 // functions to work with .INI files
@@ -56,190 +63,6 @@ public:
         Stop();
     }
 };
-
-// Reading and writing resources (eg WIN.INI, .Xdefaults)
-#if wxUSE_RESOURCES
-bool wxWriteResource( const wxString& rSection,
-                      const wxString& rEntry,
-                      const wxString& rValue,
-                      const wxString& rFile )
-{
-    HAB  hab = 0;
-    HINI hIni = 0;
-
-    if (!rFile.empty())
-    {
-        hIni = ::PrfOpenProfile(hab, (PSZ)WXSTRINGCAST rFile);
-        if (hIni != 0L)
-        {
-            return (::PrfWriteProfileString( hIni
-                                            ,(PSZ)WXSTRINGCAST rSection
-                                            ,(PSZ)WXSTRINGCAST rEntry
-                                            ,(PSZ)WXSTRINGCAST rValue
-                                           ));
-        }
-    }
-    else
-        return (::PrfWriteProfileString( HINI_PROFILE
-                                        ,(PSZ)WXSTRINGCAST rSection
-                                        ,(PSZ)WXSTRINGCAST rEntry
-                                        ,(PSZ)WXSTRINGCAST rValue
-                                       ));
-    return false;
-}
-
-bool wxWriteResource(
-  const wxString&                   rSection
-, const wxString&                   rEntry
-, float                             fValue
-, const wxString&                   rFile
-)
-{
-    wxChar                          zBuf[50];
-
-    wxSprintf(zBuf, "%.4f", fValue);
-    return wxWriteResource( rSection
-                           ,rEntry
-                           ,zBuf
-                           ,rFile
-                          );
-}
-
-bool wxWriteResource(
-  const wxString&                   rSection
-, const wxString&                   rEntry
-, long                              lValue
-, const wxString&                   rFile
-)
-{
-    wxChar                          zBuf[50];
-
-    wxSprintf(zBuf, "%ld", lValue);
-    return wxWriteResource( rSection
-                           ,rEntry
-                           ,zBuf
-                           ,rFile
-                          );
-}
-
-bool wxWriteResource( const wxString& rSection,
-                      const wxString& rEntry,
-                      int lValue,
-                      const wxString& rFile )
-{
-    wxChar zBuf[50];
-
-    wxSprintf(zBuf, "%d", lValue);
-    return wxWriteResource( rSection, rEntry, zBuf, rFile );
-}
-
-bool wxGetResource( const wxString& rSection,
-                    const wxString& rEntry,
-                    wxChar** ppValue,
-                    const wxString& rFile )
-{
-    HAB    hab = 0;
-    HINI   hIni = 0;
-    wxChar zDefunkt[] = _T("$$default");
-    char   zBuf[1000];
-
-    if (!rFile.empty())
-    {
-        hIni = ::PrfOpenProfile(hab, (PSZ)WXSTRINGCAST rFile);
-        if (hIni != 0L)
-        {
-            ULONG n = ::PrfQueryProfileString( hIni
-                                              ,(PSZ)WXSTRINGCAST rSection
-                                              ,(PSZ)WXSTRINGCAST rEntry
-                                              ,(PSZ)zDefunkt
-                                              ,(PVOID)zBuf
-                                              ,1000
-                                             );
-            if (zBuf == NULL)
-                return false;
-            if (n == 0L || wxStrcmp(zBuf, zDefunkt) == 0)
-                return false;
-            zBuf[n-1] = '\0';
-        }
-        else
-            return false;
-    }
-    else
-    {
-        ULONG n = ::PrfQueryProfileString( HINI_PROFILE
-                                          ,(PSZ)WXSTRINGCAST rSection
-                                          ,(PSZ)WXSTRINGCAST rEntry
-                                          ,(PSZ)zDefunkt
-                                          ,(PVOID)zBuf
-                                          ,1000
-                                         );
-        if (zBuf == NULL)
-            return false;
-        if (n == 0L || wxStrcmp(zBuf, zDefunkt) == 0)
-            return false;
-        zBuf[n-1] = '\0';
-    }
-    strcpy((char*)*ppValue, zBuf);
-    return true;
-}
-
-bool wxGetResource( const wxString& rSection,
-                    const wxString& rEntry,
-                    float* pValue,
-                    const wxString& rFile )
-{
-    wxChar* zStr = NULL;
-
-    zStr = new wxChar[1000];
-    bool bSucc = wxGetResource( rSection, rEntry, (wxChar **)&zStr, rFile );
-
-    if (bSucc)
-    {
-        *pValue = (float)wxStrtod(zStr, NULL);
-    }
-
-    delete[] zStr;
-    return bSucc;
-}
-
-bool wxGetResource( const wxString& rSection,
-                    const wxString& rEntry,
-                    long* pValue,
-                    const wxString& rFile )
-{
-    wxChar* zStr = NULL;
-
-    zStr = new wxChar[1000];
-    bool bSucc = wxGetResource( rSection, rEntry, (wxChar **)&zStr, rFile );
-
-    if (bSucc)
-    {
-        *pValue = wxStrtol(zStr, NULL, 10);
-    }
-
-    delete[] zStr;
-    return bSucc;
-}
-
-bool wxGetResource( const wxString& rSection,
-                    const wxString& rEntry,
-                    int* pValue,
-                    const wxString& rFile )
-{
-    wxChar* zStr = NULL;
-
-    zStr = new wxChar[1000];
-    bool bSucc = wxGetResource( rSection, rEntry, (wxChar **)&zStr, rFile );
-
-    if (bSucc)
-    {
-        *pValue = (int)wxStrtol(zStr, NULL, 10);
-    }
-
-    delete[] zStr;
-    return bSucc;
-}
-#endif // wxUSE_RESOURCES
 
 // ---------------------------------------------------------------------------
 // helper functions for showing a "busy" cursor
@@ -264,7 +87,7 @@ void wxBeginBusyCursor(const wxCursor* pCursor)
 void wxEndBusyCursor()
 {
     wxCHECK_RET( gs_wxBusyCursorCount > 0
-                ,_T("no matching wxBeginBusyCursor() for wxEndBusyCursor()")
+                ,wxT("no matching wxBeginBusyCursor() for wxEndBusyCursor()")
                );
 
     if (--gs_wxBusyCursorCount == 0)
@@ -298,7 +121,7 @@ bool wxCheckForInterrupt( wxWindow* pWnd )
     }
     else
     {
-        wxFAIL_MSG(_T("pWnd==NULL !!!"));
+        wxFAIL_MSG(wxT("pWnd==NULL !!!"));
         return false;//*** temporary?
     }
 }
@@ -445,6 +268,15 @@ wxPortId wxGUIAppTraits::GetToolkitVersion(int *verMaj, int *verMin) const
     return wxPORT_OS2;
 }
 
+wxTimerImpl* wxGUIAppTraits::CreateTimerImpl(wxTimer *timer)
+{
+    return new wxOS2TimerImpl(timer);
+}
+
+wxEventLoopBase* wxGUIAppTraits::CreateEventLoop()
+{
+    return new wxEventLoop;
+}
 
 // ---------------------------------------------------------------------------
 // window information functions
@@ -1032,7 +864,7 @@ wxBitmap wxDisableBitmap(
     ::GpiSetBitmap(hPS, NULLHANDLE);
     ::GpiDestroyPS(hPS);
     ::DevCloseDC(hDC);
-    if (vNewBmp.Ok())
+    if (vNewBmp.IsOk())
         return(vNewBmp);
     return(wxNullBitmap);
 } // end of wxDisableBitmap

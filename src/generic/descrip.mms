@@ -2,7 +2,7 @@
 #                                                                            *
 # Make file for VMS                                                          *
 # Author : J.Jansen (joukj@hrem.nano.tudelft.nl)                             *
-# Date : 31 October 2006                                                     *
+# Date : 21 January 2013                                                     *
 #                                                                            *
 #*****************************************************************************
 .first
@@ -46,21 +46,17 @@ CC_DEFINE =
 
 OBJECTS = \
 		aboutdlgg.obj,\
-		animateg.obj,\
 		busyinfo.obj,\
-		calctrl.obj,\
+		calctrlg.obj,\
 		caret.obj,\
 		choicbkg.obj,\
 		choicdgg.obj,\
-		colrdlgg.obj,\
-		clrpickerg.obj,\
 		datectlg.obj,\
 		dcpsg.obj,\
 		dirctrlg.obj,\
 		dirdlgg.obj,\
 		fdrepdlg.obj,\
 		fontdlgg.obj,\
-		fontpickerg.obj,\
 		grid.obj,\
 		gridctrl.obj,\
 		gridsel.obj,\
@@ -74,7 +70,6 @@ OBJECTS = \
 		msgdlgg.obj,\
 		numdlgg.obj,\
 		odcombo.obj,\
-		panelg.obj,\
 		printps.obj,\
 		prntdlgg.obj,\
 		propdlg.obj,\
@@ -92,16 +87,22 @@ OBJECTS = \
 		treebkg.obj,\
 		treectlg.obj,\
 		wizard.obj,\
-		hyperlink.obj,\
+		hyperlinkg.obj,\
 		filepickerg.obj,\
-		bmpcboxg.obj
+		bmpcboxg.obj,\
+		filectrlg.obj,srchctlg.obj,notifmsgg.obj,headerctrlg.obj,\
+		grideditors.obj,vlbox.obj,vscroll.obj,stattextg.obj,\
+		editlbox.obj,datavgen.obj,dbgrptg.obj,dragimgg.obj,\
+		richmsgdlgg.obj,commandlinkbuttong.obj,spinctlg.obj,\
+		markuptext.obj,bannerwindow.obj,timectrlg.obj,richtooltipg.obj\
+		,statbmpg.obj,splash.obj
 
 SOURCES = \
 		aboutdlgg.cpp,\
 		accel.cpp,\
 		animateg.cpp,\
 		busyinfo.cpp,\
-		calctrl.cpp,\
+		calctrlg.cpp,\
 		caret.cpp,\
 		choicbkg.cpp,\
 		choicdgg.cpp,\
@@ -131,7 +132,6 @@ SOURCES = \
 		numdlgg.cpp,\
 		odcombo.cpp,\
 		paletteg.cpp,\
-		panelg.cpp,\
 		printps.cpp,\
 		prntdlgg.cpp,\
 		propdlg.cpp,\
@@ -160,53 +160,69 @@ SOURCES = \
 		splash.cpp,\
 		timer.cpp,\
 		vlbox.cpp,\
-		hyperlink.cpp,\
+		hyperlinkg.cpp,\
 		filepickerg.cpp,\
 		vscroll.cpp,\
-		icon.cpp,bmpcboxg.cpp
+		icon.cpp,bmpcboxg.cpp,filectrlg.cpp,srchctlg.cpp,notifmsgg.cpp\
+		,headerctrlg.cpp,grideditors.cpp,stattextg.cpp,editlbox.cpp,\
+		datavgen.cpp,dbgrptg.cpp,dragimgg.cpp,richmsgdlgg.cpp,\
+		commandlinkbuttong.cpp,spinctlg.cpp markuptext.cpp \
+		bannerwindow.cpp timectrlg.cpp richtooltipg.cpp statbmpg.cpp \
+		textmeasure.cpp
 
 .ifdef __WXMOTIF__
-OBJECTS0=,statusbr.obj,statline.obj,notebook.obj,spinctlg.obj,collpaneg.obj,\
-	combog.obj
+OBJECTS0=statusbr.obj,statline.obj,notebook.obj,spinctlg.obj,collpaneg.obj,\
+	combog.obj,animateg.obj,colrdlgg.obj,clrpickerg.obj,fontpickerg.obj,\
+	mdig.obj,infobar.obj,textmeasure.obj
 .else
 .ifdef __WXX11__
-OBJECTS0=,accel.obj,filedlgg.obj,dragimgg.obj,fdrepdlg.obj,htmllbox.obj,\
-	listbkg.obj,mdig.obj,spinctlg.obj,splash.obj,timer.obj,\
-	vlbox.obj,vscroll.obj,combog.obj,icon.obj,collpaneg.obj
+OBJECTS0=accel.obj,filedlgg.obj,dragimgg.obj,fdrepdlg.obj,htmllbox.obj,\
+	listbkg.obj,mdig.obj,spinctlg.obj,timer.obj,\
+	combog.obj,icon.obj,collpaneg.obj,animateg.obj,\
+	colrdlgg.obj,clrpickerg.obj,fontpickerg.obj,infobar.obj,textmeasure.obj
 .else
 .ifdef __WXGTK__
-OBJECTS0=,accel.obj,statusbr.obj,filedlgg.obj,paletteg.obj,vlbox.obj,\
-	vscroll.obj,combog.obj,icon.obj,collpaneg.obj
+OBJECTS0=accel.obj,statusbr.obj,filedlgg.obj,paletteg.obj,\
+	combog.obj,icon.obj,collpaneg.obj,animateg.obj,\
+	colrdlgg.obj,clrpickerg.obj,fontpickerg.obj,infobar.obj,textmeasure.obj
 .else
-OBJECTS0=,accel.obj,statusbr.obj,filedlgg.obj,paletteg.obj,vlbox.obj,\
-	vscroll.obj,combog.obj,icon.obj
+OBJECTS0=accel.obj,statusbr.obj,filedlgg.obj,paletteg.obj,\
+	combog.obj,icon.obj
 .endif
 .endif
 .endif
 
 all : $(SOURCES)
-	$(MMS)$(MMSQUALIFIERS) $(OBJECTS)$(OBJECTS0)
+	$(MMS)$(MMSQUALIFIERS) $(OBJECTS)
+	$(MMS)$(MMSQUALIFIERS) $(OBJECTS0)
 .ifdef __WXMOTIF__
-	library/crea [--.lib]libwx_motif.olb $(OBJECTS)$(OBJECTS0)
+	library/crea [--.lib]libwx_motif.olb $(OBJECTS)
+	library [--.lib]libwx_motif.olb $(OBJECTS0)
 .else
 .ifdef __WXGTK__
-	library/crea [--.lib]libwx_gtk.olb $(OBJECTS)$(OBJECTS0)
+	library/crea [--.lib]libwx_gtk.olb $(OBJECTS)
+	library [--.lib]libwx_gtk.olb $(OBJECTS0)
 .else
 .ifdef __WXGTK2__
-	library/crea [--.lib]libwx_gtk2.olb $(OBJECTS)$(OBJECTS0)
+	library/crea [--.lib]libwx_gtk2.olb $(OBJECTS)
+	library [--.lib]libwx_gtk2.olb $(OBJECTS0)
 .else
 .ifdef __WXX11__
-	library/crea [--.lib]libwx_x11_univ.olb $(OBJECTS)$(OBJECTS0)
+	library/crea [--.lib]libwx_x11_univ.olb $(OBJECTS)
+	library [--.lib]libwx_x11_univ.olb $(OBJECTS0)
 .endif
 .endif
 .endif
 .endif
 
+$(OBJECTS) : [--.include.wx]setup.h
+$(OBJECTS0) : [--.include.wx]setup.h
+
 aboutdlgg.obj : aboutdlgg.cpp
 accel.obj : accel.cpp
 animateg.obj : animateg.cpp
 busyinfo.obj : busyinfo.cpp
-calctrl.obj : calctrl.cpp
+calctrlg.obj : calctrlg.cpp
 caret.obj : caret.cpp
 choicdgg.obj : choicdgg.cpp
 clrpickerg.obj : clrpickerg.cpp
@@ -228,13 +244,13 @@ icon.obj : icon.cpp
 imaglist.obj : imaglist.cpp
 laywin.obj : laywin.cpp
 listctrl.obj : listctrl.cpp
+	cxx $(CXXFLAGS)$(CXX_DEFINE)/warn=disable=(INTTRUNCATED) listctrl.cpp
 logg.obj : logg.cpp
 msgdlgg.obj : msgdlgg.cpp
 notebook.obj : notebook.cpp
 numdlgg.obj : numdlgg.cpp
 odcombo.obj : odcombo.cpp
 paletteg.obj : paletteg.cpp
-panelg.obj : panelg.cpp
 printps.obj : printps.cpp
 prntdlgg.obj : prntdlgg.cpp
 progdlgg.obj : progdlgg.cpp
@@ -271,6 +287,27 @@ toolbkg.obj : toolbkg.cpp
 treebkg.obj : treebkg.cpp
 combog.obj : combog.cpp
 fontpickerg.obj : fontpickerg.cpp
-hyperlink.obj : hyperlink.cpp
+hyperlinkg.obj : hyperlinkg.cpp
 filepickerg.obj : filepickerg.cpp
 bmpcboxg.obj : bmpcboxg.cpp
+filectrlg.obj : filectrlg.cpp
+srchctlg.obj : srchctlg.cpp
+notifmsgg.obj : notifmsgg.cpp
+stattextg.obj : stattextg.cpp
+headerctrlg.obj : headerctrlg.cpp
+grideditors.obj : grideditors.cpp
+infobar.obj : infobar.cpp
+datavgen.obj : datavgen.cpp
+	cxx $(CXXFLAGS)$(CXX_DEFINE)/warn=disable=(UNSCOMZER) datavgen.cpp
+dbgrptg.obj : dbgrptg.cpp
+dragimgg.obj : dragimgg.cpp
+richmsgdlgg.obj : richmsgdlgg.cpp
+commandlinkbuttong.obj : commandlinkbuttong.cpp
+spinctlg.obj : spinctlg.cpp
+markuptext.obj : markuptext.cpp
+bannerwindow.obj : bannerwindow.cpp
+timectrlg.obj : timectrlg.cpp
+richtooltipg.obj : richtooltipg.cpp
+statbmpg.obj : statbmpg.cpp
+textmeasure.obj : textmeasure.cpp
+editlbox.obj : editlbox.cpp
